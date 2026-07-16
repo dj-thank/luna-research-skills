@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Diverse Luna Research"
+  short_description: "Coordinate verified parallel Luna research"
+  default_prompt: "Use $run-diverse-luna-research to investigate this topic with diverse verified Luna scouts."
+
+policy:
+  allow_implicit_invocation: true

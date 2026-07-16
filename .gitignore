@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.venv/
+venv/
+work-test-home/
+outputs/
+forward-test-result.md
+.tmp-marketplace-home/
+.DS_Store
+Thumbs.db
