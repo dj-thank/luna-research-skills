@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import struct
 import tomllib
 import unittest
 from pathlib import Path
@@ -87,6 +88,21 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertTrue((ROOT / "LICENSE").is_file())
         self.assertTrue((ROOT / "SECURITY.md").is_file())
         self.assertTrue((ROOT / ".github" / "workflows" / "ci.yml").is_file())
+
+    def test_readme_research_flow_is_mobile_safe(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        asset = ROOT / "docs" / "assets" / "one-prompt-research-flow.png"
+
+        self.assertNotIn("```mermaid", readme)
+        self.assertIn("docs/assets/one-prompt-research-flow.png", readme)
+        self.assertTrue(asset.is_file())
+
+        png = asset.read_bytes()
+        self.assertEqual(png[:8], b"\x89PNG\r\n\x1a\n")
+        self.assertEqual(png[12:16], b"IHDR")
+        width, height = struct.unpack(">II", png[16:24])
+        self.assertGreaterEqual(width, 1000)
+        self.assertGreaterEqual(height, 1000)
 
 
 if __name__ == "__main__":
