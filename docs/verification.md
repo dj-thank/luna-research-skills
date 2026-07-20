@@ -42,6 +42,8 @@ model_reasoning_effort = "medium"
 
 Both orchestration skills then use ordinary `spawn_agent` with `fork_turns="none"`. A full-history fork carries the parent model and bypasses the intended default-role selection in the tested implementation. Each accepted research packet, project workstream result, and independent verifier report must pass the runtime gate.
 
+`max_threads = 40` is a user-level capacity ceiling, not a request to launch 40 agents. The project skill normally budgets 2-4 assignment attempts for a focused project, 4-8 for a broad project, and 8-12 only when workstreams remain genuinely independent. Dispatch occurs in bounded waves, and a verifier slot is reserved whenever the budget is at least four.
+
 ## Evidence captured before publication
 
 Test date: 2026-07-17 (Asia/Tokyo).
@@ -69,6 +71,22 @@ Two read-only forward tests exercised the packaged `run-diverse-luna-project` sk
 The first test exposed an ambiguous assignment budget that could consume every slot before independent verification. The skill now reserves `V=1` whenever `N >= 4` and limits planned non-verifier starts to `N-V`. A fresh second test selected `N=8`, reserved one verifier, and allocated seven non-verifier workstreams without exceeding the budget.
 
 These were orchestration tests without a target repository or provider credentials. They validate contract formation, decomposition, ownership, budget accounting, and boundary reporting; they do not prove implementation, deployment, customer communication, billing correctness, or production E2E.
+
+### Clean-install UX validation for 0.2.0
+
+Test date: 2026-07-20 (Asia/Tokyo).
+
+The public marketplace was added into a fresh isolated `CODEX_HOME`, resolved commit `afc0c2dc6ddb9352af4446a122987a87c5d180d9`, exposed plugin version `0.2.0`, and reported the plugin installation policy as `AVAILABLE`. The configuration Skill was then exercised against another empty isolated `CODEX_HOME` through `plan`, `install --apply`, and `status`.
+
+Observed success markers:
+
+```text
+INSTALLED: model=gpt-5.6-luna, max_threads=40, max_depth=2
+STATE: managed installation is intact
+READY: static Luna subagent configuration is present.
+```
+
+The Codex Plugins screen itself was not automated or captured. The public instructions therefore use the verified navigation labels and accessible text output rather than a simulated screenshot.
 
 ## Known boundaries
 
