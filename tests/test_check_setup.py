@@ -25,6 +25,13 @@ CHECK = (
     / "scripts"
     / "check_setup.py"
 )
+PROJECT_CHECK = (
+    PLUGIN
+    / "skills"
+    / "run-diverse-luna-project"
+    / "scripts"
+    / "check_setup.py"
+)
 
 
 def run_script(script: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -62,6 +69,27 @@ def write_rollout(home: Path, thread_id: str, model: str = "gpt-5.6-luna") -> Pa
 
 
 class CheckSetupTests(unittest.TestCase):
+    def test_project_checker_preserves_runtime_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            home = root / "home"
+            workspace = root / "workspace"
+            workspace.mkdir()
+            install_valid_home(home)
+            thread_id = str(uuid.uuid4())
+            write_rollout(home, thread_id)
+            result = run_script(
+                PROJECT_CHECK,
+                "--codex-home",
+                str(home),
+                "--workspace",
+                str(workspace),
+                "--runtime-thread",
+                thread_id,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("VERIFIED", result.stdout)
+
     def test_static_preflight_passes_for_managed_install(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

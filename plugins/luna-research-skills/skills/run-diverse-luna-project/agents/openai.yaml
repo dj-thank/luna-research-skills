@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Diverse Luna Project"
+  short_description: "Coordinate verified Luna project workstreams"
+  default_prompt: "Use $run-diverse-luna-project to decompose, execute, integrate, and verify this broad project with bounded Luna workstreams."
+
+policy:
+  allow_implicit_invocation: true

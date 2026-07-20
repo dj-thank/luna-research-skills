@@ -19,7 +19,7 @@ class RepositoryContractTests(unittest.TestCase):
             (ROOT / ".agents" / "plugins" / "marketplace.json").read_text()
         )
         self.assertEqual(plugin["name"], "luna-research-skills")
-        self.assertEqual(plugin["version"], "0.1.0")
+        self.assertEqual(plugin["version"], "0.2.0")
         self.assertEqual(plugin["license"], "MIT")
         self.assertEqual(plugin["repository"], "https://github.com/dj-thank/luna-research-skills")
         self.assertEqual(plugin["skills"], "./skills/")
@@ -33,6 +33,7 @@ class RepositoryContractTests(unittest.TestCase):
     def test_skill_frontmatter_is_minimal_and_metadata_is_current(self) -> None:
         expected_policy = {
             "configure-luna-subagents": "false",
+            "run-diverse-luna-project": "true",
             "run-diverse-luna-research": "true",
         }
         for skill_dir in sorted(path for path in SKILLS.iterdir() if path.is_dir()):
@@ -81,6 +82,15 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('fork_turns="none"', research)
         self.assertIn("--runtime-thread", research)
         self.assertIn("Discard the packet", research)
+
+        project = (SKILLS / "run-diverse-luna-project" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('fork_turns="none"', project)
+        self.assertIn("--runtime-thread", project)
+        self.assertIn("discard the result", project)
+        self.assertIn("no two concurrent builders own the same file", project)
+        self.assertIn("planned non-verifier starts are at most `N-V`", project)
 
     def test_public_repository_basics_exist(self) -> None:
         self.assertTrue((ROOT / "README.md").is_file())

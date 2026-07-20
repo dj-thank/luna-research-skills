@@ -1,7 +1,7 @@
 {
   "name": "luna-research-skills",
-  "version": "0.1.0",
-  "description": "Safely configure and verify GPT-5.6 Luna subagents for diverse, source-backed Codex research.",
+  "version": "0.2.0",
+  "description": "Safely configure and verify GPT-5.6 Luna subagents for broad Codex projects and source-backed research.",
   "author": {
     "name": "dj-thank",
     "url": "https://github.com/dj-thank"
@@ -14,23 +14,26 @@
     "skills",
     "luna",
     "multi-agent",
-    "research"
+    "research",
+    "project-orchestration"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Luna Research Skills",
-    "shortDescription": "Verified Luna routing for parallel Codex research.",
-    "longDescription": "Install a reversible Luna default-subagent configuration, prove the effective model from child runtime metadata, and coordinate diverse source-backed research with strict evidence and budget gates.",
+    "shortDescription": "Verified Luna routing for projects and research.",
+    "longDescription": "Install a reversible Luna default-subagent configuration, prove the effective model from child runtime metadata, and coordinate broad projects or diverse source-backed research with strict ownership, evidence, and budget gates.",
     "developerName": "dj-thank",
     "category": "Developer Tools",
     "capabilities": [
       "Local configuration",
-      "Parallel research"
+      "Parallel research",
+      "Project orchestration"
     ],
     "websiteURL": "https://github.com/dj-thank/luna-research-skills",
     "defaultPrompt": [
       "Inspect my Luna subagent setup safely.",
-      "Research this topic with verified Luna scouts."
+      "Research this topic with verified Luna scouts.",
+      "Decompose and execute this broad project with verified Luna workstreams."
     ]
   }
 }

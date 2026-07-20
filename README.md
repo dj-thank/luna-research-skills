@@ -1,8 +1,19 @@
-# Luna Research Skills
+# Luna Research & Project Skills
 
-Codex の通常サブエージェントを **GPT-5.6 Luna** に固定して広範調査を行い、各子タスクの実行メタデータまで検証する、コミュニティ製の skills-only plugin です。
+Codex の通常サブエージェントを **GPT-5.6 Luna** に固定し、広いプロジェクトの分解・実行・統合または広範調査を行い、採用する各子タスクの実行メタデータまで検証する、コミュニティ製の skills-only plugin です。
 
-This community skills-only plugin safely pins fresh ordinary Codex subagents to **GPT-5.6 Luna**, then verifies each accepted scout from runtime metadata during diverse research.
+This community skills-only plugin safely pins fresh ordinary Codex subagents to **GPT-5.6 Luna**, then runtime-verifies each accepted project workstream or research scout.
+
+## 1つのプロンプトから、プロジェクト全体をLunaで進める
+
+`$run-diverse-luna-project` は、機能開発、移行、監査、リリース、複数成果物の制作を、成果・所有範囲・観点・工程・リスク・検証境界へ分解します。重複編集を避けるためファイル所有権と依存関係を固定し、Luna を小さな wave で動かし、親エージェントが統合と最終検証を担当します。
+
+```text
+$run-diverse-luna-project このWebサービスにアカウントデータのエクスポートと削除を追加し、
+API・DB・画面・運用手順・段階リリースまで実装して検証して
+```
+
+各 workstream は採用前に Luna の runtime metadata を確認します。ローカルテスト、デプロイ済み状態、外部ネットワーク、物理端末、人間の体験は別々の検証境界として報告されます。
 
 ## 1つのプロンプトから、6〜20件の調査タスクを動かす
 
@@ -53,7 +64,7 @@ flowchart TD
 
 1. `~/.codex/agents/default.toml` に Luna 固定の default role を安全に導入する。
 2. 通常の `spawn_agent` を必ず `fork_turns="none"` で起動し、その role を選ばせる。
-3. 各 child rollout の `turn_context.model` が `gpt-5.6-luna` であることを確認してから、調査結果を採用する。
+3. 各 child rollout の `turn_context.model` が `gpt-5.6-luna` であることを確認してから、workstream や調査結果を採用する。
 
 名前や nickname をモデルの証拠にはしません。実行メタデータが証拠です。
 
@@ -85,13 +96,19 @@ Skill はまず read-only の plan を表示します。実適用では次の設
 
 既存値が衝突する場合は停止し、承認された replacement flag がある時だけ変更します。変更前ファイルは `CODEX_HOME/backups/luna-research-skills/` に保存され、書き込みは原子的です。
 
-Codex を再起動するか新しいタスクを開いた後、調査 Skill を使います。
+Codex を再起動するか新しいタスクを開いた後、広いプロジェクトにはプロジェクト Skill を使います。
+
+```text
+$run-diverse-luna-project CLI設定形式の移行を、互換性・変換器・テスト・文書・リリースの観点で進めて
+```
+
+一次資料中心の調査には調査 Skill を使います。
 
 ```text
 $run-diverse-luna-research 量子誤り訂正の最新アプローチを一次資料中心に比較して
 ```
 
-この Skill は最初の有用な scout を runtime probe として使い、Luna が確認できた場合だけ次の wave を開始します。以後も採用する全 scout を検証します。
+両 Skill は最初の有用な read-only workstream または scout を runtime probe として使い、Luna が確認できた場合だけ次の wave を開始します。以後も採用する全結果を検証します。
 
 ### 重要な影響範囲
 
@@ -115,6 +132,17 @@ python -m compileall -q plugins
 テストは Linux / Windows、Python 3.11 / 3.13 の GitHub Actions でも実行します。互換性の根拠と既知の境界は [docs/verification.md](docs/verification.md) にまとめています。
 
 ## English
+
+### One prompt orchestrates a broad project
+
+`$run-diverse-luna-project` decomposes feature work, migrations, audits, releases, and multi-artifact delivery by outcomes, ownership, perspectives, lifecycle stages, risks, and verification boundaries. It runs disjoint Luna workstreams in bounded waves while the root owns shared interfaces, integration, external-action gates, and final acceptance.
+
+```text
+$run-diverse-luna-project Add account data export and deletion to this service,
+covering the API, database, UI, operations, and staged release validation.
+```
+
+Every accepted workstream passes the Luna runtime gate. Local tests, deployment state, external-network reachability, physical devices, and human experience remain separately reported boundaries.
 
 ### One prompt launches 6-20 verified research tasks
 
@@ -151,7 +179,7 @@ Then open a new Codex task. If the CLI wrapper is unavailable, install `Luna Res
 
 Invoke `$configure-luna-subagents` explicitly. It shows a read-only plan, discloses the global default-role blast radius, and applies only after explicit authorization. Existing conflicting values require separate replacement flags and are backed up before atomic writes.
 
-After restarting Codex or opening a new task, invoke `$run-diverse-luna-research` with the research question. The skill uses only ordinary `spawn_agent` calls with `fork_turns="none"`, verifies the first useful scout before fan-out, and validates every accepted scout's rollout metadata.
+After restarting Codex or opening a new task, invoke `$run-diverse-luna-project` for broad delivery or `$run-diverse-luna-research` for source-heavy investigation. Both skills use only ordinary `spawn_agent` calls with `fork_turns="none"`, verify the first useful read-only result before fan-out, and validate every accepted child's rollout metadata.
 
 ### Guarantee boundary
 

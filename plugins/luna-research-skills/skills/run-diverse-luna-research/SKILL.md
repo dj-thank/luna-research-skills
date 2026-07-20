@@ -1,11 +1,11 @@
 ---
 name: run-diverse-luna-research
-description: Run broad, source-backed research through diverse parallel Codex scouts, require GPT-5.6 Luna runtime proof for every accepted scout result, then deduplicate, challenge, verify, and synthesize the evidence. Use for deep research, literature or market scans, multi-source technical investigations, policy or product comparisons, due diligence, and questions that benefit from independent perspectives. Use a normal single-agent lookup for narrow stable facts.
+description: Run source-backed research through diverse Codex evidence scouts, require GPT-5.6 Luna runtime proof for every accepted result, then deduplicate, challenge, verify, and synthesize the evidence. Use for deep research, literature or market scans, multi-source technical investigations, policy or product comparisons, due diligence, and source-heavy workstreams inside a larger project. Use run-diverse-luna-project for mixed projects with implementation, artifacts, migrations, releases, or operational delivery. Use a normal single-agent lookup for narrow stable facts.
 ---
 
 # Run Diverse Luna Research
 
-Coordinate at the root and treat ordinary `spawn_agent` calls with `fork_turns="none"` as the only eligible fan-out path. The custom default role selects Luna; task names and nicknames are logistics. Accept a scout packet only after its rollout reports `gpt-5.6-luna`.
+Coordinate at the root and keep this branch research-only. For broader delivery, let `run-diverse-luna-project` own the project contract and allocate this skill a bounded evidence sub-budget. Treat ordinary `spawn_agent` calls with `fork_turns="none"` as the only eligible fan-out path. The custom default role selects Luna; task names and nicknames are logistics. Accept a scout packet only after its rollout reports `gpt-5.6-luna`.
 
 ## 1. Frame the research contract
 
