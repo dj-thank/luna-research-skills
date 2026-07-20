@@ -74,10 +74,9 @@ flowchart TD
 
 ```bash
 codex plugin marketplace add dj-thank/luna-research-skills
-codex plugin add luna-research-skills@luna-research-skills
 ```
 
-その後、新しい Codex タスクを開始してください。CLI ラッパーが利用できない環境では、ChatGPT デスクトップの Codex で Plugins を開き、marketplace と `Luna Research Skills` を選択してインストールできます。
+その後、Codex デスクトップの Plugins を開き、`luna-research-skills` marketplace から `Luna Research Skills` を選択してインストールし、新しい Codex タスクを開始してください。CLI ラッパーが利用できない場合は、Plugins 画面から marketplace の追加も行えます。
 
 ### 使い方
 
@@ -170,10 +169,9 @@ Require Python 3.11+ and a current Codex build with plugin marketplaces:
 
 ```bash
 codex plugin marketplace add dj-thank/luna-research-skills
-codex plugin add luna-research-skills@luna-research-skills
 ```
 
-Then open a new Codex task. If the CLI wrapper is unavailable, install `Luna Research Skills` from the Plugins view in Codex.
+Then open Plugins in Codex desktop, install `Luna Research Skills` from the `luna-research-skills` marketplace, and start a new Codex task. If the CLI wrapper is unavailable, add the marketplace from the Plugins view as well.
 
 ### Use
 
