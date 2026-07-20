@@ -17,9 +17,9 @@ Primary references:
 
 This repository is published through GitHub only. It has not been submitted to OpenAI's public Plugins Directory.
 
-## Why the setup is separate from the research skill
+## Why the setup is separate from the orchestration skills
 
-The current plugin and Skill metadata describe invocation and UI behavior; they do not provide a per-`spawn_agent` model field. Model selection therefore lives in the user's custom default-agent file. Separating setup from research makes the write explicit, reversible, and independently auditable.
+The current plugin and Skill metadata describe invocation and UI behavior; they do not provide a per-`spawn_agent` model field. Model selection therefore lives in the user's custom default-agent file. Separating setup from project and research orchestration makes the write explicit, reversible, and independently auditable.
 
 The setup installs:
 
@@ -40,7 +40,7 @@ model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 ```
 
-The research skill then uses ordinary `spawn_agent` with `fork_turns="none"`. A full-history fork carries the parent model and bypasses the intended default-role selection in the tested implementation.
+Both orchestration skills then use ordinary `spawn_agent` with `fork_turns="none"`. A full-history fork carries the parent model and bypasses the intended default-role selection in the tested implementation. Each accepted research packet, project workstream result, and independent verifier report must pass the runtime gate.
 
 ## Evidence captured before publication
 
@@ -59,6 +59,16 @@ Observed routing probe:
 3. The child rollout reported `thread_source = "subagent"`, `model = "gpt-5.6-luna"`, and `effort = "medium"`.
 
 Repository verification includes unit tests for planning, conflict gates, backup/restore, drift detection, malformed TOML, workspace role shadowing, spawn-schema validation, child thread lookup, positive Luna metadata, and negative model metadata.
+
+### Project-orchestration validation for 0.2.0
+
+Test date: 2026-07-20 (Asia/Tokyo).
+
+Two read-only forward tests exercised the packaged `run-diverse-luna-project` skill with privacy-safe desktop beta and payment-provider migration requests. The root independently verified both child rollouts as `thread_source = "subagent"`, `model = "gpt-5.6-luna"`, and `effort = "medium"`.
+
+The first test exposed an ambiguous assignment budget that could consume every slot before independent verification. The skill now reserves `V=1` whenever `N >= 4` and limits planned non-verifier starts to `N-V`. A fresh second test selected `N=8`, reserved one verifier, and allocated seven non-verifier workstreams without exceeding the budget.
+
+These were orchestration tests without a target repository or provider credentials. They validate contract formation, decomposition, ownership, budget accounting, and boundary reporting; they do not prove implementation, deployment, customer communication, billing correctness, or production E2E.
 
 ## Known boundaries
 
