@@ -31,7 +31,7 @@ Resolve this skill directory and run:
 python <skill-dir>/scripts/check_setup.py
 ```
 
-Inspect the active `spawn_agent` schema as runtime truth. Require `message`, `task_name`, and `fork_turns`; pass only fields the schema exposes. Route every new workstream through the ordinary default agent with `fork_turns="none"`. Put the complete task-local context in `message`; treat task names and nicknames as logistics.
+Inspect the active `spawn_agent` schema as runtime truth. Require `message` and one supported non-history routing contract; pass only fields the schema exposes. The legacy contract is `message` + `task_name` + `fork_turns`, using `fork_turns="none"`. The current Codex contract is `message` + `agent_type` + `fork_context`, using `agent_type="default"` and `fork_context=false`. Put the complete task-local context in `message`; treat task names and nicknames as logistics, never as model evidence.
 
 Reserve one unit from `N` and run the highest-priority read-only reconnaissance cell as the runtime probe. Wait for completion, then verify its rollout with one supported locator:
 
@@ -40,7 +40,7 @@ python <skill-dir>/scripts/check_setup.py --runtime-thread <child-thread-uuid>
 python <skill-dir>/scripts/check_setup.py --runtime-rollout <child-rollout.jsonl>
 ```
 
-Accept the probe result only when the checker reports `gpt-5.6-luna`. If static setup, live schema, or runtime verification fails, discard the result, stop new dispatch, and direct the user to `$configure-luna-subagents`. Use a sequential root fallback only when the user accepts that it is not Luna fan-out.
+Accept the probe result only when the checker reports `gpt-5.6-luna`. If static setup, the live schema, or runtime verification fails, discard the result, stop new dispatch, and direct the user to `$configure-luna-subagents`. Use a sequential root fallback only when the user accepts that it is not Luna fan-out.
 
 Completion criterion: the first accepted result has verified Luna runtime metadata, or zero further subagents start and one concrete blocker is reported.
 

@@ -17,7 +17,7 @@ python <skill-dir>/scripts/configure_luna.py plan
 
 Use `--codex-home <path>` when `CODEX_HOME` or `~/.codex` is not the intended target. Report every `CHANGE`, `CONFLICT`, and required replacement flag.
 
-Explain the blast radius before applying: `agents/default.toml` affects every ordinary fresh subagent that selects the default role, not only research scouts. The runtime must pass `fork_turns="none"`; a full-history fork inherits the parent context and may bypass this role.
+Explain the blast radius before applying: `agents/default.toml` affects every ordinary fresh subagent that selects the default role, not only research scouts. The runtime must use a supported non-history route: legacy `fork_turns="none"`, or current `agent_type="default"` with `fork_context=false`. A full-history fork inherits the parent context and may bypass this role.
 
 Completion criterion: the user knows the exact files and existing values that would change, whether `--replace-default` or `--replace-settings` is required, and that the change applies to all fresh default-role subagents.
 
@@ -43,7 +43,7 @@ Ask the user to restart Codex or open a new task after installation. Run:
 python <skill-dir>/scripts/configure_luna.py status
 ```
 
-Static readiness is necessary but not runtime proof. Use `$run-diverse-luna-research` to create a bounded probe with `fork_turns="none"` and verify the child's rollout metadata before broad fan-out.
+Static readiness is necessary but not runtime proof. Use `$run-diverse-luna-research` to create a bounded probe with the supported non-history route and verify the child's rollout metadata before broad fan-out.
 
 Completion criterion: static status is `READY`, and any claim that a child actually ran Luna is backed by child runtime metadata rather than its task name or nickname.
 

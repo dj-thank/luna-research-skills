@@ -41,6 +41,12 @@ READY: static Luna subagent configuration is present.
 
 `READY` は静的設定の確認です。実際に採用した子タスクは、各 orchestration Skill が `thread_source = "subagent"`、`model = "gpt-5.6-luna"`、`effort = "medium"` を runtime metadata で確認します。
 
+Codex の spawn surface には世代差があります。旧 surface は `message` / `task_name` / `fork_turns` を公開し、`fork_turns="none"` を使います。現在の surface は `message` / `agent_type` / `fork_context` を公開し、`agent_type="default"` と `fork_context=false` を使います。checker は両方を受け付けますが、どちらの経路でも child rollout の runtime metadata が採用条件です。
+
+## 配布せずに再現する
+
+Skill を marketplace から配布・インストールしたくない場合は、[再現用プロンプト](docs/prompt-reproduction.md)を新しい Codex タスクへそのまま貼り付けてください。現在のワークスペース内に、設定、project orchestration、research orchestration、checker、テストを生成する手順です。ユーザー設定への apply、GitHub への公開、外部サービス操作は自動では行わず、必要な場合は別途明示的に承認します。
+
 ## 1つのプロンプトから、プロジェクト全体をLunaで進める
 
 `$run-diverse-luna-project` は、機能開発、移行、監査、リリース、複数成果物の制作を、成果・所有範囲・観点・工程・リスク・検証境界へ分解します。重複編集を避けるためファイル所有権と依存関係を固定し、Luna を小さな wave で動かし、親エージェントが統合と最終検証を担当します。
@@ -78,16 +84,20 @@ $run-diverse-luna-research 2025〜2026年のAIコーディングエージェン�
 特に、技術動向や文献の横断調査、競合・市場比較、製品選定、政策比較、デューデリジェンスのように、**一人で検索すると視点が偏りやすい調査**に向いています。全タスクのうち、一次資料確認と反証確認にそれぞれ20%以上を割り当てます。
 
 > [!IMPORTANT]
-> このリポジトリは OpenAI 公式製品ではありません。2026-07-17 時点の Codex の挙動を利用しており、モデル名やサブエージェントのルーティング仕様は将来変わる可能性があります。
+> このリポジトリは OpenAI 公式製品ではありません。検証ログには 2026-07-17 時点の Codex の挙動を含みます。モデル名やサブエージェントのルーティング仕様は将来変わる可能性があるため、上記の current/legacy 互換説明と発表直前の runtime probe を優先してください。
+
+### 価格の鮮度
+
+価格を発表資料へ引用する場合は、[GPT-5.6 Luna の公式モデルページ](https://developers.openai.com/api/docs/models/gpt-5.6-luna)を参照してください。2026-08-01 の表示は input `$0.20`、cached input `$0.02`、output `$1.20` per 1M tokens です。Codex の credit rate、Fast mode、契約プランの料金は別系統なので、API のドル価格と混ぜず、発表時に再確認してください。
 
 ## 日本語
 
 ### 何を解決するか
 
-公開 Skill の manifest には、`spawn_agent` ごとのモデルを直接指定する項目がありません。この plugin は次の三段階で、その制約を回避せずに検証可能な形へ落とします。
+公開 Skill の manifest には、`spawn_agent` ごとのモデルを直接指定する項目がありません。この plugin はユーザーの default role と runtime の非履歴 routing control を組み合わせ、次の三段階で検証可能な形へ落とします。
 
 1. `~/.codex/agents/default.toml` に Luna 固定の default role を安全に導入する。
-2. 通常の `spawn_agent` を必ず `fork_turns="none"` で起動し、その role を選ばせる。
+2. 旧 surface では `fork_turns="none"`、現在の surface では `agent_type="default"` と `fork_context=false` で起動し、その role を明示的に選ばせる。
 3. 各 child rollout の `turn_context.model` が `gpt-5.6-luna` であることを確認してから、workstream や調査結果を採用する。
 
 名前や nickname をモデルの証拠にはしません。実行メタデータが証拠です。
@@ -137,7 +147,7 @@ $run-diverse-luna-research 量子誤り訂正の最新アプローチを一次�
 
 ### 重要な影響範囲
 
-`agents/default.toml` は研究専用ではなく、`fork_turns="none"` で default role を選ぶ全ての通常サブエージェントに作用します。親の履歴を丸ごと継承する fork、CSV 一括 fan-out、内部エージェント、別の custom role はこの保証範囲に含まれません。
+`agents/default.toml` は研究専用ではなく、非履歴 routing control で default role を選ぶ全ての通常サブエージェントに作用します。親の履歴を丸ごと継承する fork、CSV 一括 fan-out、内部エージェント、別の custom role はこの保証範囲に含まれません。
 
 復元する場合は、明示的に次を依頼します。
 
@@ -208,15 +218,19 @@ codex plugin marketplace add dj-thank/luna-research-skills
 
 Then open Plugins in Codex desktop, install `Luna Research Skills` from the `luna-research-skills` marketplace, and start a new Codex task. If the CLI wrapper is unavailable, add the marketplace from the Plugins view as well.
 
+### Reproduce without installing the Skill
+
+Paste the complete [reproduction prompt](docs/prompt-reproduction.md) into a new Codex task. It asks the root coordinator to generate a reviewable local bundle with the configuration flow, project and research orchestration, static/runtime checks, and tests. It does not apply user settings or publish anything automatically.
+
 ### Use
 
 Invoke `$configure-luna-subagents` explicitly. It shows a read-only plan, discloses the global default-role blast radius, and applies only after explicit authorization. Existing conflicting values require separate replacement flags and are backed up before atomic writes.
 
-After restarting Codex or opening a new task, invoke `$run-diverse-luna-project` for broad delivery or `$run-diverse-luna-research` for source-heavy investigation. Both skills use only ordinary `spawn_agent` calls with `fork_turns="none"`, verify the first useful read-only result before fan-out, and validate every accepted child's rollout metadata.
+After restarting Codex or opening a new task, invoke `$run-diverse-luna-project` for broad delivery or `$run-diverse-luna-research` for source-heavy investigation. Both skills use only ordinary `spawn_agent` calls with a supported non-history route (`fork_turns="none"` on the legacy surface, or `agent_type="default"` plus `fork_context=false` on the current surface), verify the first useful read-only result before fan-out, and validate every accepted child's rollout metadata.
 
 ### Guarantee boundary
 
-The plugin controls a user-level default agent role because the current public Skill/plugin manifest does not expose a per-spawn model selector. The guarantee covers fresh ordinary default-role subagents spawned with `fork_turns="none"`. It does not cover full-history forks, bulk CSV fan-out, internal agents, or other custom roles.
+The plugin controls a user-level default agent role because the public Skill/plugin manifest does not expose a per-spawn model selector. The guarantee covers fresh ordinary default-role subagents launched through a supported non-history route: legacy `fork_turns="none"`, or current `agent_type="default"` plus `fork_context=false`. It does not cover full-history forks, bulk CSV fan-out, internal agents, or other custom roles.
 
 ## License
 

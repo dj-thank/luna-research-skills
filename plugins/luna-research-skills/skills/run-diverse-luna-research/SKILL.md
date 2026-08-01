@@ -5,7 +5,7 @@ description: Run source-backed research through diverse Codex evidence scouts, r
 
 # Run Diverse Luna Research
 
-Coordinate at the root and keep this branch research-only. For broader delivery, let `run-diverse-luna-project` own the project contract and allocate this skill a bounded evidence sub-budget. Treat ordinary `spawn_agent` calls with `fork_turns="none"` as the only eligible fan-out path. The custom default role selects Luna; task names and nicknames are logistics. Accept a scout packet only after its rollout reports `gpt-5.6-luna`.
+Coordinate at the root and keep this branch research-only. For broader delivery, let `run-diverse-luna-project` own the project contract and allocate this skill a bounded evidence sub-budget. Treat ordinary `spawn_agent` calls with a supported non-history route as the only eligible fan-out path: legacy `fork_turns="none"`, or current `agent_type="default"` with `fork_context=false`. The custom default role selects Luna; task names and nicknames are logistics. Accept a scout packet only after its rollout reports `gpt-5.6-luna`.
 
 ## 1. Frame the research contract
 
@@ -27,9 +27,9 @@ Resolve this skill directory and run:
 python <skill-dir>/scripts/check_setup.py
 ```
 
-Inspect the active `spawn_agent` schema as runtime truth. Require `message`, `task_name`, and `fork_turns`; supply only fields present in that schema. Route each new scout through ordinary `spawn_agent` with `fork_turns="none"`. Use a complete self-contained `message`; use `task_name` only as a unique operational label.
+Inspect the active `spawn_agent` schema as runtime truth. Require `message` and one supported non-history routing contract; supply only fields present in that schema. For the legacy schema, use `task_name` and `fork_turns="none"`. For the current schema, use `agent_type="default"` and `fork_context=false`; the current schema does not need `task_name`. Use a complete self-contained `message`; use task names only as operational labels.
 
-If the checker fails, the tool is absent, or `fork_turns` is unavailable, stop before fan-out and direct the user to `$configure-luna-subagents`. Preserve root-only research as a separately authorized fallback rather than labeling it Luna fan-out.
+If the checker fails, the tool is absent, or neither supported non-history route is available, stop before fan-out and direct the user to `$configure-luna-subagents`. Preserve root-only research as a separately authorized fallback rather than labeling it Luna fan-out.
 
 Completion criterion: static setup passes and the live tool surface supports an explicit non-full-history fork, or zero subagents have started and one concrete blocker is reported.
 
@@ -48,7 +48,7 @@ Completion criterion: every planned assignment has one unique cell, source unive
 
 ## 4. Prove the route with the first useful scout
 
-Reserve one unit from `N` and spawn the highest-priority cell with `fork_turns="none"`. Give the scout:
+Reserve one unit from `N` and spawn the highest-priority cell with the supported non-history route. Give the scout:
 
 - the full research contract and exactly one coverage cell;
 - the packet contract in [references/research-packet.md](references/research-packet.md);
@@ -80,7 +80,7 @@ Completion criterion: the first accepted packet has verified Luna runtime metada
 
 ## 5. Dispatch and adapt in waves
 
-Start three to six scouts concurrently, bounded by the live limit and remaining `N`; preserve the root slot for coordination. Use ordinary `spawn_agent` with `fork_turns="none"` for each new scout. Prefer `followup_task` on a completed, verified scout when a new spawn is unnecessary.
+Start three to six scouts concurrently, bounded by the live limit and remaining `N`; preserve the root slot for coordination. Use the selected supported non-history route for each new scout. Prefer `followup_task` on a completed, verified scout when a new spawn is unnecessary.
 
 Maintain an assignment ledger. Reserve one unit before every spawn or follow-up and count every started assignment, including failed, rejected, and in-flight work. Keep `started <= N`. After every completion, verify that thread again with `--runtime-thread` before accepting its packet. A model mismatch is a routing breach: exclude the result and stop new dispatch.
 

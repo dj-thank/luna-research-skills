@@ -141,7 +141,7 @@ class CheckSetupTests(unittest.TestCase):
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
             self.assertIn("model must be 'gpt-5.6-luna'", result.stdout)
 
-    def test_spawn_schema_requires_fork_turns(self) -> None:
+    def test_spawn_schema_requires_supported_non_history_routing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             home = root / "home"
@@ -170,7 +170,7 @@ class CheckSetupTests(unittest.TestCase):
                 str(schema_path),
             )
             self.assertEqual(failed.returncode, 1, failed.stdout + failed.stderr)
-            self.assertIn("does not expose fork_turns", failed.stdout)
+            self.assertIn("must expose either legacy", failed.stdout)
 
             schema_path.write_text(
                 json.dumps(
@@ -197,6 +197,87 @@ class CheckSetupTests(unittest.TestCase):
                 str(schema_path),
             )
             self.assertEqual(passed.returncode, 0, passed.stdout + passed.stderr)
+
+            schema_path.write_text(
+                json.dumps(
+                    {
+                        "name": "multi_agent_v1.spawn_agent",
+                        "parameters": {
+                            "properties": {
+                                "message": {"type": "string"},
+                                "agent_type": {"type": "string"},
+                                "fork_context": {"type": "boolean"},
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            current = run_script(
+                CHECK,
+                "--codex-home",
+                str(home),
+                "--workspace",
+                str(workspace),
+                "--spawn-schema-json",
+                str(schema_path),
+            )
+            self.assertEqual(current.returncode, 0, current.stdout + current.stderr)
+            self.assertIn("current agent_type/fork_context", current.stdout)
+
+            schema_path.write_text(
+                json.dumps(
+                    {
+                        "name": "multi_agent_v1__spawn_agent",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {"type": "string"},
+                                "agent_type": {"type": "string"},
+                                "fork_context": {"type": "boolean"},
+                            },
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            live_shape = run_script(
+                CHECK,
+                "--codex-home",
+                str(home),
+                "--workspace",
+                str(workspace),
+                "--spawn-schema-json",
+                str(schema_path),
+            )
+            self.assertEqual(live_shape.returncode, 0, live_shape.stdout + live_shape.stderr)
+            self.assertIn("current agent_type/fork_context", live_shape.stdout)
+
+            schema_path.write_text(
+                json.dumps(
+                    {
+                        "name": "multi_agent_v1.spawn_agent",
+                        "parameters": {
+                            "properties": {
+                                "message": {"type": "string"},
+                                "fork_context": {"type": "boolean"},
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            ambiguous = run_script(
+                CHECK,
+                "--codex-home",
+                str(home),
+                "--workspace",
+                str(workspace),
+                "--spawn-schema-json",
+                str(schema_path),
+            )
+            self.assertEqual(ambiguous.returncode, 1, ambiguous.stdout + ambiguous.stderr)
+            self.assertIn("agent_type/fork_context routing controls", ambiguous.stdout)
 
     def test_runtime_thread_lookup_and_model_verification(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
