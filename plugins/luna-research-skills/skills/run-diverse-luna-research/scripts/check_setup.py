@@ -222,8 +222,15 @@ def spawn_agent_schemas(value: object) -> list[dict[str, Any]]:
         name = value.get("name")
         if (
             isinstance(name, str)
-            and name.rsplit(".", 1)[-1] == "spawn_agent"
-            and isinstance(value.get("parameters"), dict)
+            and (
+                name == "spawn_agent"
+                or name.endswith(".spawn_agent")
+                or name.endswith("__spawn_agent")
+            )
+            and any(
+                isinstance(value.get(key), dict)
+                for key in ("parameters", "inputSchema", "input_schema")
+            )
         ):
             found.append(value)
         for child in value.values():
@@ -232,6 +239,16 @@ def spawn_agent_schemas(value: object) -> list[dict[str, Any]]:
         for child in value:
             found.extend(spawn_agent_schemas(child))
     return found
+
+
+def spawn_agent_properties(schema: dict[str, Any]) -> dict[str, Any]:
+    for key in ("parameters", "inputSchema", "input_schema"):
+        candidate = schema.get(key)
+        if isinstance(candidate, dict) and isinstance(
+            candidate.get("properties"), dict
+        ):
+            return candidate["properties"]
+    return {}
 
 
 def validate_spawn_schema(path: Path) -> tuple[list[str], list[str]]:
@@ -247,19 +264,27 @@ def validate_spawn_schema(path: Path) -> tuple[list[str], list[str]]:
 
     usable: list[set[str]] = []
     for schema in schemas:
-        properties = schema.get("parameters", {}).get("properties", {})
-        if isinstance(properties, dict) and isinstance(properties.get("message"), dict):
+        properties = spawn_agent_properties(schema)
+        if isinstance(properties.get("message"), dict):
             usable.append(set(properties))
     if not usable:
         return ["spawn_agent schema does not expose the required message field"], []
 
     fields = sorted(set().union(*usable))
     print(f"OK: ordinary spawn_agent is callable with fields: {', '.join(fields)}")
-    if not any("fork_turns" in fields_for_schema for fields_for_schema in usable):
+
+    routing_modes: list[str] = []
+    for fields_for_schema in usable:
+        if {"task_name", "fork_turns"}.issubset(fields_for_schema):
+            routing_modes.append("legacy fork_turns")
+        if {"agent_type", "fork_context"}.issubset(fields_for_schema):
+            routing_modes.append("current agent_type/fork_context")
+    if not routing_modes:
         return [
-            "spawn_agent does not expose fork_turns; the Luna default role cannot be "
-            "selected deterministically"
+            "spawn_agent must expose either legacy message/task_name/fork_turns "
+            "or current message/agent_type/fork_context routing controls"
         ], []
+    print("OK: supported non-history routing: " + ", ".join(sorted(set(routing_modes))))
     return [], []
 
 
@@ -390,8 +415,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print("READY: static Luna ordinary-agent routing passed preflight.")
-    print('REQUIRED: every new spawn must pass fork_turns="none".')
-    print("NOTE: task_name and nicknames are logistical labels, not model evidence.")
+    print(
+        'REQUIRED: use legacy fork_turns="none" or current '
+        'agent_type="default", fork_context=false before accepting a child.'
+    )
+    print("NOTE: task names and nicknames are logistical labels, not model evidence.")
     if runtime_path is None:
         print("NEXT: verify a completed probe with --runtime-thread <child-thread-uuid>.")
     else:

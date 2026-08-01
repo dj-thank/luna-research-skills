@@ -1,6 +1,6 @@
 {
   "name": "luna-research-skills",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Safely configure and verify GPT-5.6 Luna subagents for broad Codex projects and source-backed research.",
   "author": {
     "name": "dj-thank",

@@ -20,7 +20,7 @@ class RepositoryContractTests(unittest.TestCase):
             (ROOT / ".agents" / "plugins" / "marketplace.json").read_text()
         )
         self.assertEqual(plugin["name"], "luna-research-skills")
-        self.assertEqual(plugin["version"], "0.2.0")
+        self.assertEqual(plugin["version"], "0.2.1")
         self.assertEqual(plugin["license"], "MIT")
         self.assertEqual(plugin["repository"], "https://github.com/dj-thank/luna-research-skills")
         self.assertEqual(plugin["skills"], "./skills/")
@@ -81,6 +81,7 @@ class RepositoryContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('fork_turns="none"', research)
+        self.assertIn("fork_context=false", research)
         self.assertIn("--runtime-thread", research)
         self.assertIn("Discard the packet", research)
 
@@ -88,6 +89,7 @@ class RepositoryContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn('fork_turns="none"', project)
+        self.assertIn("fork_context=false", project)
         self.assertIn("--runtime-thread", project)
         self.assertIn("discard the result", project)
         self.assertIn("no two concurrent builders own the same file", project)
@@ -98,6 +100,14 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertTrue((ROOT / "LICENSE").is_file())
         self.assertTrue((ROOT / "SECURITY.md").is_file())
         self.assertTrue((ROOT / ".github" / "workflows" / "ci.yml").is_file())
+        prompt = ROOT / "docs" / "prompt-reproduction.md"
+        self.assertTrue(prompt.is_file())
+        prompt_text = prompt.read_text(encoding="utf-8")
+        self.assertIn('agent_type="default"', prompt_text)
+        self.assertIn("fork_context=false", prompt_text)
+        self.assertIn('fork_turns="none"', prompt_text)
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("docs/prompt-reproduction.md", readme)
 
     def test_readme_quick_start_is_mobile_safe_and_checkable(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
