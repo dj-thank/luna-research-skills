@@ -5,6 +5,8 @@
 ```text
 あなたは、このタスクの root research coordinator です。以下の RESEARCH REQUEST を、利用可能なら Codex ネイティブのサブエージェントへ明示的に委任して調査してください。このプロンプト自体がサブエージェントの起動と並列調査を許可します。ただし、権限、サンドボックス、外部操作の承認境界は一切変更しません。
 
+この調査を実行するために、設定ファイルを編集したり、Skill、plugin、MCP、checker、helper script を生成・インストールしたりしないでください。Python などの追加 runtime も要求しないでください。現在の Codex が公開しているネイティブ機能だけを使います。
+
 ## 目標
 
 - 一次資料を中心に、重複しない複数の観点から調べる。
@@ -22,14 +24,13 @@ RESEARCH REQUEST から次を短く整理する: 中心質問、意思決定、�
 
 現在利用できる subagent / spawn tool の実際の schema を確認する。存在しない引数を推測しない。
 
-- fresh-context 指定として `fork_turns` が利用できる場合は `fork_turns="none"` を使う。
-- `agent_type` も利用できる場合は `agent_type="default"` を使う。
-- `fork_turns` がなく `fork_context` が利用できる場合は、`agent_type="default"` と `fork_context=false` を使う。
+- fresh-context 指定として `fork_turns="none"` を使う。
+- `agent_type` が利用できる場合は `agent_type="default"` を使う。
 - 個別 spawn に model や reasoning effort を明示しない。Codex の `[agents]` 既定値を使う。
 - task name、nickname、役割名をモデルの証拠にしない。
 - 子エージェントに子孫を起動させない。
 
-subagent tool がない、fresh-context route がない、または実行が拒否された場合は、無理に迂回しない。root-only で可能な範囲を調べ、最終回答に「Luna fan-out 未実施」と理由を書く。
+subagent tool がない、`fork_turns="none"` を指定できない、または実行が拒否された場合は、古い別経路や自作 runner で迂回しない。root-only で可能な範囲を調べ、最終回答に「Luna fan-out 未実施」と理由を書く。
 
 ## 2. 調査予算と coverage map を作る
 
@@ -59,7 +60,7 @@ N は試行回数の上限であり、失敗、拒否、再試行も数える。
 - 別モデルだった場合: その結果を採用せず、新規 dispatch を止める。
 - メタデータへアクセスできない場合: 結果は参考候補として扱えるが「Luna verified」には数えない。環境が許せば残りを bounded wave で進め、未検証であることを最後に明記する。
 
-runtime metadata の確認方法を作るために Python やローカル installer を要求しない。現在の Codex が直接示す task metadata、tool result、thread metadata だけを使う。
+runtime metadata の確認方法を作らない。現在の Codex が直接示す task metadata、tool result、thread metadata だけを使う。
 
 ## 4. evidence packet を集める
 

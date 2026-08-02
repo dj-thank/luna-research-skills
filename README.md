@@ -28,6 +28,9 @@ default_subagent_reasoning_effort = "medium"
 
 `[agents]` がすでにある場合、同じ見出しをもう1つ作らず、その中の値を更新します。`40` は同時に40件起動する指定ではなく、1セッションで開いておける子タスクの上限です。実際のプロンプトは小さな wave で起動します。
 
+> [!WARNING]
+> この既定値は研究専用ではありません。モデルを個別指定していない通常のサブエージェントは、ほかのタスクでも Luna になります。Luna を利用できないアカウントや実行環境では、この設定だけで利用可能になるわけではありません。
+
 ### 2. Codex を再起動する
 
 設定を読み直すため、Codex を再起動するか新しいタスクを開始します。
@@ -37,6 +40,8 @@ default_subagent_reasoning_effort = "medium"
 [`PROMPT.md`](PROMPT.md) のコードブロック全体をコピーし、末尾の `RESEARCH REQUEST` を自分の質問に書き換えて Codex に貼り付けます。
 
 これだけです。プロンプトは Codex のネイティブな subagent runner を使い、利用可能な実行面では独立した Luna scout を並列に動かします。
+
+プロンプトは設定ファイルを編集せず、Skill、plugin、checker、helper script も生成・インストールしません。
 
 ## `config.toml` とプロンプトの役割
 
