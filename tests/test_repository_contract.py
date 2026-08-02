@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import re
 import struct
-import tomllib
 import unittest
 from pathlib import Path
 
@@ -20,7 +19,7 @@ class RepositoryContractTests(unittest.TestCase):
             (ROOT / ".agents" / "plugins" / "marketplace.json").read_text()
         )
         self.assertEqual(plugin["name"], "luna-research-skills")
-        self.assertEqual(plugin["version"], "0.2.1")
+        self.assertEqual(plugin["version"], "0.3.0")
         self.assertEqual(plugin["license"], "MIT")
         self.assertEqual(plugin["repository"], "https://github.com/dj-thank/luna-research-skills")
         self.assertEqual(plugin["skills"], "./skills/")
@@ -64,18 +63,17 @@ class RepositoryContractTests(unittest.TestCase):
                 for token in forbidden:
                     self.assertNotIn(token, text, f"{token!r} found in {path}")
 
-    def test_luna_asset_and_runtime_guardrails(self) -> None:
-        asset = (
-            SKILLS
-            / "configure-luna-subagents"
-            / "assets"
-            / "default-agent.toml"
+    def test_luna_defaults_and_runtime_guardrails(self) -> None:
+        configure = (
+            SKILLS / "configure-luna-subagents" / "scripts" / "configure_luna.py"
+        ).read_text(encoding="utf-8")
+        self.assertIn('("agents", "default_subagent_model", EXPECTED_MODEL)', configure)
+        self.assertIn(
+            '("agents", "default_subagent_reasoning_effort", EXPECTED_EFFORT)',
+            configure,
         )
-        with asset.open("rb") as handle:
-            role = tomllib.load(handle)
-        self.assertEqual(role["name"], "default")
-        self.assertEqual(role["model"], "gpt-5.6-luna")
-        self.assertEqual(role["model_reasoning_effort"], "medium")
+        self.assertIn("max_concurrent_threads_per_session", configure)
+        self.assertNotIn("expected_role_bytes", configure)
 
         research = (SKILLS / "run-diverse-luna-research" / "SKILL.md").read_text(
             encoding="utf-8"
@@ -115,7 +113,7 @@ class RepositoryContractTests(unittest.TestCase):
 
         self.assertIn("## 3分 Quick Start", readme)
         self.assertIn("INSTALLED: model=gpt-5.6-luna", readme)
-        self.assertIn("STATE: managed installation is intact", readme)
+        self.assertIn("STATE: managed v2 installation is intact", readme)
         self.assertIn("同時に40件を起動する指定ではありません", readme)
         self.assertNotIn("```mermaid", readme)
         self.assertIn("docs/assets/one-prompt-research-flow.png", readme)

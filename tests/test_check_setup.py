@@ -101,7 +101,7 @@ class CheckSetupTests(unittest.TestCase):
                 CHECK, "--codex-home", str(home), "--workspace", str(workspace)
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-            self.assertIn("static Luna ordinary-agent routing", result.stdout)
+            self.assertIn("Codex-native Luna subagent defaults", result.stdout)
             self.assertIn("--runtime-thread", result.stdout)
 
     def test_wrong_model_fails(self) -> None:
@@ -111,27 +111,27 @@ class CheckSetupTests(unittest.TestCase):
             workspace = root / "workspace"
             workspace.mkdir()
             install_valid_home(home)
-            role_path = home / "agents" / "default.toml"
-            role = role_path.read_text(encoding="utf-8").replace(
-                'model = "gpt-5.6-luna"', 'model = "gpt-5.6-sol"'
+            config_path = home / "config.toml"
+            config = config_path.read_text(encoding="utf-8").replace(
+                'default_subagent_model = "gpt-5.6-luna"',
+                'default_subagent_model = "gpt-5.6-sol"',
             )
-            role_path.write_text(role, encoding="utf-8")
+            config_path.write_text(config, encoding="utf-8")
             result = run_script(
                 CHECK, "--codex-home", str(home), "--workspace", str(workspace)
             )
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            self.assertIn("model must be 'gpt-5.6-luna'", result.stdout)
+            self.assertIn("default_subagent_model must be gpt-5.6-luna", result.stdout)
 
     def test_workspace_default_override_is_checked(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             home = root / "home"
             workspace = root / "workspace"
-            override = workspace / ".codex" / "agents" / "default.toml"
+            override = workspace / ".codex" / "config.toml"
             override.parent.mkdir(parents=True)
             override.write_text(
-                'name = "default"\nmodel = "other"\nmodel_reasoning_effort = "medium"\n'
-                'developer_instructions = "bounded"\n',
+                '[agents]\ndefault_subagent_model = "other"\n',
                 encoding="utf-8",
             )
             install_valid_home(home)
@@ -139,7 +139,7 @@ class CheckSetupTests(unittest.TestCase):
                 CHECK, "--codex-home", str(home), "--workspace", str(workspace)
             )
             self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
-            self.assertIn("model must be 'gpt-5.6-luna'", result.stdout)
+            self.assertIn("overrides the Luna default", result.stdout)
 
     def test_spawn_schema_requires_supported_non_history_routing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -170,7 +170,7 @@ class CheckSetupTests(unittest.TestCase):
                 str(schema_path),
             )
             self.assertEqual(failed.returncode, 1, failed.stdout + failed.stderr)
-            self.assertIn("must expose either legacy", failed.stdout)
+            self.assertIn("must expose either message/fork_turns", failed.stdout)
 
             schema_path.write_text(
                 json.dumps(

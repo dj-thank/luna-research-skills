@@ -14,35 +14,28 @@ Primary references:
 - [Build skills](https://learn.chatgpt.com/docs/build-skills)
 - [Build plugins](https://learn.chatgpt.com/docs/build-plugins)
 - [Submit plugins](https://learn.chatgpt.com/docs/submit-plugins)
+- [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents)
+- [Configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference)
 
 This repository is published through GitHub only. It has not been submitted to OpenAI's public Plugins Directory.
 
 ## Why the setup is separate from the orchestration skills
 
-The current plugin and Skill metadata describe invocation and UI behavior; they do not provide a per-`spawn_agent` model field. Model selection therefore lives in the user's custom default-agent file. Separating setup from project and research orchestration makes the write explicit, reversible, and independently auditable.
+Current Codex exposes subagent model, effort, enablement, and concurrency defaults under `[agents]`. Separating setup from project and research orchestration makes the user-level write explicit, reversible, and independently auditable.
 
 The setup installs:
 
 ```toml
-[features]
-multi_agent = true
-
 [agents]
-max_threads = 40
-max_depth = 2
+enabled = true
+max_concurrent_threads_per_session = 40
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "medium"
 ```
 
-and a user-level `agents/default.toml` with:
+The orchestration skills use ordinary `spawn_agent` with an explicit fresh-context route. Prefer `fork_turns="none"`, adding `agent_type="default"` when exposed. On surfaces without `fork_turns`, use `agent_type="default"` plus `fork_context=false`. Explicit spawn values and model-pinned custom roles override the defaults. Each accepted research packet, project workstream result, and independent verifier report must pass the runtime gate.
 
-```toml
-name = "default"
-model = "gpt-5.6-luna"
-model_reasoning_effort = "medium"
-```
-
-The orchestration skills use ordinary `spawn_agent` with an explicit non-history route. On the legacy surface this is `fork_turns="none"`; on the current surface it is `agent_type="default"` plus `fork_context=false`. A full-history fork carries the parent context and may bypass the intended default-role selection. Each accepted research packet, project workstream result, and independent verifier report must pass the runtime gate.
-
-`max_threads = 40` is a user-level capacity ceiling, not a request to launch 40 agents. The project skill normally budgets 2-4 assignment attempts for a focused project, 4-8 for a broad project, and 8-12 only when workstreams remain genuinely independent. Dispatch occurs in bounded waves, and a verifier slot is reserved whenever the budget is at least four.
+`max_concurrent_threads_per_session = 40` is a session ceiling, not a request to launch 40 agents. The project skill normally budgets 2-4 assignment attempts for a focused project, 4-8 for a broad project, and 8-12 only when workstreams remain genuinely independent. Dispatch occurs in bounded waves, and a verifier slot is reserved whenever the budget is at least four.
 
 ## Evidence captured before publication
 
@@ -60,7 +53,7 @@ Observed routing probe:
 2. The parent spawned an ordinary child with `fork_turns="none"` and no custom agent-name selector.
 3. The child rollout reported `thread_source = "subagent"`, `model = "gpt-5.6-luna"`, and `effort = "medium"`.
 
-Repository verification includes unit tests for planning, conflict gates, backup/restore, drift detection, malformed TOML, workspace role shadowing, spawn-schema validation, child thread lookup, positive Luna metadata, and negative model metadata.
+Repository verification includes unit tests for planning, conflict gates, byte-exact backup/restore, managed-v1 migration, drift detection, malformed TOML, workspace setting shadowing, spawn-schema validation, child thread lookup, positive Luna metadata, and negative model metadata.
 
 ### Project-orchestration validation for 0.2.0
 
@@ -88,35 +81,35 @@ READY: static Luna subagent configuration is present.
 
 The Codex Plugins screen itself was not automated or captured. The public instructions therefore use the verified navigation labels and accessible text output rather than a simulated screenshot.
 
-### Current spawn surface compatibility (2026-08-01)
+### Codex-native defaults and current spawn surface (2026-08-02)
 
 The active Codex tool surface inspected for this validation exposes the following `spawn_agent` controls:
 
 ```text
-message, agent_type, fork_context, items, model, reasoning_effort, service_tier
+message, task_name, fork_turns, agent_type, model, reasoning_effort
 ```
 
-It does not expose the older `task_name` or `fork_turns` fields. The inspected user default role is `name=default`, `model=gpt-5.6-luna`, `model_reasoning_effort=medium`, and `service_tier=default`. Therefore the current non-history request is:
+The current surface exposes an explicit no-history fork and agent-type selection. The preferred request is:
 
 ```text
+fork_turns="none"
 agent_type="default"
-fork_context=false
 ```
 
-The static checker accepts both this current contract and the legacy `task_name` + `fork_turns="none"` contract so that previously captured schemas remain testable. In either case, the route is not accepted as runtime proof until the resulting child rollout reports `thread_source="subagent"`, `model="gpt-5.6-luna"`, and `effort="medium"`.
+The current Codex manual documents `agents.enabled`, `agents.max_concurrent_threads_per_session`, `agents.default_subagent_model`, and `agents.default_subagent_reasoning_effort`; explicit spawn values take precedence. The checker also accepts the transitional `agent_type="default"` + `fork_context=false` surface. Neither static path is runtime proof until the child rollout reports `thread_source="subagent"`, `model="gpt-5.6-luna"`, and `effort="medium"`.
 
-This repository-validation run inspected the live schema but did not start a child: the execution policy for this task requires an explicitly exposed `fork_turns` control before starting a model-fixed subagent. No runtime child proof is claimed for this run. The current route is documented and covered by static schema tests; run a fresh probe in the target Codex surface before a public demo.
+This repository-validation run inspected the live schema and official manual but did not start a child because the task did not authorize delegated agent work. No new runtime child proof is claimed for this run. Historical runtime probes remain recorded above; run a fresh probe in the target Codex surface before a public demo.
 
 ## Known boundaries
 
 | Path | Covered | Evidence rule |
 | --- | --- | --- |
-| Ordinary `spawn_agent`, legacy `fork_turns="none"` | Yes | Verify each accepted child rollout |
-| Ordinary `spawn_agent`, current `agent_type="default"`, `fork_context=false` | Yes, after a child probe | Verify each accepted child rollout |
+| Ordinary `spawn_agent`, `fork_turns="none"`, optional `agent_type="default"` | Yes | Verify each accepted child rollout |
+| Transitional `agent_type="default"`, `fork_context=false` | Yes, after a child probe | Verify each accepted child rollout |
 | Full-history fork | No | Parent model may be inherited |
-| `spawn_agents_on_csv` or bulk fan-out | No | Default-role routing is not asserted |
+| Unverified bulk fan-out | No | Per-child runtime metadata is required |
 | Internal/system-created agents | No | Routing is outside this Skill's control |
-| A different named custom role | No | Its own role file controls the model |
+| A model-pinned custom role | Only if verified | Its role file overrides `[agents]` defaults |
 | Static config without a child probe | Partly | Report static readiness, not runtime proof |
 
 Model availability can differ by account, plan, rollout, and Codex release. A missing or rejected `gpt-5.6-luna` route is a hard stop for Luna fan-out. Re-run the probe after Codex upgrades or configuration changes.

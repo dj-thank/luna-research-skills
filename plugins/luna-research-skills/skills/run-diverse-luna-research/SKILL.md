@@ -5,7 +5,7 @@ description: Run source-backed research through diverse Codex evidence scouts, r
 
 # Run Diverse Luna Research
 
-Coordinate at the root and keep this branch research-only. For broader delivery, let `run-diverse-luna-project` own the project contract and allocate this skill a bounded evidence sub-budget. Treat ordinary `spawn_agent` calls with a supported non-history route as the only eligible fan-out path: legacy `fork_turns="none"`, or current `agent_type="default"` with `fork_context=false`. The custom default role selects Luna; task names and nicknames are logistics. Accept a scout packet only after its rollout reports `gpt-5.6-luna`.
+Coordinate at the root and keep this branch research-only. For broader delivery, let `run-diverse-luna-project` own the project contract and allocate this skill a bounded evidence sub-budget. Fan out only through ordinary `spawn_agent` using a fresh-context route. Codex-native `[agents]` defaults select Luna; explicit spawn values or custom roles can override them. Task names and nicknames are logistics. Accept a scout packet only after its rollout reports `gpt-5.6-luna` and medium effort.
 
 ## 1. Frame the research contract
 
@@ -27,7 +27,7 @@ Resolve this skill directory and run:
 python <skill-dir>/scripts/check_setup.py
 ```
 
-Inspect the active `spawn_agent` schema as runtime truth. Require `message` and one supported non-history routing contract; supply only fields present in that schema. For the legacy schema, use `task_name` and `fork_turns="none"`. For the current schema, use `agent_type="default"` and `fork_context=false`; the current schema does not need `task_name`. Use a complete self-contained `message`; use task names only as operational labels.
+Inspect the active `spawn_agent` schema as runtime truth and supply only exposed fields. Require `message` plus one fresh-context contract. Prefer `fork_turns="none"`; when `agent_type` is also exposed, set it to `default`. On surfaces without `fork_turns`, require `agent_type="default"` and `fork_context=false`. Include `task_name` only when exposed. Put the complete assignment in `message` and do not pass an explicit model or reasoning effort that conflicts with the configured defaults.
 
 If the checker fails, the tool is absent, or neither supported non-history route is available, stop before fan-out and direct the user to `$configure-luna-subagents`. Preserve root-only research as a separately authorized fallback rather than labeling it Luna fan-out.
 

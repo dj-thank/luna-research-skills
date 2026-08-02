@@ -31,7 +31,7 @@ Resolve this skill directory and run:
 python <skill-dir>/scripts/check_setup.py
 ```
 
-Inspect the active `spawn_agent` schema as runtime truth. Require `message` and one supported non-history routing contract; pass only fields the schema exposes. The legacy contract is `message` + `task_name` + `fork_turns`, using `fork_turns="none"`. The current Codex contract is `message` + `agent_type` + `fork_context`, using `agent_type="default"` and `fork_context=false`. Put the complete task-local context in `message`; treat task names and nicknames as logistics, never as model evidence.
+Inspect the active `spawn_agent` schema as runtime truth and pass only exposed fields. Require `message` plus one fresh-context contract. Prefer `fork_turns="none"`; when `agent_type` is also exposed, set it to `default`. On surfaces without `fork_turns`, require `agent_type="default"` and `fork_context=false`. Include `task_name` only when exposed. Put the complete task-local context in `message`, do not pass a conflicting model or reasoning effort, and treat task names and nicknames as logistics rather than model evidence.
 
 Reserve one unit from `N` and run the highest-priority read-only reconnaissance cell as the runtime probe. Wait for completion, then verify its rollout with one supported locator:
 
