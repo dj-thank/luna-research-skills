@@ -32,7 +32,9 @@ RESEARCH REQUEST から次を短く整理する: 中心質問、意思決定、�
 - root は depth=0、直接起動した child は depth=1、child が起動した grandchild は depth=2 とする。
 - child は割り当てられた descendant allowance の範囲でのみ grandchild を起動できる。grandchild は子孫を起動しない。
 
-subagent tool がない、`fork_turns="none"` を指定できない、`Unknown model`を含むmodel error、または実行が拒否された場合は、古い別経路、自作runner、別モデルの明示指定で迂回しない。root-onlyで可能な範囲を調べ、最終回答に「Luna fan-out未実施」と理由を書く。
+subagent tool がない、`fork_turns="none"` を指定できない、または実行が拒否された場合は、古い別経路、自作runner、別モデルの明示指定で迂回しない。root-onlyで可能な範囲を調べ、最終回答に「Luna fan-out未実施」と理由を書く。
+
+`Unknown model gpt-5.6-luna` の場合は、長期間継続したtaskに古いmodel allowlistが残っている可能性がある。設定を変更せず、このtaskでは新規dispatchを止め、「新しいCodex taskを開始して同じプロンプトを貼り直す」という最小復旧手順を返す。fresh taskでも同じ場合のみ、host-wide model routing BLOCKEDと報告する。
 
 ## 2. 調査予算と coverage map を作る
 

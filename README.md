@@ -77,16 +77,19 @@ flowchart TD
 
 ## Runtime verification status
 
-2026-08-03 の Codex desktop probe では、ネイティブrunnerの階層機構は root → child → grandchild まで到達しました。観測できたtask identityは次の通りです。
+2026-08-03 のfresh Codex task probeでは、root → child → grandchildがすべて `gpt-5.6-luna`、reasoning effort `medium` で完了しました。live spawn surfaceにLunaが表示され、spawn errorはありませんでした。
 
 ```text
-/root/hierarchy_mechanics_probe
-/root/hierarchy_mechanics_probe/grandchild_hierarchy_probe
+root        019fc498-e57e-7d00-9122-676bc21e63ff  gpt-5.6-luna / medium
+child       019fc499-9306-74d1-bcf1-f5bd7db5f2ab  gpt-5.6-luna / medium
+grandchild  019fc499-d452-7b70-b707-6c14e2faced4  gpt-5.6-luna / medium
 ```
 
-このmechanics probeは、利用可能だった別モデルを明示した非Lunaテストです。公式Subagents資料は `gpt-5.6-luna` を狭く反復的なagent向けモデルとして掲載し、global default設定も公開しています。しかし `gpt-5.6-luna` の既定ルートとLuna専用roleは、今回の実行面ではどちらも `Unknown model` と拒否されました。フルアクセスでの再試行も同じ結果だったため、権限やsandboxではなくmodel routingのBLOCKEDとして扱います。したがって、現時点で証明できたのは「ネイティブなdepth=2委任」であり、「Lunaによるdepth=2実行」ではありません。
+長期間継続していた旧task `019fc1df-876a-7180-b42b-30950bd5af94` では、spawn前allowlistがLunaを欠き、`Unknown model gpt-5.6-luna` を返しました。フルアクセスでも変わらない一方、同じhost上のfresh taskはLunaを受理して階層実行できたため、原因は権限、sandbox、アカウント全体のLuna欠落ではなく、旧taskに保持されたstale model allowlistです。
 
-プロンプトはLuna起動が拒否された場合、別モデルへ黙って切り替えません。root-onlyへ戻し、`Luna fan-out未実施` と理由を報告します。モデル提供状況が変わったら、同じprobeを再実行してこの境界を更新します。
+なお、旧taskから許可済みモデルを明示してspawn前validatorを通したprobeも、実rollout metadataではchildとgrandchildの両方がLunaでした。これはvalidatorと後段のdefault-role解決順序の不整合を示しますが、文書化された回避策ではないため利用手順にはしません。
+
+`Unknown model` が出た場合は設定を書き換えたり別モデルへ偽装したりせず、新しいCodex taskを開始して同じプロンプトを貼り直してください。fresh taskでも失敗する場合だけCodexを再起動し、それでも失敗するならhost-wide BLOCKEDとして報告します。
 
 ## 保証の境界
 
@@ -94,7 +97,7 @@ flowchart TD
 - task name や nickname は、実際のモデルを証明しません。
 - 実行メタデータを確認できない環境では、プロンプトは「Luna 未検証」と明記します。
 - `max_depth` は現在の公開設定リファレンスにない互換設定です。受理されたことと、実際にgrandchildが動いたことを別々に扱います。
-- 別モデルで成功した階層probeをLunaの証拠にしません。Luna routeの `Unknown model` はBLOCKEDとして扱います。
+- 長期taskの `Unknown model` をhost-wide障害と即断しません。fresh taskでallowlistとruntime metadataを再確認します。
 - Web、MCP、外部サービス、ファイル変更、公開、購入などの権限は、この設定やプロンプトによって拡張されません。
 - ChatGPT の通常チャットなど、Codex の `config.toml` と subagent runner を持たない環境では同じルーティング保証はありません。
 
