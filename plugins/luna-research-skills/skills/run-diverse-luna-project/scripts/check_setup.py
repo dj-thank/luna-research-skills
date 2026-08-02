@@ -11,11 +11,9 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-EXPECTED_AGENT_NAME = "default"
 EXPECTED_MODEL = "gpt-5.6-luna"
 EXPECTED_REASONING_EFFORT = "medium"
 EXPECTED_MAX_THREADS = 40
-EXPECTED_MAX_DEPTH = 2
 
 try:
     import tomllib
@@ -32,7 +30,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--codex-home",
         type=Path,
         default=Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")),
-        help="Codex home containing config.toml and agents/default.toml.",
+        help="Codex home containing config.toml.",
     )
     parser.add_argument(
         "--config",
@@ -88,63 +86,24 @@ def validate_static(config: dict[str, Any]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
 
-    features = config.get("features")
-    if not isinstance(features, dict):
-        errors.append("[features] must be a TOML table")
-    elif features.get("multi_agent") is not True:
-        errors.append("features.multi_agent must be true")
-    else:
-        print("OK: stable multi_agent is enabled")
-
     agents = config.get("agents")
     if not isinstance(agents, dict):
         errors.append("[agents] must be a TOML table")
         agents = {}
 
     expected = {
-        "max_threads": EXPECTED_MAX_THREADS,
-        "max_depth": EXPECTED_MAX_DEPTH,
+        "enabled": True,
+        "max_concurrent_threads_per_session": EXPECTED_MAX_THREADS,
+        "default_subagent_model": EXPECTED_MODEL,
+        "default_subagent_reasoning_effort": EXPECTED_REASONING_EFFORT,
     }
     for key, value in expected.items():
         current = agents.get(key)
-        if isinstance(current, bool) or current != value:
+        if current != value or (type(value) is int and isinstance(current, bool)):
             errors.append(f"agents.{key} must be {value}, got {current!r}")
         else:
             print(f"OK: configured agents.{key} = {value}")
     return errors, warnings
-
-
-def validate_role_file(path: Path, label: str) -> tuple[list[str], list[str]]:
-    if not path.is_file():
-        return [f"{label} is missing: {path}"], []
-    try:
-        role = load_toml(path)
-    except ValueError as exc:
-        return [str(exc)], []
-
-    errors: list[str] = []
-    expected = {
-        "name": EXPECTED_AGENT_NAME,
-        "model": EXPECTED_MODEL,
-        "model_reasoning_effort": EXPECTED_REASONING_EFFORT,
-    }
-    for key, value in expected.items():
-        if role.get(key) != value:
-            errors.append(f"{path}: {key} must be {value!r}, got {role.get(key)!r}")
-    if not isinstance(role.get("developer_instructions"), str):
-        errors.append(f"{path}: developer_instructions must be a string")
-    if not errors:
-        print(
-            "OK: custom default agent pins "
-            f"model={EXPECTED_MODEL}, reasoning_effort={EXPECTED_REASONING_EFFORT}"
-        )
-    return errors, []
-
-
-def validate_default_agent(codex_home: Path) -> tuple[list[str], list[str]]:
-    return validate_role_file(
-        codex_home / "agents" / "default.toml", "Luna default-agent file"
-    )
 
 
 def validate_workspace_overrides(
@@ -156,6 +115,34 @@ def validate_workspace_overrides(
     codex_home = codex_home.expanduser().resolve()
     checked: set[Path] = set()
 
+    agent_dirs = [codex_home / "agents"]
+    agent_dirs.extend(directory / ".codex" / "agents" for directory in (workspace, *workspace.parents))
+    for agents_dir in agent_dirs:
+        if not agents_dir.is_dir():
+            continue
+        try:
+            role_paths = sorted(agents_dir.rglob("*.toml"))
+        except OSError as exc:
+            warnings.append(f"cannot scan {agents_dir}: {exc}")
+            continue
+        for role_path in role_paths:
+            try:
+                role = load_toml(role_path)
+            except ValueError as exc:
+                warnings.append(str(exc))
+                continue
+            if role.get("name") != "default":
+                continue
+            checked.add(role_path.resolve())
+            model = role.get("model")
+            effort = role.get("model_reasoning_effort")
+            if model is not None and model != EXPECTED_MODEL:
+                errors.append(f"{role_path}: custom default model overrides Luna with {model!r}")
+            if effort is not None and effort != EXPECTED_REASONING_EFFORT:
+                errors.append(
+                    f"{role_path}: custom default reasoning effort overrides medium with {effort!r}"
+                )
+
     for directory in (workspace, *workspace.parents):
         config_dir = directory / ".codex"
         try:
@@ -163,27 +150,6 @@ def validate_workspace_overrides(
                 continue
         except OSError:
             pass
-
-        agents_dir = config_dir / "agents"
-        if agents_dir.is_dir():
-            try:
-                role_paths = sorted(agents_dir.rglob("*.toml"))
-            except OSError as exc:
-                warnings.append(f"cannot scan {agents_dir}: {exc}")
-                role_paths = []
-            for path in role_paths:
-                try:
-                    role = load_toml(path)
-                except ValueError as exc:
-                    warnings.append(str(exc))
-                    continue
-                if role.get("name") == EXPECTED_AGENT_NAME:
-                    checked.add(path.resolve())
-                    role_errors, role_warnings = validate_role_file(
-                        path, "workspace default-agent override"
-                    )
-                    errors.extend(role_errors)
-                    warnings.extend(role_warnings)
 
         config_path = config_dir / "config.toml"
         if not config_path.is_file():
@@ -193,26 +159,27 @@ def validate_workspace_overrides(
         except ValueError as exc:
             warnings.append(str(exc))
             continue
+        checked.add(config_path.resolve())
         agents = layer.get("agents")
-        default = agents.get("default") if isinstance(agents, dict) else None
-        config_file = default.get("config_file") if isinstance(default, dict) else None
-        if isinstance(config_file, str):
-            role_path = Path(config_file)
-            if not role_path.is_absolute():
-                role_path = config_dir / role_path
-            role_path = role_path.resolve()
-            if role_path not in checked:
-                checked.add(role_path)
-                role_errors, role_warnings = validate_role_file(
-                    role_path, "workspace agents.default.config_file"
+        if not isinstance(agents, dict):
+            continue
+        expected = {
+            "enabled": True,
+            "max_concurrent_threads_per_session": EXPECTED_MAX_THREADS,
+            "default_subagent_model": EXPECTED_MODEL,
+            "default_subagent_reasoning_effort": EXPECTED_REASONING_EFFORT,
+        }
+        for key, value in expected.items():
+            if key in agents and agents[key] != value:
+                errors.append(
+                    f"{config_path}: agents.{key} overrides the Luna default with "
+                    f"{agents[key]!r}"
                 )
-                errors.extend(role_errors)
-                warnings.extend(role_warnings)
 
     if checked and not errors:
-        print(f"OK: {len(checked)} workspace default-role override(s) also pin Luna")
+        print(f"OK: {len(checked)} workspace config layer(s) do not shadow Luna defaults")
     elif not checked:
-        print("OK: no workspace default-role override shadows the user Luna role")
+        print("OK: no workspace config layer shadows the user Luna defaults")
     return errors, warnings
 
 
@@ -275,14 +242,14 @@ def validate_spawn_schema(path: Path) -> tuple[list[str], list[str]]:
 
     routing_modes: list[str] = []
     for fields_for_schema in usable:
-        if {"task_name", "fork_turns"}.issubset(fields_for_schema):
-            routing_modes.append("legacy fork_turns")
+        if "fork_turns" in fields_for_schema:
+            routing_modes.append("fork_turns")
         if {"agent_type", "fork_context"}.issubset(fields_for_schema):
             routing_modes.append("current agent_type/fork_context")
     if not routing_modes:
         return [
-            "spawn_agent must expose either legacy message/task_name/fork_turns "
-            "or current message/agent_type/fork_context routing controls"
+            "spawn_agent must expose either message/fork_turns or "
+            "message/agent_type/fork_context routing controls"
         ], []
     print("OK: supported non-history routing: " + ", ".join(sorted(set(routing_modes))))
     return [], []
@@ -379,9 +346,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     errors, warnings = validate_static(config)
-    role_errors, role_warnings = validate_default_agent(codex_home)
-    errors.extend(role_errors)
-    warnings.extend(role_warnings)
     override_errors, override_warnings = validate_workspace_overrides(
         args.workspace, codex_home
     )
@@ -414,9 +378,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: {error}")
         return 1
 
-    print("READY: static Luna ordinary-agent routing passed preflight.")
+    print("READY: Codex-native Luna subagent defaults passed preflight.")
     print(
-        'REQUIRED: use legacy fork_turns="none" or current '
+        'REQUIRED: use fork_turns="none" when available; otherwise use '
         'agent_type="default", fork_context=false before accepting a child.'
     )
     print("NOTE: task names and nicknames are logistical labels, not model evidence.")

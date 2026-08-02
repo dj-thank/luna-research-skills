@@ -1,7 +1,7 @@
 {
   "name": "luna-research-skills",
-  "version": "0.2.1",
-  "description": "Safely configure and verify GPT-5.6 Luna subagents for broad Codex projects and source-backed research.",
+  "version": "0.3.0",
+  "description": "Configure Codex-native GPT-5.6 Luna subagent defaults and verify parallel project and research work at runtime.",
   "author": {
     "name": "dj-thank",
     "url": "https://github.com/dj-thank"
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Luna Research Skills",
     "shortDescription": "Verified Luna routing for projects and research.",
-    "longDescription": "Install a reversible Luna default-subagent configuration, prove the effective model from child runtime metadata, and coordinate broad projects or diverse source-backed research with strict ownership, evidence, and budget gates.",
+    "longDescription": "Install reversible Codex-native Luna subagent defaults, migrate legacy default-agent setups, prove the effective model from child runtime metadata, and coordinate broad projects or diverse source-backed research with strict ownership, evidence, and budget gates.",
     "developerName": "dj-thank",
     "category": "Developer Tools",
     "capabilities": [

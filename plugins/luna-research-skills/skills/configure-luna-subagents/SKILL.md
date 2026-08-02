@@ -1,11 +1,11 @@
 ---
 name: configure-luna-subagents
-description: Configure, audit, or restore Codex ordinary subagent routing so fresh non-full-history subagents use GPT-5.6 Luna with multi-agent depth 2 and a 40-thread ceiling. Use for first-time Luna setup, routing repair, compatibility checks after a Codex update, or removal of this managed configuration.
+description: Configure, audit, migrate, or restore Codex-native subagent defaults so spawned agents use GPT-5.6 Luna at medium reasoning with a 40-thread session ceiling. Use for first-time Luna setup, migration from the legacy default-agent file, routing repair, compatibility checks after a Codex update, or removal of this managed configuration.
 ---
 
 # Configure Luna Subagents
 
-Use the bundled installer as the single source of truth. It plans first, preserves unrelated TOML, backs up changed files, writes atomically, and restores only when managed files have not drifted.
+Use the bundled installer as the single source of truth. It manages only `config.toml`, preserves unrelated TOML and line endings, backs up changed bytes, writes atomically, and restores only when managed files have not drifted.
 
 ## 1. Inspect the target
 
@@ -17,9 +17,9 @@ python <skill-dir>/scripts/configure_luna.py plan
 
 Use `--codex-home <path>` when `CODEX_HOME` or `~/.codex` is not the intended target. Report every `CHANGE`, `CONFLICT`, and required replacement flag.
 
-Explain the blast radius before applying: `agents/default.toml` affects every ordinary fresh subagent that selects the default role, not only research scouts. The runtime must use a supported non-history route: legacy `fork_turns="none"`, or current `agent_type="default"` with `fork_context=false`. A full-history fork inherits the parent context and may bypass this role.
+Explain the blast radius before applying: the four `[agents]` values are user-level defaults for spawned agents, not only research scouts. Explicit model or reasoning values supplied by a spawn, and custom-agent files that set their own model, take precedence. Use `fork_turns="none"` when the active schema exposes it; otherwise use `agent_type="default"` with `fork_context=false`.
 
-Completion criterion: the user knows the exact files and existing values that would change, whether `--replace-default` or `--replace-settings` is required, and that the change applies to all fresh default-role subagents.
+Completion criterion: the user knows every value that would change, whether `--replace-settings` is required, and which explicit spawn or custom-role settings can override the defaults.
 
 ## 2. Apply an authorized plan
 
@@ -29,11 +29,21 @@ Treat a request to inspect, explain, or audit as read-only. When the user has ex
 python <skill-dir>/scripts/configure_luna.py install --apply
 ```
 
-Add `--replace-default` only for an approved existing `agents/default.toml` replacement. Add `--replace-settings` only for approved changes to `features.multi_agent`, `agents.max_threads`, or `agents.max_depth`.
+Add `--replace-settings` only for approved changes to `agents.enabled`, `agents.max_concurrent_threads_per_session`, `agents.default_subagent_model`, or `agents.default_subagent_reasoning_effort`.
 
 Preserve the reported backup path. A write failure triggers rollback; an existing managed state that drifted stops a second installation.
 
-Completion criterion: the installer exits successfully and reports `model=gpt-5.6-luna`, `max_threads=40`, and `max_depth=2`, or it stops without changing the target and reports one actionable conflict.
+Completion criterion: the installer exits successfully and reports `model=gpt-5.6-luna`, `reasoning_effort=medium`, and `max_concurrent_threads_per_session=40`, or it stops without changing the target and reports one actionable conflict.
+
+## Migrate a managed v1 installation
+
+When `plan` reports an intact managed v1 installation, review the same conflicts and run:
+
+```text
+python <skill-dir>/scripts/configure_luna.py migrate --apply
+```
+
+Add `--replace-settings` only when the plan names conflicting pre-v1 values and the user approves replacing them. Migration first verifies v1 hashes and backups, restores the pre-v1 bytes including any previous `agents/default.toml`, then installs the v2 config-only state. Drift fails closed.
 
 ## 3. Cross the reload boundary
 
@@ -43,7 +53,7 @@ Ask the user to restart Codex or open a new task after installation. Run:
 python <skill-dir>/scripts/configure_luna.py status
 ```
 
-Static readiness is necessary but not runtime proof. Use `$run-diverse-luna-research` to create a bounded probe with the supported non-history route and verify the child's rollout metadata before broad fan-out.
+Static readiness is necessary but not runtime proof. Use `$run-diverse-luna-research` to create a bounded probe with the supported fresh-context route and verify the child's rollout metadata before broad fan-out.
 
 Completion criterion: static status is `READY`, and any claim that a child actually ran Luna is backed by child runtime metadata rather than its task name or nickname.
 

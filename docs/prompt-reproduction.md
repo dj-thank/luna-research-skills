@@ -31,11 +31,10 @@ marketplace から Skill をインストールせずに、このプロジェク�
 
 ## 厳格な Luna gate
 
-- fan-out に使える schema は `message` と、次のいずれかの非履歴 routing control を公開していなければならない。
-  - legacy surface: `task_name` と `fork_turns`
-  - current surface: `agent_type` と `fork_context`
-- legacy surface では通常 subagent を `fork_turns="none"` で起動する。
-- current surface では通常 subagent を `agent_type="default"` と `fork_context=false` で起動する。`default` role の設定が `model="gpt-5.6-luna"`、`model_reasoning_effort="medium"`、適切な service tier であることを確認する。
+- fan-out に使える schema は `message` と、`fork_turns` または `agent_type` + `fork_context` の fresh-context control を公開していなければならない。
+- `fork_turns` があれば `fork_turns="none"` を使い、`agent_type` もあれば `default` を明示する。
+- `fork_turns` がない surface では `agent_type="default"` と `fork_context=false` を使う。
+- `[agents]` の `default_subagent_model="gpt-5.6-luna"` と `default_subagent_reasoning_effort="medium"` を確認し、競合する明示 model / effort を spawn に渡さない。
 - 親の履歴を丸ごと継承する full-history fork を、非履歴 route の代わりに使わない。task name、nickname、パス文字列、設定ファイルの存在だけもモデルの証拠にしない。
 - legacy route と current route のどちらも schema に存在しない場合は BLOCKED とし、子エージェントを一体も起動しない。
 - 静的設定が PASS でも runtime proof にはならない。採用する child rollout は `session_meta.thread_source="subagent"`、`turn_context.model="gpt-5.6-luna"`、`turn_context.effort="medium"` を確認する。
@@ -49,7 +48,6 @@ outputs/generated-luna-research-skills/
   README.md
   skills/configure-luna-subagents/SKILL.md
   skills/configure-luna-subagents/agents/openai.yaml
-  skills/configure-luna-subagents/assets/default-agent.toml
   skills/configure-luna-subagents/scripts/configure_luna.py
   skills/run-diverse-luna-project/SKILL.md
   skills/run-diverse-luna-project/agents/openai.yaml
@@ -66,9 +64,10 @@ outputs/generated-luna-research-skills/
 
 ## configure-luna-subagents の要件
 
-- `plan`、`status`、`install`、`uninstall` の4経路を持つ。
-- `plan` と `status` は read-only。`install` と `uninstall` は `--apply` がないと書き込まない。
-- 変更対象は `features.multi_agent=true`、`agents.max_threads=40`、`agents.max_depth=2`、default role の `model=gpt-5.6-luna` と `model_reasoning_effort=medium`。
+- `plan`、`status`、`install`、`migrate`、`uninstall` の5経路を持つ。
+- `plan` と `status` は read-only。書き込み経路は `--apply` がないと変更しない。
+- 変更対象は `agents.enabled=true`、`agents.max_concurrent_threads_per_session=40`、`agents.default_subagent_model="gpt-5.6-luna"`、`agents.default_subagent_reasoning_effort="medium"`。
+- managed v1 の `agents/default.toml` 方式は hash と backup を検証し、pre-v1 bytes を復元してから config-only v2 へ移行する。
 - 既存値が異なる場合は `CONFLICT` と必要な replacement flag を出し、承認なしでは変更しない。
 - 変更前 bytes、SHA-256、timestamped backup、installed SHA-256 を記録する。
 - atomic write と失敗時 rollback を実装する。
@@ -99,7 +98,7 @@ outputs/generated-luna-research-skills/
 
 - checker は Python 3.11+ の標準ライブラリで動かす。静的 config、workspace override、spawn schema、runtime rollout を fail-closed で検証する。
 - runtime checker は `thread_source`、`model`、`effort` を確認し、model が違う child を reject する。
-- tests には少なくとも次を含める: read-only plan、conflict gate、atomic rollback、drift-blocked uninstall、malformed TOML、workspace default shadowing、非履歴 routing control が無い spawn schema の失敗、legacy schema の成功、current schema の成功、正しい rollout の成功、誤モデル rollout の失敗、非UUIDの拒否。
+- tests には少なくとも次を含める: read-only plan、conflict gate、byte-exact restore、managed-v1 migration、drift-blocked uninstall、malformed TOML、workspace setting shadowing、fresh-context control が無い spawn schema の失敗、`fork_turns` schema の成功、`fork_context` schema の成功、正しい rollout の成功、誤モデル rollout の失敗、非UUIDの拒否。
 - 次を実行し、実際の exit code を報告する。
 
 ```text
@@ -132,4 +131,4 @@ python -m unittest discover -s outputs/generated-luna-research-skills/tests -v
 2. compileall / unittest が成功した。
 3. 実際の child rollout が `gpt-5.6-luna` を示した。
 
-3 は1や2から推論できません。現在の `spawn_agent` schema が `agent_type="default"` / `fork_context=false` も、legacy の `fork_turns="none"` も公開していない場合は、3を実行せず Luna fan-out 未実施として報告してください。
+3 は1や2から推論できません。現在の `spawn_agent` schema が `fork_turns="none"` も `agent_type="default"` / `fork_context=false` も公開していない場合は、3を実行せず Luna fan-out 未実施として報告してください。

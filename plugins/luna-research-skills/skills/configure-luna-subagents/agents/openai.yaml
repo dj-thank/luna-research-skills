@@ -1,7 +1,7 @@
 interface:
   display_name: "Configure Luna Subagents"
-  short_description: "Safely pin fresh Codex subagents to Luna"
-  default_prompt: "Use $configure-luna-subagents to inspect and safely configure fresh subagents for Luna."
+  short_description: "Configure Codex-native Luna subagent defaults"
+  default_prompt: "Use $configure-luna-subagents to inspect, migrate, or safely configure Codex-native Luna subagent defaults."
 
 policy:
   allow_implicit_invocation: false
