@@ -1,8 +1,8 @@
 # Luna Research Prompt for Codex
 
-Codex のネイティブ subagent を **GPT-5.6 Luna** へルーティングし、child が担当範囲を観察して、価値がある論点だけを grandchild へ切り出すための、自己完結したコミュニティ製プロンプトです。
+Codex のネイティブ subagent を、利用可能な環境では **GPT-5.6 Luna** の既定モデルへルーティングし、child が担当範囲を観察して、価値がある論点だけを grandchild へ切り出すための、自己完結したコミュニティ製プロンプトです。Lunaの利用可能性や実行経路は、このリポジトリだけでは保証されません。
 
-公開物の本体は [`PROMPT.md`](PROMPT.md) です。Python、installer、plugin、marketplace、MCP、独自 runner は使いません。
+公開物の本体は [`PROMPT.md`](PROMPT.md) と [`PROMPT.en.md`](PROMPT.en.md) です。Python、installer、plugin、marketplace、MCP、独自 runner は使いません。
 
 > [!IMPORTANT]
 > このリポジトリは OpenAI 公式製品ではありません。設定名、モデル提供状況、subagent機能は変更される可能性があります。
@@ -19,16 +19,14 @@ Codex のネイティブ subagent を **GPT-5.6 Luna** へルーティングし�
 ```toml
 [agents]
 enabled = true
-max_concurrent_threads_per_session = 40
-max_threads = 40
-max_depth = 2
+max_concurrent_threads_per_session = 6
 default_subagent_model = "gpt-5.6-luna"
 default_subagent_reasoning_effort = "medium"
 ```
 
-- `max_concurrent_threads_per_session` は現在の公開名です。`max_threads` は旧実行面との互換 alias です。
-- `40` は常時40件を起動する指定ではなく、同時に開いておける子タスクの上限です。プロンプトは通常3〜6件の小さな wave に制限します。
-- `max_depth = 2` は root → child → grandchild を意図した互換設定です。現在の公開 Configuration Reference には掲載されていないため、プロンプトでも深度と総起動数を制限し、runtime metadata で実行結果を確認します。
+- `max_concurrent_threads_per_session` は同時に開ける子タスク数の上限です。プロンプト側の assignment budget `N` と通常3〜6件の wave が、実際の起動数をさらに制限します。
+- `max_threads` は旧名のaliasです。既存設定に残っている場合はどちらか一方だけを使い、canonical名と同時に設定しないでください。
+- `max_depth` は現在の公開Configuration Referenceにないため、設定例には追加しないでください。root → child → grandchild の深度は、プロンプト内の台帳で論理的に管理します。これはruntime強制ではありません。
 - この既定値はほかのタスクにも適用されます。個別 spawn や custom agent に明示されたモデル・推論強度がある場合は、そちらが優先されます。
 
 ### 2. 新しい Codex タスクを開始する
@@ -37,7 +35,7 @@ default_subagent_reasoning_effort = "medium"
 
 ### 3. プロンプトを貼る
 
-[`PROMPT.md`](PROMPT.md) のコードブロック全体をコピーし、末尾の `RESEARCH REQUEST` だけを書き換えて貼り付けます。
+日本語版の [`PROMPT.md`](PROMPT.md) または英語版の [`PROMPT.en.md`](PROMPT.en.md) のコードブロック全体をコピーし、末尾の `RESEARCH REQUEST` だけを書き換えて貼り付けます。
 
 これだけです。プロンプト自身は設定やファイルを変更せず、Codex のネイティブ機能だけで調査します。
 
@@ -57,7 +55,7 @@ flowchart TD
     P --> O
 ```
 
-この設計では、`max_threads` と `max_depth` を単なる上限ではなく、観察に基づく再帰的な分解へ使います。
+この設計では、Codexの同時実行上限とは別に、プロンプト内の台帳を使って観察に基づく再帰的な分解を制御します。
 
 - 最大深度: root=0、child=1、grandchild=2
 - child ごとの descendant allowance: 0〜2
@@ -68,21 +66,21 @@ flowchart TD
 
 ## `config.toml` と `PROMPT.md` の役割
 
-`config.toml` は、明示的なモデル指定を持たない subagent の既定モデルと推論強度を決めます。`PROMPT.md` は、問いの分解、再帰条件、予算、証拠形式、反証枠、root検証、完了条件を決めます。
+`config.toml` は、明示的なモデル指定を持たない subagent の既定モデルと推論強度を決めます。`PROMPT.md` は、問いの分解、再帰条件、予算、証拠形式、反証枠、root検証、完了条件を決めます。assignment budget、depth、descendant allowanceはprompt-levelの台帳であり、spawn toolの戻り値やruntimeが自動で強制するものではありません。
 
-したがって、Pythonなどの補助環境は不要ですが、Lunaへのルーティングと研究手順は別の役割です。プロンプトだけを別環境へ持っていくこともできます。その環境にLunaまたはnative subagentがなければ、Luna実行を名乗らずflat / root-only fallbackとして報告します。
+したがって、Pythonなどの補助環境は不要ですが、Lunaへのルーティングと研究手順は別の役割です。プロンプトだけを別環境へ持っていくこともできます。その環境にLunaまたはnative subagentがなければ、Luna実行を名乗らずflat / root-only fallbackとして報告します。fresh-contextの引数はCodexの世代で異なるため、`fork_turns="none"` が公開されていない現行系では `agent_type="default"` と `fork_context=false` を使います。
 
-## Runtime proof
+## Historical runtime evidence
 
-2026-08-03 の fresh Codex task で、root → child → grandchild がすべて `gpt-5.6-luna`、reasoning effort `medium` で完了しました。
+2026-08-03 の作者環境のfresh Codex taskでは、root → child → grandchild がすべて `gpt-5.6-luna`、reasoning effort `medium` で完了しました。この記録は現在の全アカウント、全リリース、全実行面に対する保証ではありません。公開読者が再実行し、各childのruntime metadataを確認してください。
 
 ```text
-root        019fc498-e57e-7d00-9122-676bc21e63ff  gpt-5.6-luna / medium
-child       019fc499-9306-74d1-bcf1-f5bd7db5f2ab  gpt-5.6-luna / medium
-grandchild  019fc499-d452-7b70-b707-6c14e2faced4  gpt-5.6-luna / medium
+root        gpt-5.6-luna / medium
+child       gpt-5.6-luna / medium
+grandchild  gpt-5.6-luna / medium
 ```
 
-旧タスクで `Unknown model gpt-5.6-luna` が出ても、直ちにhost-wide障害とは限りません。同じhostのfresh taskで成功した実例では、原因は旧タスクに残ったstale model allowlistでした。
+`Unknown model gpt-5.6-luna` が出た場合は、その環境またはアカウントでの利用可能性を確認してください。まず設定を変更せずfresh taskで一度再試行し、それでも失敗する場合は現在のCodex、アカウント、モデル提供状況を確認します。
 
 復旧順序は次のとおりです。
 
@@ -96,11 +94,19 @@ grandchild  019fc499-d452-7b70-b707-6c14e2faced4  gpt-5.6-luna / medium
 
 - task名やnicknameはモデルの証拠になりません。
 - metadataを確認できない出力は `Luna unverified` とします。
-- `max_depth` の受理と、grandchildの実行成功は別々に確認します。
+- 論理的な最大深度を台帳に記録することと、grandchildの実行成功は別々に確認します。
+- assignment budget、depth、descendant allowanceはprompt-levelの台帳であり、runtimeの強制やspawn結果の証明ではありません。
 - Web、MCP、外部サービス、ファイル変更、公開、購入などの権限は、この設定やプロンプトでは拡張されません。
 - ChatGPTの通常チャットなど、Codexの `config.toml` とnative subagent runnerを持たない環境では同じroutingを保証しません。
+- 現行のspawn戻り値が `agent_id` と nickname だけでmetadataを含まない場合、そこからモデルを推測してはいけません。確認できない結果は `Luna unverified` と報告します。
 
 現在の定義は Codex の [Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference) と [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) を確認してください。
+
+## Data handling
+
+RESEARCH REQUEST、取得した資料、subagentの入力と結果は、親タスクで有効なsubagent、Web、MCP、その他の外部サービスへ渡る可能性があります。秘密、個人情報、社内限定情報、未公開コード、credentialを、明示的な承認と組織のデータ取扱い方針なしに入力しないでください。read-onlyはデータの外部送信や保持を意味しません。
+
+仕様やモデル提供状況は変わるため、実演・登壇前にも上記公式ドキュメントと実行metadataを再確認してください。
 
 ## Historical plugin version
 
@@ -109,3 +115,5 @@ Python installer と3つの Skill を含む旧版は、Git履歴と [`v0.3.0`](h
 ## License
 
 [MIT](LICENSE)
+
+Security and responsible disclosure guidance: [SECURITY.md](SECURITY.md)

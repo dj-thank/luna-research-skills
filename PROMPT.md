@@ -2,12 +2,12 @@
 
 次のコードブロック全体をコピーし、末尾の `RESEARCH REQUEST` だけを書き換えて、新しい Codex タスクへ貼り付けてください。
 
-```text
-あなたは root research coordinator です。以下の RESEARCH REQUEST を、利用可能なら Codex ネイティブのサブエージェントへ委任し、一次資料を中心に調査してください。この依頼は subagent の起動と並列調査を明示的に許可しますが、承認、サンドボックス、外部操作の権限は変更しません。
+````text
+あなたは root research coordinator です。以下の RESEARCH REQUEST を、利用可能なら Codex ネイティブのサブエージェントへ委任し、一次資料を中心に調査してください。この依頼は subagent の起動と並列調査を明示的に許可しますが、承認、サンドボックス、外部操作の権限を変更したり、特定モデルの利用可能性を保証したりしません。
 
 設定ファイルを編集せず、Skill、plugin、MCP、runner、checker、helper script、Pythonなどの追加 runtime を作成・導入しないでください。現在の Codex が公開しているネイティブ機能だけを使ってください。
 
-`max_threads` は容量上限、`max_depth` は到達可能な深さです。実際に使う起動数と深さは、このプロンプトの assignment budget と descendant allowance でさらに小さく制御してください。
+`max_concurrent_threads_per_session`（旧名 `max_threads`）は同時実行数の上限です。depth、assignment budget、descendant allowance はこのプロンプトが台帳で管理する論理的な制約であり、spawn tool がruntimeで強制する制約ではありません。実際に使う起動数と深さは、このプロンプトの台帳でさらに小さく制御してください。
 
 ## 成果条件
 
@@ -50,19 +50,19 @@ assignment | cell | depth | parent | descendant allowance | status | task ID
 
 利用可能な subagent / spawn tool の実際の schema を確認し、存在しない引数を推測しないでください。
 
-- fresh context を指定できる場合は `fork_turns="none"` を使う。
-- `agent_type` がある場合は `agent_type="default"` を使う。
+- fresh context を指定できる場合は、`fork_turns` が公開されていれば `fork_turns="none"` を使う。`fork_turns` が公開されていない現行系では、`agent_type="default"` と `fork_context=false` を使う。
+- `agent_type` と `fork_context` のどちらかしか公開されていない場合は、存在する引数だけを使い、fresh context を実証できなければ `Luna unverified` または root-only として扱う。
 - 個別 spawn に model や reasoning effort を明示せず、Codex の `[agents]` 既定値を使う。
 - task name、nickname、役割名をモデルの証拠にしない。
 
 最初に、優先度の高い read-only cell を1件だけ child へ渡し、descendant allowance=1 としてください。child には、cell を観察したうえで独立した確認項目を1件だけ grandchild へ実際に委任し、その完了を待って統合するよう依頼してください。probe は合計2 assignmentsを消費します。
 
-利用可能な task / thread / tool metadata で、child と grandchild がそれぞれ subagent、`gpt-5.6-luna`、reasoning effort `medium` であることを確認してください。確認方法を自作しないでください。
+利用可能な task / thread / rollout metadata で、child と grandchild がそれぞれ subagent、`gpt-5.6-luna`、reasoning effort `medium` であることを確認してください。spawn の戻り値が `agent_id` や nickname だけの場合、それらからモデルを推測しないでください。確認方法を自作せず、公開されているmetadataだけを使ってください。
 
 - 両方を確認: `bounded hierarchy verified` として次へ進む。
 - grandchild を起動できない: 残予算を root 管理の flat wave へ戻す。
 - どちらかが別モデル: その系統を棄却し、新規 dispatch を止める。
-- metadata を確認できない: 候補資料として扱えるが `Luna verified` には数えない。
+- metadata を確認できない: 候補資料として扱えるが `Luna verified` には数えない。確認不能な環境で「全結果をLuna verified」とは報告しない。
 - native spawn がない、fresh context を指定できない、または起動が拒否される: root-only で調べ、理由を報告する。
 - `Unknown model gpt-5.6-luna`: そのタスクでの dispatch を止め、新しい Codex タスクへ同じプロンプトを貼り直すよう案内する。fresh task でも失敗した時だけ、Codex を再起動して再試行する。
 
@@ -78,7 +78,7 @@ child は最初に cell を観察し、次の3条件をすべて満たす場合�
 2. 別の情報源を調べる価値がある。
 3. 切り出しが結論または confidence を改善する見込みがある。
 
-grandchild へは完全な依頼文、depth=2、子孫起動禁止、read-only 境界を渡し、利用可能なら `fork_turns="none"` を使わせてください。
+grandchild へは完全な依頼文、depth=2、子孫起動禁止、read-only 境界を渡してください。起動前に公開schemaを再確認し、`fork_turns` が公開されていれば `fork_turns="none"`、現行系のように公開されていなければ `agent_type="default"` と `fork_context=false` を使わせてください。どちらも公開されていない場合はfresh contextを実証できないため、Luna verifiedとは呼ばないでください。存在しない引数を推測しないでください。
 
 各 child は、自分と descendant の結果を統合した evidence packet を返します。
 
@@ -118,6 +118,7 @@ Method note には、depth別の planned / started / completed / failed / reject
 ## Safety boundary
 
 - 調査は read-only とする。ユーザーが別途明示していない編集、送信、購入、公開、デプロイ、アカウント変更、credential 操作を行わない。
+- RESEARCH REQUEST、取得した資料、subagent の入力と結果は、親タスクで有効なsubagent、Web、MCP、その他の外部サービスへ渡る可能性があります。秘密、個人情報、社内限定情報、未公開コード、credentialを、明示的な承認と組織のデータ取扱い方針なしに入力しないでください。read-only はデータの外部送信や保持を意味しません。
 - 高リスク分野では最新の一次資料を優先し、専門家判断の代替と断定しない。
 - subagent の出力は未検証候補として扱い、root が採否を決める。
 - ローカル検証を、公開状態、外部サービス状態、物理環境、人間の承認と混同しない。
@@ -125,4 +126,4 @@ Method note には、depth別の planned / started / completed / failed / reject
 ## RESEARCH REQUEST
 
 ここを、調べたい質問、対象範囲、欲しい成果物に置き換える。
-```
+````
