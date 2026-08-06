@@ -16,6 +16,8 @@ Codex のネイティブ subagent を、利用可能な環境では **GPT-5.6 Lu
 
 既存の `[agents]` セクションへ次を統合してください。同じ見出しを重複させないでください。
 
+編集前に `config.toml` のバックアップを作り、既存の無関係な設定を保持してください。既存値が衝突する場合は、重複キーを追加せずに停止して確認してください。
+
 ```toml
 [agents]
 enabled = true
@@ -27,7 +29,7 @@ default_subagent_reasoning_effort = "medium"
 - `max_concurrent_threads_per_session` は同時に開ける子タスク数の上限です。プロンプト側の assignment budget `N` と通常3〜6件の wave が、実際の起動数をさらに制限します。
 - `max_threads` は旧名のaliasです。既存設定に残っている場合はどちらか一方だけを使い、canonical名と同時に設定しないでください。
 - `max_depth` は現在の公開Configuration Referenceにないため、設定例には追加しないでください。root → child → grandchild の深度は、プロンプト内の台帳で論理的に管理します。これはruntime強制ではありません。
-- この既定値はほかのタスクにも適用されます。個別 spawn や custom agent に明示されたモデル・推論強度がある場合は、そちらが優先されます。
+- この既定値はこのユーザー環境の全通常subagentに適用され得ます。個別 spawn や custom agent に明示されたモデル・推論強度がある場合は、そちらが優先されます。コスト、利用可能性、組織ポリシーを確認してください。
 
 ### 2. 新しい Codex タスクを開始する
 
@@ -89,6 +91,8 @@ grandchild  gpt-5.6-luna / medium
 3. それでも失敗する場合は、その環境ではLuna routingを利用できないものとして報告する。
 
 別モデルを明示してvalidatorを迂回する方法は、文書化された復旧策ではないため採用しません。
+
+公開用の再現記録を作る場合は、日付、Codexのバージョン、対象コミット、実効設定、各childの `thread_source` / `model` / `effort`、assignment ledgerの件数を記録してください。rawのthread ID、rollout全文、秘密を公開リポジトリへ追加しないでください。
 
 ## Verification boundary
 
