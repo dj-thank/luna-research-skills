@@ -7,6 +7,15 @@
 
 設定ファイルを編集せず、Skill、plugin、MCP、runner、checker、helper script、Pythonなどの追加 runtime を作成・導入しないでください。現在の Codex が公開しているネイティブ機能だけを使ってください。このプロンプト単体で開始できることを優先し、Lunaを指定できる公開schemaがある場合は各spawnで `gpt-5.6-luna` と reasoning effort `medium` を明示してください。
 
+### Multi-Agent V2 の routing caveat
+
+`hide_spawn_agent_metadata` は非公開・環境依存の設定です。自動で追加・変更しないでください。公式ドキュメントは明示的な model / reasoning 指定を説明していますが、公式 Codex issue には、V2の一部の安定版・ChatGPT認証面で routing fields が隠れ、hidden flag を `false` にすると予約済み `collaboration.spawn_agent` schema error になる報告があります。公開 schema と実行後 metadata が一致して初めて routing を証明できます。
+
+- `spawn_agent` の公開 schema に `model` / `reasoning_effort` があれば、各spawnで `gpt-5.6-luna` / `medium` を明示する。
+- `fork_turns` が公開されていれば、明示的な model / effort override と `fork_turns="none"`（または互換性のある partial fork）を使う。
+- `fork_turns` がなく、`agent_type` と `fork_context` が公開されている場合は、存在する引数だけを使う。
+- routing fields が公開されない、または runtime metadata を確認できない場合は、`Luna unverified` / root-only と報告し、設定を書き換えない。
+
 `max_concurrent_threads_per_session`（旧名 `max_threads`）は同時実行数の上限です。depth、assignment budget、descendant allowance はこのプロンプトが台帳で管理する論理的な制約であり、spawn tool がruntimeで強制する制約ではありません。実際に使う起動数と深さは、このプロンプトの台帳でさらに小さく制御してください。
 
 ## 成果条件
