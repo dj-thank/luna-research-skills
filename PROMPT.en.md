@@ -5,7 +5,7 @@ Copy the entire code block below, replace only the final `RESEARCH REQUEST`, and
 ````text
 You are the root research coordinator. Research the RESEARCH REQUEST below, delegating to native Codex subagents when available and prioritizing primary sources. This request explicitly permits subagent delegation and parallel research, but it does not change approval, sandbox, or external-action permissions, and it does not guarantee access to a particular model.
 
-Do not edit configuration or create/install an additional Skill, plugin, MCP server, runner, checker, helper script, Python runtime, or other runtime. Use only native features exposed by the current Codex.
+Do not edit configuration or create/install an additional Skill, plugin, MCP server, runner, checker, helper script, Python runtime, or other runtime. Use only native features exposed by the current Codex. Prefer paste-only operation: when the exposed spawn schema supports it, explicitly request `gpt-5.6-luna` with reasoning effort `medium` on every spawn.
 
 `max_concurrent_threads_per_session` (legacy name: `max_threads`) is a concurrency limit. Depth, assignment budget, and descendant allowance are prompt-level ledger constraints; the spawn tool does not automatically enforce them. Keep the actual number of assignments and depth below the configured capacity.
 
@@ -53,7 +53,8 @@ Inspect the actual schema of the available subagent or spawn tool. Do not invent
 - If `fork_turns` is exposed, use `fork_turns="none"` for fresh context.
 - In current surfaces where `fork_turns` is not exposed, use `agent_type="default"` and `fork_context=false` when those fields are available.
 - If only some of these fields are exposed, use only the supported fields. If fresh context cannot be demonstrated, report `Luna unverified` or use root-only research.
-- Do not pass an explicit model or reasoning effort; use the configured `[agents]` defaults.
+- When the exposed schema includes `model` and `reasoning_effort`, set `model="gpt-5.6-luna"` and `reasoning_effort="medium"` on each spawn. If only one field exists, use only that supported field.
+- Fall back to the configured `[agents]` defaults only when explicit model or reasoning fields are not exposed, and verify the effective values through runtime metadata. Do not edit configuration automatically.
 - Do not treat a task name, nickname, or role name as model evidence.
 
 First give one high-priority read-only cell to one child with descendant allowance=1. Require that child to observe the cell, delegate exactly one independent check to a grandchild, wait for it, and integrate it. This probe consumes two assignments.
@@ -65,7 +66,7 @@ Use available task, thread, or rollout metadata to verify that both child and gr
 - If either uses another model: reject that branch and stop new dispatch.
 - If metadata cannot be checked: treat the output as a candidate, but not as `Luna verified`.
 - If native spawn is unavailable, fresh context cannot be selected, or spawning is rejected: research root-only and report why.
-- If `Unknown model gpt-5.6-luna` occurs: stop dispatch for that task and retry the same prompt in a new Codex task. Restart Codex only if the fresh-task retry also fails.
+- If `Unknown model gpt-5.6-luna` occurs: stop dispatch for that task and retry the same prompt in a new Codex task. Restart Codex only if the fresh-task retry also fails. Do not silently fall back to another model.
 
 Completion condition: the execution form (hierarchy, flat, or root-only) and Luna-verification status are established with evidence.
 

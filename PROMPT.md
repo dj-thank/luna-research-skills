@@ -5,7 +5,7 @@
 ````text
 あなたは root research coordinator です。以下の RESEARCH REQUEST を、利用可能なら Codex ネイティブのサブエージェントへ委任し、一次資料を中心に調査してください。この依頼は subagent の起動と並列調査を明示的に許可しますが、承認、サンドボックス、外部操作の権限を変更したり、特定モデルの利用可能性を保証したりしません。
 
-設定ファイルを編集せず、Skill、plugin、MCP、runner、checker、helper script、Pythonなどの追加 runtime を作成・導入しないでください。現在の Codex が公開しているネイティブ機能だけを使ってください。
+設定ファイルを編集せず、Skill、plugin、MCP、runner、checker、helper script、Pythonなどの追加 runtime を作成・導入しないでください。現在の Codex が公開しているネイティブ機能だけを使ってください。このプロンプト単体で開始できることを優先し、Lunaを指定できる公開schemaがある場合は各spawnで `gpt-5.6-luna` と reasoning effort `medium` を明示してください。
 
 `max_concurrent_threads_per_session`（旧名 `max_threads`）は同時実行数の上限です。depth、assignment budget、descendant allowance はこのプロンプトが台帳で管理する論理的な制約であり、spawn tool がruntimeで強制する制約ではありません。実際に使う起動数と深さは、このプロンプトの台帳でさらに小さく制御してください。
 
@@ -52,7 +52,8 @@ assignment | cell | depth | parent | descendant allowance | status | task ID
 
 - fresh context を指定できる場合は、`fork_turns` が公開されていれば `fork_turns="none"` を使う。`fork_turns` が公開されていない現行系では、`agent_type="default"` と `fork_context=false` を使う。
 - `agent_type` と `fork_context` のどちらかしか公開されていない場合は、存在する引数だけを使い、fresh context を実証できなければ `Luna unverified` または root-only として扱う。
-- 個別 spawn に model や reasoning effort を明示せず、Codex の `[agents]` 既定値を使う。
+- 公開schemaに `model` と `reasoning_effort` がある場合は、個別spawnで `model="gpt-5.6-luna"` と `reasoning_effort="medium"` を明示する。片方だけ公開されている場合は存在する引数だけを使う。
+- model / reasoning の明示引数が公開されていない場合だけ、Codex の `[agents]` 既定値へフォールバックし、実効値をruntime metadataで検証する。設定ファイルを自動編集しない。
 - task name、nickname、役割名をモデルの証拠にしない。
 
 最初に、優先度の高い read-only cell を1件だけ child へ渡し、descendant allowance=1 としてください。child には、cell を観察したうえで独立した確認項目を1件だけ grandchild へ実際に委任し、その完了を待って統合するよう依頼してください。probe は合計2 assignmentsを消費します。
@@ -64,7 +65,7 @@ assignment | cell | depth | parent | descendant allowance | status | task ID
 - どちらかが別モデル: その系統を棄却し、新規 dispatch を止める。
 - metadata を確認できない: 候補資料として扱えるが `Luna verified` には数えない。確認不能な環境で「全結果をLuna verified」とは報告しない。
 - native spawn がない、fresh context を指定できない、または起動が拒否される: root-only で調べ、理由を報告する。
-- `Unknown model gpt-5.6-luna`: そのタスクでの dispatch を止め、新しい Codex タスクへ同じプロンプトを貼り直すよう案内する。fresh task でも失敗した時だけ、Codex を再起動して再試行する。
+- `Unknown model gpt-5.6-luna`: そのタスクでの dispatch を止め、新しい Codex タスクへ同じプロンプトを貼り直すよう案内する。fresh task でも失敗した時だけ、Codex を再起動して再試行する。別モデルへ自動フォールバックしない。
 
 完了条件: hierarchy / flat / root-only の実行形態と、Luna verification の可否が証拠付きで確定していること。
 
