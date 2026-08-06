@@ -1,14 +1,33 @@
-# Luna Research Prompt for Codex
+# Luna Swarm Prompts for Codex
 
-Codex のネイティブsubagentを利用し、可能な環境では **GPT-5.6 Luna** で、複数観点・一次資料・反証・孫エージェントまで含む調査を実行するコミュニティ製プロンプトです。
+Codex のネイティブ subagent を利用し、可能な環境では **GPT-5.6 Luna** で、多様な観点・独立した作業・反証・孫エージェントまで含む群知性を実行するコミュニティ製プロンプトです。
 
-## 使い方: このプロンプトを投げるだけ
+実行済みの可視化デモ: **[Codex Agent Swarm](https://codex-luna-swarm.imagine-create.chatgpt.site/)**
 
-1. 下のコードブロックをすべてコピーする。
-2. 最後の `RESEARCH REQUEST` を自分の質問に置き換える。
-3. 新しいCodexタスクへ貼り付ける。
+## 使い方: cloneせず、プロンプトを投げるだけ
+
+このリポジトリを clone したり、スクリプトを実行したり、Skill をインストールしたりする必要はありません。むしろ、第三者のコードを取得・実行せず、プロンプト本文を読んでからコピーする使い方を推奨します。
+
+用途を選び、リンク先のコードブロック全体をコピーし、末尾の依頼だけを書き換えて、新しい Codex タスクへ貼り付けてください。
+
+| 用途 | 貼り付けるもの |
+|---|---|
+| 調査・文献レビュー・比較・一次資料確認 | **[Research Prompt を開く](PROMPT.md)** |
+| 実装・監査・移行・リリース・複数成果物 | **[Diverse Project Prompt を開く](PROJECT-PROMPT.md)** |
+
+ブラウザでプレーンテキストとして開く場合: [Research Prompt raw](https://raw.githubusercontent.com/dj-thank/luna-research-skills/main/PROMPT.md) / [Project Prompt raw](https://raw.githubusercontent.com/dj-thank/luna-research-skills/main/PROJECT-PROMPT.md)
 
 インストール、Python、plugin、MCP、設定ファイルの編集は不要です。プロンプトが現在のspawn schemaを確認し、利用可能なら `gpt-5.6-luna / medium` を明示して実行します。利用できない場合は別モデルへ黙って切り替えず、検証不能またはroot-onlyとして報告します。
+
+## 規模は固定ではない
+
+実証デモの16件は一例です。プロンプトは、対象を outcome、ownership、perspective、lifecycle、challenge、verification に分け、必要な数の bounded assignment を作ります。大規模実行を明示した場合は40件までを目安にできますが、小さな wave に分け、総試行数、失敗、再試行、孫への委任も同じ台帳で数えます。
+
+旧版にあった `max_concurrent_threads_per_session = 40` は「40体を必ず起動する命令」ではなく、同時に開ける子タスクの容量上限でした。現在の prompt-only 版はユーザー設定を変更せず、実行時に公開されている上限と schema の範囲内で動きます。40件を超える総予算が必要な場合も、無制限に fan-out せず、根拠と停止条件を明示した複数 wave として扱います。
+
+### false safety stop を避ける
+
+`read-only` は「runtime自体が書き込み不能でなければならない」という意味ではなく、「そのagentが変更操作を行わない」という行動上の境界です。プロンプトは、writableなruntime表示だけで停止せず、read/search/openだけを使うよう明示します。実際のread denial、mutationの不可避性、tool不在、retry上限、scope/secret問題がある場合は、分類と実エラーを返して安全停止します。安全条件を弱めず、能力の存在と操作の実行を区別します。
 
 > [!IMPORTANT]
 > このリポジトリはOpenAI公式製品ではありません。モデル提供状況やsubagent機能は、Codex、アカウント、workspaceによって異なります。
@@ -68,22 +87,24 @@ assignment | cell | depth | parent | descendant allowance | status | task ID
 - model / reasoning の明示引数が公開されていない場合だけ、Codex の `[agents]` 既定値へフォールバックし、実効値をruntime metadataで検証する。設定ファイルを自動編集しない。
 - task name、nickname、役割名をモデルの証拠にしない。
 
-最初に、優先度の高い read-only cell を1件だけ child へ渡し、descendant allowance=1 としてください。child には、cell を観察したうえで独立した確認項目を1件だけ grandchild へ実際に委任し、その完了を待って統合するよう依頼してください。probe は合計2 assignmentsを消費します。
+最初に、優先度の高い read-only cell を1件だけ child へ渡し、descendant allowance=1 としてください。child には、cell を観察したうえで独立した確認項目を1件だけ grandchild へ実際に委任し、その完了を待って統合するよう依頼してください。probe は合計2 assignmentsを消費します。probeは追加のroute検証であり、grandchildを起動できなくてもchildは自分のbounded cellを継続します。
 
 利用可能な task / thread / rollout metadata で、child と grandchild がそれぞれ subagent、`gpt-5.6-luna`、reasoning effort `medium` であることを確認してください。spawn の戻り値が `agent_id` や nickname だけの場合、それらからモデルを推測しないでください。確認方法を自作せず、公開されているmetadataだけを使ってください。
 
 - 両方を確認: `bounded hierarchy verified` として次へ進む。
-- grandchild を起動できない: 残予算を root 管理の flat wave へ戻す。
-- どちらかが別モデル: その系統を棄却し、新規 dispatch を止める。
-- metadata を確認できない: 候補資料として扱えるが `Luna verified` には数えない。確認不能な環境で「全結果をLuna verified」とは報告しない。
-- native spawn がない、fresh context を指定できない、または起動が拒否される: root-only で調べ、理由を報告する。
-- `Unknown model gpt-5.6-luna`: そのタスクでの dispatch を止め、新しい Codex タスクへ同じプロンプトを貼り直すよう案内する。fresh task でも失敗した時だけ、Codex を再起動して再試行する。別モデルへ自動フォールバックしない。
+- grandchildを起動できない: assignmentをfailedと記録し、childは担当cellを継続する。残予算はroot管理のflat waveへ戻す。
+- 別モデル: その系統のLuna verified判定と新規Luna dispatchだけを止め、既取得結果は未検証候補としてrootが再確認する。
+- metadataを確認できない: 作業を継続して未検証候補を返すが、`Luna verified`には数えない。
+- native spawnやfresh contextがない、または起動拒否: root-onlyで継続し理由を報告する。
+- `Unknown model gpt-5.6-luna`: 新しいCodexタスクで最小probeを1回だけ再試行し、再失敗後は設定やモデルを変えずroot-onlyで継続する。
 
 完了条件: hierarchy / flat / root-only の実行形態と、Luna verification の可否が証拠付きで確定していること。
 
 ## 4. Bounded hierarchy で調査する
 
-各 child へ、全体質問と1つの bounded cell、対象・除外・期間・情報源、read-only 境界、自分の depth、descendant allowance を渡してください。canonical URL、publisher、公開日または更新日、precise locator を要求してください。
+各 child へ、全体質問と1つの bounded cell、対象・除外・期間・情報源、behavioral read-only 境界、自分の depth、descendant allowance を渡してください。canonical URL、publisher、公開日または更新日、precise locator を要求してください。
+
+`read-only`は行動上の制約です。runtimeが`danger-full-access`、filesystemが`unrestricted`でも、書き込み能力の存在だけを理由に停止しません。read / search / openだけを使い、編集・削除・移動・公開・送信・権限変更・承認要求を行いません。安全停止は、実際のread denial、mutationの不可避性、read tool不在、bounded retry消尽、scope/secret問題のいずれかを、実エラーとともに示せる場合だけです。
 
 child は最初に cell を観察し、次の3条件をすべて満たす場合だけ grandchild へ切り出します。
 
@@ -92,6 +113,10 @@ child は最初に cell を観察し、次の3条件をすべて満たす場合�
 3. 切り出しが結論または confidence を改善する見込みがある。
 
 grandchild へは完全な依頼文、depth=2、子孫起動禁止、read-only 境界を渡してください。起動前に公開schemaを再確認し、`fork_turns` が公開されていれば `fork_turns="none"`、現行系のように公開されていなければ `agent_type="default"` と `fork_context=false` を使わせてください。どちらも公開されていない場合はfresh contextを実証できないため、Luna verifiedとは呼ばないでください。存在しない引数を推測しないでください。
+
+3条件またはallowanceを満たさない場合、childはgrandchildを起動せず自分の担当範囲を継続します。schema errorは公開schemaを再読して対応引数だけで1回、一時timeoutは残予算内で最大1回だけ再試行し、deterministicなpermission denialは再試行しません。
+
+waveの結果とtask IDを台帳へ回収した後、公開schemaにclose / shutdown操作があれば、完了済みagentを次wave前に閉じて枠を返却します。待機・統合前には閉じません。
 
 各 child は、自分と descendant の結果を統合した evidence packet を返します。
 
@@ -176,12 +201,12 @@ flowchart TD
 
 ## Historical runtime evidence
 
-2026-08-06 の作者環境のfresh Codex taskでは、root → child → grandchild と独立した反証担当が `gpt-5.6-luna`、reasoning effort `medium` で完了しました。この記録は現在の全アカウント、全リリース、全実行面に対する保証ではありません。公開読者が再実行し、各childのruntime metadataを確認してください。
+2026-08-07 の作者環境のfresh Codex taskでは、4 parentがそれぞれ3 childを呼ぶ2層構造を実行し、parent 4件 + child 12件の計16件が完了しました。16件すべてのruntime metadataで `thread_source="subagent"`、`gpt-5.6-luna`、reasoning effort `medium` を確認し、この実行での rejected / safety stop は0件でした。これは当該runの観測値であり、今後の全アカウント、全リリース、全入力で0件を保証するものではありません。公開読者が再実行し、各childのruntime metadataを確認してください。
 
 ```text
-root        gpt-5.6-luna / medium
-child       gpt-5.6-luna / medium
-grandchild  gpt-5.6-luna / medium
+parent x4   gpt-5.6-luna / medium
+child x12   gpt-5.6-luna / medium
+result      completed 16 / rejected 0
 ```
 
 `Unknown model gpt-5.6-luna` が出た場合は、その環境またはアカウントでの利用可能性を確認してください。まず設定を変更せずfresh taskで一度再試行し、それでも失敗する場合は現在のCodex、アカウント、モデル提供状況を確認します。
