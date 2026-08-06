@@ -7,6 +7,8 @@
 
 設定ファイルを編集せず、repository の clone、Skill・plugin・MCP・runner・checker・helper script の導入を要求しないでください。現在の Codex が公開しているネイティブ機能だけで開始してください。Lunaを指定できる公開schemaがある場合は、各spawnで `gpt-5.6-luna` と reasoning effort `medium` を明示してください。利用できない場合は別モデルへ黙って切り替えず、そのLuna系統の起動だけを止め、rootまたは許可されたroot-only経路で作業を継続して境界を報告してください。
 
+`hide_spawn_agent_metadata` は非公開・環境依存の設定なので、自動追加・変更しないでください。公式ドキュメントは明示的な model / reasoning 指定を説明していますが、公式 Codex issue には、Multi-Agent V2の一部の安定版・ChatGPT認証面で routing fields が隠れ、hidden flag を `false` にすると予約済み `collaboration.spawn_agent` schema error になる報告があります。`model` / `reasoning_effort` が公開されていれば各spawnで明示し、`fork_turns` が公開されていれば `fork_turns="none"`（または互換性のある partial fork）を使ってください。`fork_turns` がなく `agent_type` / `fork_context` が公開されている場合は、存在する引数だけを使います。実行後の `thread_source` / `model` / `effort` を確認できない場合は、`Luna unverified` または root-only と報告し、設定を書き換えません。
+
 ## 0. 実行原則
 
 - root が成果、権限、依存関係、統合、最終判断を所有する。
