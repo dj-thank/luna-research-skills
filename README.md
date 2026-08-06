@@ -29,6 +29,14 @@ Codex のネイティブ subagent を利用し、可能な環境では **GPT-5.6
 
 `read-only` は「runtime自体が書き込み不能でなければならない」という意味ではなく、「そのagentが変更操作を行わない」という行動上の境界です。プロンプトは、writableなruntime表示だけで停止せず、read/search/openだけを使うよう明示します。実際のread denial、mutationの不可避性、tool不在、retry上限、scope/secret問題がある場合は、分類と実エラーを返して安全停止します。安全条件を弱めず、能力の存在と操作の実行を区別します。
 
+### Sol / Multi-Agent V2 の現在地（2026-08-07）
+
+この問題は、すべての Codex surface で解消済みとは判定していません。現在の [公式 Subagents ドキュメント](https://learn.chatgpt.com/docs/agent-configuration/subagents) は、custom agent file の `model` / `model_reasoning_effort` が優先され、明示的な spawn 値は `[agents]` の既定値より優先されると説明しています。また、[PR #32749](https://github.com/openai/codex/pull/32749) は Multi-Agent V2 の `model` / `reasoning_effort` override を公開する変更として main に merge されています。
+
+ただし、公式 issue には、安定版や ChatGPT 認証面で V2 の routing fields が隠れる、full-history fork では override が拒否される、`hide_spawn_agent_metadata=false` を設定すると予約済み `collaboration.spawn_agent` schema error になる、という報告が残っています（[#32031](https://github.com/openai/codex/issues/32031)、[#32674](https://github.com/openai/codex/issues/32674)、[#32988](https://github.com/openai/codex/issues/32988)）。そのため、`hide_spawn_agent_metadata` のような非公開フラグを README の利用者へ一律に追加・変更させません。
+
+利用時は、現在の spawn schema に存在する引数だけを使ってください。`model` / `reasoning_effort` が公開されていれば明示し、`fork_turns` が公開されていれば明示的 override と `fork_turns="none"`（または互換性のある partial fork）を組み合わせます。実行後は task 名、nickname、設定ファイルではなく、child の runtime metadata の `thread_source` / `model` / `effort` を確認してください。確認できない出力は `Luna unverified` または root-only として扱います。
+
 > [!IMPORTANT]
 > このリポジトリはOpenAI公式製品ではありません。モデル提供状況やsubagent機能は、Codex、アカウント、workspaceによって異なります。
 
@@ -37,6 +45,8 @@ Codex のネイティブ subagent を利用し、可能な環境では **GPT-5.6
 あなたは root research coordinator です。以下の RESEARCH REQUEST を、利用可能なら Codex ネイティブのサブエージェントへ委任し、一次資料を中心に調査してください。この依頼は subagent の起動と並列調査を明示的に許可しますが、承認、サンドボックス、外部操作の権限を変更したり、特定モデルの利用可能性を保証したりしません。
 
 設定ファイルを編集せず、Skill、plugin、MCP、runner、checker、helper script、Pythonなどの追加 runtime を作成・導入しないでください。現在の Codex が公開しているネイティブ機能だけを使ってください。このプロンプト単体で開始できることを優先し、Lunaを指定できる公開schemaがある場合は各spawnで `gpt-5.6-luna` と reasoning effort `medium` を明示してください。
+
+`hide_spawn_agent_metadata` は非公開・環境依存の設定です。自動で追加・変更しないでください。V2の一部の実行面では routing fields が隠れ、hidden flag を `false` にすると予約済み schema error になる報告があります。公開 schema に `model` / `reasoning_effort` があれば明示し、`fork_turns` が公開されていれば `fork_turns="none"`（または互換性のある partial fork）を使います。実行後の `thread_source` / `model` / `effort` を確認できない出力は `Luna unverified` または root-only と報告してください。
 
 `max_concurrent_threads_per_session`（旧名 `max_threads`）は同時実行数の上限です。depth、assignment budget、descendant allowance はこのプロンプトが台帳で管理する論理的な制約であり、spawn tool がruntimeで強制する制約ではありません。実際に使う起動数と深さは、このプロンプトの台帳でさらに小さく制御してください。
 
