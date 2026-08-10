@@ -256,7 +256,7 @@ result      completed 16 / rejected 0
 
 現在の定義は Codex の [Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference) と [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) を確認してください。
 
-更新履歴は [CHANGELOG.md](CHANGELOG.md)、公開告知用の文面は [docs/social/](docs/social/) にあります。
+更新履歴は [CHANGELOG.md](CHANGELOG.md) にあります。
 
 ## Data handling
 

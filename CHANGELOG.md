@@ -4,14 +4,19 @@
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-08-10
+## [1.3.2] - 2026-08-10
+
+### Removed
+
+- リポジトリ内の公開告知テンプレートとREADMEからの参照。
+
+## 1.3.1 - 2026-08-10
 
 ### Added
 
 - Codex Desktop / Multi-Agent V2でLunaだけが `spawn_agent` allowlistから除外される場合の診断・バックアップ・復元ガイド。
 - 公式 `models_cache.json` を直接編集せず、専用 `model_catalog_json` のLunaエントリだけを `v1` から `v2` へ変更するコミュニティ製の暫定回避策。
 - 公式ドキュメントと `openai/codex` 公開issueに基づく一次情報調査ノート。
-- X向けの短文投稿とスレッド用テンプレート。
 
 ### Changed
 
@@ -42,7 +47,7 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.1...HEAD
-[1.3.1]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.0...v1.3.1
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/dj-thank/luna-research-skills/releases/tag/v1.3.2
 [1.3.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/dj-thank/luna-research-skills/releases/tag/v1.2.0
