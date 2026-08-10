@@ -37,6 +37,17 @@ Codex のネイティブ subagent を利用し、可能な環境では **GPT-5.6
 
 利用時は、現在の spawn schema に存在する引数だけを使ってください。`model` / `reasoning_effort` が公開されていれば明示し、`fork_turns` が公開されていれば明示的 override と `fork_turns="none"`（または互換性のある partial fork）を組み合わせます。実行後は task 名、nickname、設定ファイルではなく、child の runtime metadata の `thread_source` / `model` / `effort` を確認してください。確認できない出力は `Luna unverified` または root-only として扱います。
 
+### Luna が V2 の候補に出ない場合（2026-08-10）
+
+Codex Desktop / CLI の一部では、トップレベルでは `gpt-5.6-luna` を利用できても、Multi-Agent V2 の `spawn_agent` が `Unknown model gpt-5.6-luna. Available models: gpt-5.6-sol, gpt-5.6-terra` を返す既知事象があります。公開 issue では、モデルカタログ上の Luna が `multi_agent_version: v1` のため V2 の候補から除外されるケースが報告されています（[#35097](https://github.com/openai/codex/issues/35097)、[#34399](https://github.com/openai/codex/issues/34399)、[#34964](https://github.com/openai/codex/issues/34964)）。
+
+まず fresh task、Codex の再起動、クライアント更新、アカウント／workspace のモデル提供状況を確認してください。それでも「Luna単体は動くが、native `spawn_agent` だけが拒否する」場合に限り、公式キャッシュを直接編集しないローカル専用カタログによる暫定回避策を利用できます。
+
+手順、バックアップ、検証、復元方法: **[Luna Desktop V2 compatibility workaround](docs/luna-desktop-v2-workaround.md)**
+
+> [!WARNING]
+> Luna の `multi_agent_version` を `v1` から `v2` へ変更した専用カタログは、OpenAI公式の修正ではなくコミュニティ製の暫定回避策です。導入後も child の runtime metadata を確認し、公式修正後は解除してください。
+
 > [!IMPORTANT]
 > このリポジトリはOpenAI公式製品ではありません。モデル提供状況やsubagent機能は、Codex、アカウント、workspaceによって異なります。
 
@@ -205,6 +216,8 @@ flowchart TD
 
 通常はREADMEのプロンプトを貼るだけです。現行のspawn schemaにmodel指定欄がない実行面では、`config.toml` の `[agents].default_subagent_model` と `[agents].default_subagent_reasoning_effort` がフォールバックになります。既存設定を変更する場合は、重複した `[agents]` 見出しや `max_threads` / `max_concurrent_threads_per_session` の併記を避け、事前にバックアップしてください。
 
+`default_subagent_model` を設定しても Luna だけが V2 allowlist から除外される場合は、設定値の誤りとは限りません。[診断と暫定回避策](docs/luna-desktop-v2-workaround.md)では、direct Luna probe、native spawn probe、専用モデルカタログ、fresh processでのruntime検証を別々の証拠として扱います。
+
 `PROMPT.md` は、問いの分解、再帰条件、予算、証拠形式、反証枠、root検証、完了条件を決めます。assignment budget、depth、descendant allowanceはprompt-levelの台帳であり、spawn toolの戻り値やruntimeが自動で強制するものではありません。
 
 したがって、Pythonなどの補助環境は不要ですが、Lunaへのルーティングと研究手順は別の役割です。プロンプトだけを別環境へ持っていくこともできます。その環境にLunaまたはnative subagentがなければ、Luna実行を名乗らずflat / root-only fallbackとして報告します。fresh-contextの引数はCodexの世代で異なるため、`fork_turns="none"` が公開されていない現行系では `agent_type="default"` と `fork_context=false` を使います。
@@ -242,6 +255,8 @@ result      completed 16 / rejected 0
 - 現行のspawn戻り値が `agent_id` と nickname だけでmetadataを含まない場合、そこからモデルを推測してはいけません。確認できない結果は `Luna unverified` と報告します。
 
 現在の定義は Codex の [Configuration Reference](https://learn.chatgpt.com/docs/config-file/config-reference) と [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) を確認してください。
+
+更新履歴は [CHANGELOG.md](CHANGELOG.md)、公開告知用の文面は [docs/social/](docs/social/) にあります。
 
 ## Data handling
 
