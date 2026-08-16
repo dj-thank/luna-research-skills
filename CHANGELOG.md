@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [2.0.5] - 2026-08-17
+
+### Security
+
+- GitHub CodeQL Actionの`init`と`analyze`を、GitHub公式の署名検証済みv4.37.7 commit `ff2f1c621b7f889edc0d3c761ac2e6a3f8cdb0dd`へ同時更新した。Dependabotが作成した2件の単独更新を1つの保守リリースに統合し、全workflowで引き続きfull-length SHA pinningを維持する。
+
 ## [2.0.4] - 2026-08-17
 
 ### Fixed
@@ -103,7 +109,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.4...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.5...HEAD
+[2.0.5]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.1...v2.0.2
