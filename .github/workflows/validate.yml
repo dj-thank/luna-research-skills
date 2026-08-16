@@ -1,0 +1,97 @@
+name: Validate Luna skills
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-matrix:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Run checker suites
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python .agents/skills/run-diverse-luna-research/scripts/test_check_setup.py
+          python .agents/skills/run-diverse-luna-project/scripts/test_check_setup.py
+      - name: Run repository, release, and route-manifest tests
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest discover -s tools -p 'test_*.py'
+      - name: Validate repository and compile Python
+        env:
+          PYTHONUTF8: '1'
+        run: |
+          python tools/validate_repository.py
+          python -m compileall -q .agents tools
+
+  migration-safety-pwsh:
+    name: Migration safety (PowerShell 7)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run isolated migration safety tests
+        shell: pwsh
+        run: >-
+          ./tools/Test-LunaMigrationTools.ps1
+          -Source (Resolve-Path -LiteralPath '.agents/skills').Path
+
+  migration-safety-windows-powershell:
+    name: Migration safety (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run isolated migration safety tests
+        shell: powershell
+        run: >-
+          ./tools/Test-LunaMigrationTools.ps1
+          -Source (Resolve-Path -LiteralPath '.agents/skills').Path
+
+  stress-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: {python-version: '3.12'}
+      - name: Repeat 4,225 contract cases
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python tools/stress_contracts.py --iterations 25
+
+  stress-migration:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Repeat disposable migration attack fixtures
+        shell: pwsh
+        run: |
+          1..5 | ForEach-Object {
+            ./tools/Test-LunaMigrationTools.ps1 -Source .agents/skills
+          }

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Diverse Luna Project"
+  short_description: "Sole implicit router for broad Luna research or mixed delivery"
+  default_prompt: "Use $run-diverse-luna-project as the sole implicit Luna router for broad, safely decomposable work. Before dispatch, classify deterministically: if the final deliverable is evidence or fact-checking only, explicitly hand off to $run-diverse-luna-research; if it includes code, artifacts, tests, migration, integration, release, or operations, keep project ownership. If classification is ambiguous, stay root-only until it is resolved. Fix N, separate evidence/builders/reviewers and external gates, bind accepted Luna turns to exact parent routes, and integrate at the root."
+
+policy:
+  allow_implicit_invocation: true

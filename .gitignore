@@ -1,2 +1,7 @@
 __pycache__/
 *.py[cod]
+release/
+release-repeat/
+release-check/
+luna-discovery.json
+luna-discovery.md

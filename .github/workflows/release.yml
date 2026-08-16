@@ -1,0 +1,45 @@
+name: Release
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: {fetch-depth: 0}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with: {python-version: '3.12'}
+      - name: Verify tag, repository, and release tests
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+          GH_TOKEN: '${{ github.token }}'
+        run: |
+          test "${GITHUB_REF_TYPE}" = "tag"
+          test "v$(tr -d '\r\n' < VERSION)" = "${GITHUB_REF_NAME}"
+          test "$(git rev-list -n 1 "${GITHUB_REF_NAME}")" = "${GITHUB_SHA}"
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Refusing to replace existing immutable release ${GITHUB_REF_NAME}" >&2
+            exit 1
+          fi
+          python tools/validate_repository.py
+          python -m unittest discover -s tools -p 'test_*.py'
+      - run: python tools/build_release.py --output release
+      - name: Verify assets and reproducibility
+        run: |
+          python tools/build_release.py --output release-repeat
+          cmp release/luna-skill-v*.zip release-repeat/luna-skill-v*.zip
+          cmp release/luna-hierarchical-skills-*-plugin.zip release-repeat/luna-hierarchical-skills-*-plugin.zip
+          cmp release/luna-skill-v*.spdx.json release-repeat/luna-skill-v*.spdx.json
+          (cd release && sha256sum -c SHA256SUMS)
+          unzip -t release/luna-skill-v*.zip
+          unzip -t release/luna-hierarchical-skills-*-plugin.zip
+      - name: Create immutable GitHub release
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: gh release create "${GITHUB_REF_NAME}" release/* --verify-tag --title "${GITHUB_REF_NAME}" --generate-notes

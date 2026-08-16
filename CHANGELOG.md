@@ -4,6 +4,34 @@
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-17
+
+### Added
+
+- 実行可能な `run-diverse-luna-research` / `run-diverse-luna-project` source packages と、Luna coordinator / builder / reviewer custom-agent definitions。
+- 全tree共通の `N`、同時実行capacity `C`、wave width `W`、verifier reserve `V`、depth 2、exact runtime receiptを使うhierarchical fan-out/fan-in契約。
+- read-only discovery、dry-run/`ShouldProcess`、staging hash検証、既存package拒否、非変更failure testsを備えたuser-scope migration tools。
+- Codex cloudとrepository taskで自動発見できる`.agents/skills` / `.codex/agents`配置と、Python契約・TOML・Markdown link・PowerShell migration safetyを検査する最小権限GitHub Actions workflow。
+- built-in `worker` を明示的に Luna/medium/fresh-contextへ固定する、custom role非公開surface向けの検証済みcapability fallback。
+- 決定的source ZIP、installable plugin ZIP、SHA-256 manifest、SPDX 2.3 SBOM、tag refからだけ明示dispatchできるGitHub Release workflow。
+- Python 3.11/3.12/3.13をUbuntu/Windows/macOSで走らせる契約matrix、PowerShell 7/5.1 migration tests、CodeQL、Dependabot。
+- 4,225 contract casesと5回のdisposable migration攻撃fixtureを反復する、bounded stress jobs。
+
+### Changed
+
+- READMEをprompt-first説明から、flat/hierarchical research/project Skillの配布・安全・検証案内へ置換。
+- v2 checkerを `N/C/W/V` 全tree予算、計画済みrow、`V=max(1,ceil(.15*N))`、live attemptを含む同時実行、wave幅、deadline、research/project closure、exact parent-edge receiptでfail-closed化。期限後に開始またはacceptedになった出力を拒否し、未dispatchのroot-only gapを `not_dispatched/excluded` で終端化。researchでは一次情報・反証を各`ceil(20%*N)`、測定/欠損を1件以上、unique coverage、priority accepted-or-gapとして検査。
+- projectを唯一のimplicit router、researchを明示呼出し／project handoff専用にし、packet-only、mixed delivery、曖昧時root-onlyの決定的なtie-breakを追加。
+- installerは任意manifest上書きを廃止し、package move前にowned `state=prepared` manifestを新規作成、partial/applied stateを追跡する方式へ変更。
+- installerはsource reparse pointを拒否し、`pendingDestination` journal、durable flush、atomic manifest replacement、same-volume atomic directory move、destination race拒否、OS-temp real-apply/partial-failure testsを追加。
+- research/projectのtriggerを決定的に分離し、packet-only researchとcode/artifact/test/releaseを含むmixed deliveryを明確に分離。built-in `default` を上書きしていた公開custom agent定義を削除。
+- 配布・運用契約から非公式 `max_depth` と旧custom model-catalog依存を外し、depth 2をworkflow/ledger policyとしてのみ扱うよう整理。
+
+### Removed
+
+- 現行Skillと重複・矛盾していたpaste-only `PROMPT.md`、`PROMPT.en.md`、`PROJECT-PROMPT.md`。
+- 2026-08-10時点のモデルカタログ書換え回避策とrouting観測文書。履歴とv1.3.2以前のtagには残る。
+
 ## [1.3.2] - 2026-08-10
 
 ### Removed
@@ -47,7 +75,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.2...v2.0.0
 [1.3.2]: https://github.com/dj-thank/luna-research-skills/releases/tag/v1.3.2
 [1.3.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/dj-thank/luna-research-skills/releases/tag/v1.2.0

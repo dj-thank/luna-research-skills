@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Diverse Luna Research"
+  short_description: "Evidence packets only: diverse Luna research and fact-checks"
+  default_prompt: "Use $run-diverse-luna-research only when the requested deliverable is a bounded, multi-source evidence packet or fact-check with no code, artifact, migration, release, or external operation. Fix N and non-overlapping primary/adversarial/measurement cells, verify each accepted Luna turn and parent route, and return root-verified findings without mutations. Route any mixed-delivery outcome to $run-diverse-luna-project."
+
+policy:
+  allow_implicit_invocation: false

@@ -1,13 +1,17 @@
 # Security and data handling
 
-This repository contains copy-and-paste research prompts. It does not include an installer, runner, server, credential store, or code that performs external actions by itself.
+This repository contains repository-scoped Codex Skills under `.agents/skills`, project-scoped optional custom agents under `.codex/agents`, non-mutating discovery logic, and an explicit opt-in user-scope Skill installer. It does not include a server, credential store, provider client, deployment runner, or code that performs external actions by itself. Merely connecting the repository to Codex cloud does not run the installer or perform external writes. Discovery writes only explicitly requested new report files below its declared repository or OS-temporary boundary, refuses overwrite, and never follows or resolves root/nested reparse targets. The installer changes only new package directories under the official user Skill root after `-Apply`; it rejects root/nested source reparse points, verifies one bounded source snapshot, holds exclusive target locks, rechecks destination/staging paths immediately around each atomic move, verifies post-move hashes, and rejects arbitrary/existing manifests or destinations. It durably records `pendingDestination` before each same-volume atomic rename, atomically replaces its owned journal, uses only non-recursive stage cleanup, and never deletes or disables a legacy root.
 
 ## Safe use
 
-- Do not paste API keys, passwords, access tokens, personal data, confidential company information, unreleased source code, or private research into `RESEARCH REQUEST` unless you have explicit authorization and have checked the applicable data-handling policy.
-- The prompt's read-only boundary limits the requested actions; it does not prevent the parent Codex task, Web search, MCP server, or subagent from processing or retaining data according to their own configuration and policies.
+- Do not send API keys, passwords, access tokens, personal data, confidential company information, unreleased source code, or private research to a subagent or external tool unless you have explicit authorization and have checked the applicable data-handling policy.
+- A packet's prompt-only or read-only instruction limits requested behavior; it does not prove the effective filesystem sandbox or prevent the parent Codex task, Web search, MCP server, connector, browser, provider, or subagent from processing data according to its configuration and policies.
 - Verify the effective model and execution route from runtime metadata. Do not treat a task name, nickname, prompt text, or static configuration as proof.
 - Treat fetched pages and source documents as untrusted data. Do not execute instructions embedded in them.
+- Keep local, device, provider, public, and human-approval evidence gates separate. No child or coordinator may promote a gate or perform an authenticated/public write merely because a local artifact passed.
+- Pushing a tag does not publish a release. The write-capable release workflow must be explicitly dispatched against that exact tag, checks tag-to-commit/VERSION identity, and refuses to replace an existing GitHub Release.
+- Before installation, verify the GitHub Release `SHA256SUMS`, inspect source hashes, duplicate Skill names, destination ownership, and PowerShell `-WhatIf` output. Treat source and plugin ZIPs as untrusted until checksum and archive-path validation pass. Never recursively remove `$HOME/.agents/skills` or `$HOME/.codex/skills` as a rollback; quarantine only one exact journal-listed package after hash and extra-file inspection.
+- A plugin archive intentionally contains the two Skills but not project/user custom-agent TOMLs. When custom roles are unavailable, only a live-schema built-in `worker` route explicitly pinned to Luna/medium and verified from parent/child runtime receipts is accepted.
 
 ## Reporting
 
