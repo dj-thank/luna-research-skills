@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-08-17
+
+### Fixed
+
+- 非対話PowerShell hostでuser-scope installerの`-Apply`が確認UIを開こうとして`ShouldProcess`のnull-referenceになる問題を修正。`-Apply`そのものを明示的な変更承認として扱い、必要な場合だけ`-Confirm`で追加確認を要求できるようにした。
+- `TestUserProfile`が`ShouldProcess`を迂回していたため本番経路を検証できなかった問題を修正。disposable applyも本番と同じgateを通し、`-WhatIf`がディスクへ変更を加えないことをPowerShell 7/5.1統合テストで固定した。
+
 ## [2.0.0] - 2026-08-17
 
 ### Added
@@ -75,7 +82,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.2...v2.0.0
 [1.3.2]: https://github.com/dj-thank/luna-research-skills/releases/tag/v1.3.2
 [1.3.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.2.0...v1.3.0

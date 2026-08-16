@@ -1,4 +1,7 @@
-[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
+# -Apply is the explicit authorization boundary. Medium avoids an implicit
+# confirmation prompt in non-interactive hosts while preserving -Confirm and
+# -WhatIf through the standard ShouldProcess contract.
+[CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
 param(
     [Parameter(Mandatory = $true)][string]$Source,
     [string]$TargetRoot,
@@ -473,14 +476,12 @@ if (-not $Apply) {
 }
 
 $approved = $true
-if (-not $TestUserProfile) {
-    $action = "Install $($packages.Count) Luna skill package(s) after staging and SHA-256 verification"
-    $approved = $PSCmdlet.ShouldProcess($targetRootFull, $action) -and
-        $PSCmdlet.ShouldProcess(
-            $manifestOut,
-            'Create a new durable migration journal without overwriting an existing file'
-        )
-}
+$action = "Install $($packages.Count) Luna skill package(s) after staging and SHA-256 verification"
+$approved = $PSCmdlet.ShouldProcess($targetRootFull, $action) -and
+    $PSCmdlet.ShouldProcess(
+        $manifestOut,
+        'Create a new durable migration journal without overwriting an existing file'
+    )
 if (-not $approved) {
     $manifest | ConvertTo-Json -Depth 12
     return

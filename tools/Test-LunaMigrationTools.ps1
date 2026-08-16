@@ -89,6 +89,15 @@ try {
 
     & $installer -Source $Source -Apply -WhatIf | Out-Null
 
+    $whatIfProfile = Join-Path $testRoot ('luna-skills-test-profile-' + [guid]::NewGuid().ToString('N'))
+    & $installer `
+        -Source $Source `
+        -Apply `
+        -TestUserProfile $whatIfProfile `
+        -WhatIf | Out-Null
+    Assert-True -Condition (-not (Test-Path -LiteralPath $whatIfProfile)) `
+        -Message 'Disposable -WhatIf bypassed ShouldProcess and changed the filesystem.'
+
     $profile = Join-Path $testRoot ('luna-skills-test-profile-' + [guid]::NewGuid().ToString('N'))
     $manifestPath = Join-Path (Join-Path $profile '.agents') 'apply.json'
     $applyText = (& $installer `
