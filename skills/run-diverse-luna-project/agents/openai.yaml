@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Diverse Luna Project"
+  short_description: "Integrate bounded Luna project workstreams safely"
+  default_prompt: "Use $run-diverse-luna-project only for a broad mixed-delivery project: fix N, separate evidence/builders/shared writers and provider/public gates, bind accepted Luna turns to parent spawn routes, and integrate all changes at the root."
+
+policy:
+  allow_implicit_invocation: true

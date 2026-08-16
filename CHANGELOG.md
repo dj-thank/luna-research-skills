@@ -4,6 +4,25 @@
 
 ## [Unreleased]
 
+### Added
+
+- 実行可能な `run-diverse-luna-research` / `run-diverse-luna-project` source packages と、Luna coordinator / builder / reviewer custom-agent definitions。
+- 全tree共通の `N`、同時実行capacity `C`、wave width `W`、verifier reserve `V`、depth 2、exact runtime receiptを使うhierarchical fan-out/fan-in契約。
+- read-only discovery、dry-run/`ShouldProcess`、staging hash検証、既存package拒否、非変更failure testsを備えたuser-scope migration tools。
+
+### Changed
+
+- READMEをprompt-first説明から、flat/hierarchical research/project Skillの配布・安全・検証案内へ置換。
+- v2 checkerを `N/C/W/V` 全tree予算、計画済みrow、`V=max(1,ceil(.15*N))`、live attemptを含む同時実行、wave幅、deadline、research/project closure、exact parent-edge receiptでfail-closed化。期限後に開始またはacceptedになった出力を拒否し、未dispatchのroot-only gapを `not_dispatched/excluded` で終端化。researchでは一次情報・反証を各`ceil(20%*N)`、測定/欠損を1件以上、unique coverage、priority accepted-or-gapとして検査。
+- 厳密なpositive/negative triggerを保ったまま両Skillのimplicit invocationを有効化し、狭いlookupや小修正を除外しつつprojectless/repository taskの双方で利用できる配布方針へ変更。
+- installerは任意manifest上書きを廃止し、package move前にowned `state=prepared` manifestを新規作成、partial/applied stateを追跡する方式へ変更。
+- 配布・運用契約から非公式 `max_depth` と旧custom model-catalog依存を外し、depth 2をworkflow/ledger policyとしてのみ扱うよう整理。
+
+### Removed
+
+- 現行Skillと重複・矛盾していたpaste-only `PROMPT.md`、`PROMPT.en.md`、`PROJECT-PROMPT.md`。
+- 2026-08-10時点のモデルカタログ書換え回避策とrouting観測文書。履歴とv1.3.2以前のtagには残る。
+
 ## [1.3.2] - 2026-08-10
 
 ### Removed

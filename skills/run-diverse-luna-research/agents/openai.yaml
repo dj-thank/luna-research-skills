@@ -1,0 +1,7 @@
+interface:
+  display_name: "Run Diverse Luna Research"
+  short_description: "Verify diverse source-backed Luna evidence lanes"
+  default_prompt: "Use $run-diverse-luna-research only for a bounded multi-source evidence lane: classify research versus project work, fix N and non-overlapping cells, bind each accepted Luna turn to its parent spawn route, and return root-verified findings without mutations."
+
+policy:
+  allow_implicit_invocation: true
