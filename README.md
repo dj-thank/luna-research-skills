@@ -2,7 +2,7 @@
 
 このリポジトリは、Codex のネイティブ subagent を使う調査・開発・監査・移行・リリース作業のための、repository-scoped Skill、optional custom-agent definition、安全な発見・移行ツール、再現可能なrelease assetsを収録します。GitHubをCodex cloudのenvironmentへ接続した場合も、リポジトリrootの公式配置からSkillを発見できます。Luna は、**高速・効率的な高ボリューム fan-out** と、複数の bounded assignment を同時に処理する用途に向きます。ただし、モデル、spawn schema、同時実行上限、利用可能な機能は Codex のsurface・アカウント・workspace・cloud environmentごとに異なります。
 
-canonical source package はこのリポジトリの `.agents/skills/` と `.codex/agents/` です。前者はrepository-scoped Skill、後者はproject-scoped custom agentとして、cloneされたリポジトリ内からCodexが発見する公式配置です。実際に有効なのは、現在のCodexが発見したコピーです。README、静的設定、Git tag、過去の観測記録だけでは、そのセッションでのruntime proofになりません。
+canonical source package はこのリポジトリの `.agents/skills/` と `.codex/agents/` です。前者はrepository-scoped Skillです。後者はlocal Codex client向けのoptional project-scoped custom agent sourceであり、repositoryに存在するだけではCodex Cloudでactiveになった証拠になりません。実際に有効なのは、現在のsurfaceが発見・公開したコピーとrouteです。README、静的設定、Git tag、過去の観測記録だけでは、そのセッションでのruntime proofになりません。
 
 ## Canonical package layout
 
@@ -47,10 +47,23 @@ runtimeは、公開されているcustom roleを優先します。cloudや一部
 ### Codex cloudで使う
 
 1. GitHub上のこのリポジトリをCodex cloudへ接続し、対象branchのenvironmentを作成します。
-2. リポジトリrootの`.agents/skills`はrepository scopeとしてclone時に含まれるため、user-scope installerは不要です。
-3. 最初のcloud taskでは`$run-diverse-luna-research`または`$run-diverse-luna-project`を明示し、Skill path、公開spawn schema、実効model/effort、permission modeを確認します。
-4. `.codex/agents`のcustom roleが現在のcloud surfaceに公開されない場合、Skillは存在しないroleを推測しません。explicit Luna/medium/fresh-contextを持つbuilt-in `worker` routeが公開されていればそのrouteをreceipt検証付きで使用し、それもなければroot-onlyへfail closedします。
-5. cloud environmentの秘密値、internet access、GitHub write権限はこのリポジトリに含まれません。必要な場合だけenvironment側で個別に設定し、provider/public/HUMAN gateと分離します。
+2. リポジトリrootの`.agents/skills`はrepository scopeとしてclone時に含まれるため、user-scope installerは不要です。セットアップは通常`automatic`で十分です。
+3. Pythonを使うenvironmentでは、通常の環境変数として`PYTHONUTF8=1`と`PYTHONDONTWRITEBYTECODE=1`を設定します。秘密値はsetupで本当に必要なものだけをSecretへ置き、通常の環境変数へコピーしません。
+4. source-heavy researchが必要ならagent internetをenvironment単位で有効化します。全ドメイン・全methodは強い権限なのでtaskログを確認し、固定smoke以外でrepository bytes、環境変数、credentialを外部へ送信しません。
+5. 既知の対象commit SHAをCloud taskへ渡し、次を実行します。Codex Cloudがcheckoutを一時branch `work`として表示しても、期待SHA一致とclean worktreeをprovenanceに使い、branch labelだけでは失敗にしません。
+
+```bash
+python tools/cloud_smoke.py \
+  --expected-head '<selected commit SHA>' \
+  --network \
+  --iterations 25
+```
+
+`cloud_smoke.py`はGET/HEADに加え、`https://httpbin.org/post`へ固定文字列`codex_cloud_smoke=ok`だけをPOSTします。test/build/compileの書込みはOS temporary directoryへ隔離し、前後のGit treeがcleanでなければ失敗します。`pwsh`がないLinux CloudではPowerShell migration testを`not_run`として明示し、WindowsのPowerShell 7/5.1 GitHub Actions gateを代替証拠として残します。JSON verdictは最大でも`LOCAL_PASS`です。
+
+6. 最初のcloud taskでは`$run-diverse-luna-research`または`$run-diverse-luna-project`を明示し、Skill path、公開spawn schema、実効model/effort、permission modeを確認します。
+7. 公式Subagents仕様でcustom-agent設定はlocal Codex clientの機能です。`.codex/agents`のcustom roleが現在のCloud surfaceに公開されない場合、Skillは存在しないroleを推測しません。explicit Luna/medium/fresh-contextを持つbuilt-in `worker` routeとexact completed receiptが公開されていればそのrouteを検証付きで使用し、どれかが欠ければroot-onlyへfail closedします。
+8. cloud environmentの秘密値、internet access、GitHub write権限はこのリポジトリに含まれません。必要な場合だけenvironment側で個別に設定し、provider/public/HUMAN gateと分離します。
 
 Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、結果をreviewしてからPRへ進める仕組みです。このリポジトリを接続しただけでinstaller、provider操作、公開、外部送信が自動実行されることはありません。
 

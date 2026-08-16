@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [2.0.6] - 2026-08-17
+
+### Added
+
+- Codex Cloudの一時branch名ではなく期待commit SHAとclean treeを基準にし、保存済みUTF-8環境変数、固定payloadだけのGET/HEAD/POST、repository validator、tool/checker suites、contract stress、temp release build、compile、Git integrityを一コマンドで検査する`tools/cloud_smoke.py`を追加した。JSON receiptは`LOCAL_PASS`を上限とし、秘密値やrepository bytesを送信しない。
+- Cloud smokeの公開seamに対し、`work` branch受入、dirty tree拒否、固定POST payload、未許可HTTP method、command failure/timeoutを注入するテストを追加した。
+
+### Changed
+
+- Codex Cloudではlocal-client custom-agent TOMLをactive runtime proofとして扱わず、live surfaceがexplicit model/effort/fresh-contextとcompleted receiptを公開しない場合はroot-onlyへ縮退する境界をREADMEへ明記した。
+- stress suiteのcase数を古い固定値ではなく各`unittest`実行の観測値から集計し、test追加後も実件数を報告するようにした。
+- GitHub Actionsへoffline Cloud-smoke contract jobを追加し、期待`GITHUB_SHA`、temp-only artifact generation、clean worktreeを継続検査するようにした。
+
 ## [2.0.5] - 2026-08-17
 
 ### Security
