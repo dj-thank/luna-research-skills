@@ -40,6 +40,9 @@ jobs:
           (cd release && sha256sum -c SHA256SUMS)
           unzip -t release/luna-skill-v*.zip
           unzip -t release/luna-hierarchical-skills-*-plugin.zip
-      - name: Create immutable GitHub release
+      - name: Create and verify immutable GitHub release
         env: {GH_TOKEN: '${{ github.token }}'}
-        run: gh release create "${GITHUB_REF_NAME}" release/* --verify-tag --title "${GITHUB_REF_NAME}" --generate-notes
+        run: |
+          # With assets, gh creates a draft, uploads every asset, and publishes last.
+          gh release create "${GITHUB_REF_NAME}" release/* --verify-tag --title "${GITHUB_REF_NAME}" --generate-notes
+          test "$(gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" --json isImmutable --jq '.isImmutable')" = "true"

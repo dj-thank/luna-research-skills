@@ -42,7 +42,7 @@ runtimeは、公開されているcustom roleを優先します。cloudや一部
 - `SHA256SUMS`: 両ZIPの固定SHA-256。
 - `luna-skill-vX.Y.Z.spdx.json`: source inventoryのSPDX 2.3 SBOM。
 
-ダウンロード後は `SHA256SUMS` を照合してから展開または導入してください。source treeとplugin/user treeに同名Skillを同時に有効化するとselectorが重複します。通常は一scopeだけを使い、repository/user overlapが必要な場合はcomplete package hash一致とselected pathを記録します。
+`v2.0.3` 以降のReleaseはGitHubのImmutable releasesを有効にした状態で公開し、公開後のtag移動、asset変更・削除を禁止します。Release workflowはasset付き`gh release create`でdraft作成・全asset upload・publishを順番に行い、最後に`isImmutable=true`を検査します。ダウンロード後も `SHA256SUMS` を照合してから展開または導入してください。source treeとplugin/user treeに同名Skillを同時に有効化するとselectorが重複します。通常は一scopeだけを使い、repository/user overlapが必要な場合はcomplete package hash一致とselected pathを記録します。
 
 ### Codex cloudで使う
 

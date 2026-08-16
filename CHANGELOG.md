@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-08-17
+
+### Security
+
+- GitHub Immutable releasesをrepository設定で有効化し、公開後のtag移動、release assetの変更・削除を禁止した。Release workflowは全asset添付後に公開し、GitHub APIの`isImmutable=true`を受入条件として検査する。
+- Dependabot security updatesを有効化し、既存のDependabot alerts、CodeQL、secret scanning、push protection、private vulnerability reportingと組み合わせた。
+- GitHub Actions設定で外部Actionのfull-length commit SHA pinningを強制した。repository内のworkflowは既に全外部Actionを40桁SHAで固定している。
+
 ## [2.0.2] - 2026-08-17
 
 ### Fixed
@@ -88,7 +96,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.2...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.3...HEAD
+[2.0.3]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.2...v2.0.0

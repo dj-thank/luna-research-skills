@@ -132,6 +132,22 @@ class RepositoryValidatorTests(unittest.TestCase):
         )
         self.assertIn("implicit_router", {e["code"] for e in validator.validate_repository(root)})
 
+    def test_release_workflow_requires_immutable_publication_assertion(self):
+        root = self.fixture()
+        (root / "VERSION").write_text("2.0.3\n", encoding="utf-8")
+        workflows = root / ".github/workflows"
+        workflows.mkdir(parents=True)
+        (workflows / "release.yml").write_text(
+            "on:\n  workflow_dispatch:\n"
+            "steps:\n"
+            "  - run: test \"${GITHUB_REF_TYPE}\" = \"tag\"\n"
+            "  - run: gh release create \"${GITHUB_REF_NAME}\" release/* --verify-tag\n",
+            encoding="utf-8",
+        )
+        errors = validator.validate_repository(root)
+        self.assertIn("release_workflow", {error["code"] for error in errors})
+        self.assertTrue(any("immutability" in error["message"] for error in errors))
+
     @unittest.skipUnless(hasattr(os, "symlink"), "symlink support unavailable")
     def test_symlink_source_is_rejected_without_reading_target(self):
         root = self.fixture()
