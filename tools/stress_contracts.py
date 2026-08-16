@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import time
@@ -15,7 +16,15 @@ CHECKER_TESTS = (
     ROOT / ".agents/skills/run-diverse-luna-research/scripts/test_check_setup.py",
     ROOT / ".agents/skills/run-diverse-luna-project/scripts/test_check_setup.py",
 )
-CASES_PER_ITERATION = 169  # 75 + 75 checker cases and 19 repository/tool cases.
+UNITTEST_COUNT = re.compile(r"Ran\s+(\d+)\s+tests?\b")
+
+
+def parse_unittest_count(output: str) -> int:
+    """Parse the observed unittest case count instead of using a stale constant."""
+    match = UNITTEST_COUNT.search(output)
+    if match is None:
+        raise ValueError("unittest output did not contain an observed case count")
+    return int(match.group(1))
 
 
 def run(iterations: int) -> dict[str, float | int]:
@@ -25,26 +34,39 @@ def run(iterations: int) -> dict[str, float | int]:
     environment["PYTHONUTF8"] = "1"
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     started = time.monotonic()
+    cases_per_iteration: int | None = None
     for index in range(1, iterations + 1):
         commands = [
             [sys.executable, "-m", "unittest", "discover", "-s", "tools", "-p", "test_*.py"],
             *[[sys.executable, str(test)] for test in CHECKER_TESTS],
         ]
+        observed_cases = 0
         for command in commands:
-            subprocess.run(
+            result = subprocess.run(
                 command,
                 cwd=ROOT,
                 env=environment,
                 check=True,
-                stdout=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
             )
+            observed_cases += parse_unittest_count(result.stdout + "\n" + result.stderr)
+        if cases_per_iteration is None:
+            cases_per_iteration = observed_cases
+        elif observed_cases != cases_per_iteration:
+            raise RuntimeError(
+                "unittest case count drifted between iterations: "
+                f"expected {cases_per_iteration}, observed {observed_cases}"
+            )
         print(f"PASS iteration={index}/{iterations}", flush=True)
     elapsed = time.monotonic() - started
+    if cases_per_iteration is None:
+        raise RuntimeError("no unittest cases were observed")
     return {
         "iterations": iterations,
-        "cases": iterations * CASES_PER_ITERATION,
+        "cases_per_iteration": cases_per_iteration,
+        "cases": iterations * cases_per_iteration,
         "elapsed_seconds": round(elapsed, 3),
     }
 
