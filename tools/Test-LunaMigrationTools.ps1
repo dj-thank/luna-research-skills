@@ -82,12 +82,29 @@ try {
     }
     Assert-True -Condition $overwriteRejected -Message 'Discovery accepted an existing output path.'
 
-    $dryRunText = (& $installer -Source $Source) -join [Environment]::NewLine
+    $dryRunProfile = Join-Path $testRoot ('luna-skills-test-profile-' + [guid]::NewGuid().ToString('N'))
+    $dryRunText = (& $installer -Source $Source -TestUserProfile $dryRunProfile) -join [Environment]::NewLine
     $dryRun = $dryRunText | ConvertFrom-Json
     Assert-True -Condition ($dryRun.state -eq 'planned') -Message 'Installer dry-run did not return planned state.'
     Assert-True -Condition ($dryRun.schemaVersion -eq 6) -Message 'Installer dry-run returned the wrong schema version.'
+    Assert-True -Condition (-not (Test-Path -LiteralPath $dryRunProfile)) `
+        -Message 'Disposable dry-run changed the filesystem.'
 
-    & $installer -Source $Source -Apply -WhatIf | Out-Null
+    # A clean profile must complete the production-path WhatIf. On a machine
+    # where the packages are already installed, the installer's fail-closed
+    # overwrite refusal is the expected non-mutating result instead. This
+    # keeps the safety suite rerunnable after a real installation.
+    $defaultWhatIfState = 'completed'
+    try {
+        & $installer -Source $Source -Apply -WhatIf | Out-Null
+    } catch {
+        if ($_.Exception.Message -notmatch '^Refusing to overwrite existing skill package: ') {
+            throw
+        }
+        $defaultWhatIfState = 'refused_existing'
+    }
+    Assert-True -Condition ($defaultWhatIfState -in @('completed', 'refused_existing')) `
+        -Message 'Production-path -WhatIf did not complete or fail closed on an existing package.'
 
     $whatIfProfile = Join-Path $testRoot ('luna-skills-test-profile-' + [guid]::NewGuid().ToString('N'))
     & $installer `

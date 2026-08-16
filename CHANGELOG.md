@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-08-17
+
+### Fixed
+
+- user-scopeへ既に導入済みの端末でもmigration safety suiteを再実行できるようにした。production-pathの`-Apply -WhatIf`は、clean profileでは従来どおり完了し、既存packageがある場合は安全な上書き拒否を期待結果として扱う。disposable-profileの非変更テストは引き続き必須。
+
 ## [2.0.1] - 2026-08-17
 
 ### Fixed
@@ -82,7 +88,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.2...HEAD
+[2.0.2]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/dj-thank/luna-research-skills/compare/v1.3.2...v2.0.0
 [1.3.2]: https://github.com/dj-thank/luna-research-skills/releases/tag/v1.3.2
