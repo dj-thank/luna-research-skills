@@ -58,7 +58,7 @@ Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、
 
 1. [`tools/Test-LunaSkillDiscovery.ps1`](tools/Test-LunaSkillDiscovery.ps1) で、legacy/user/repository scope、同名Skill、hash、custom-agent設定を読み取り専用で確認します。
 2. [`tools/Test-LunaMigrationTools.ps1`](tools/Test-LunaMigrationTools.ps1) に `-Source .agents/skills` を渡し、discovery/installerの構文、dry-run、`-WhatIf`、OS-temp real apply、単一snapshot/hash照合、atomic journal、partial failure、排他的target lock、root/nested/staging reparse point拒否、非再帰cleanupを検査します。実user scopeは変更しません。
-3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) に `-Source .agents/skills` を渡して`-Apply`なしで実行し、公式user-scopeへ置かれるpackageとhashを確認します。`-Apply -WhatIf`も非変更です。real applyでは、同じowner境界にdurable journalを先に作り、排他的lock下で各atomic moveの前後を再検査し、既存manifest・既存package・任意pathを上書きしません。失敗時のnon-empty stageは再帰削除せずjournalのexact pathに保存します。
+3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) に `-Source .agents/skills` を渡して`-Apply`なしで実行し、公式user-scopeへ置かれるpackageとhashを確認します。`-Apply`が非対話実行でも使える明示的な変更承認で、追加の対話確認が必要な場合は`-Confirm`を付けます。`-Apply -WhatIf`は非変更です。real applyでは、同じowner境界にdurable journalを先に作り、排他的lock下で各atomic moveの前後を再検査し、既存manifest・既存package・任意pathを上書きしません。失敗時のnon-empty stageは再帰削除せずjournalのexact pathに保存します。
 4. 現在動いている `$HOME/.codex/skills` copyは、fresh taskで公式pathの発見を証明するまで消しません。同名の二重配置が検出された場合は適用を止めます。
 5. custom-agent TOMLは既存 `$HOME/.codex/agents` をバックアップ・比較し、同名fileを上書きせずに導入します。Skill installerはagent設定を変更しません。
 6. Codexを再起動し、projectless taskとrepository内taskの双方で、明示的なSkill invocation、custom roleの公開有無、Luna/mediumのcompleted runtime receiptを確認します。
