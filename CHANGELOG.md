@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-08-17
+
+### Fixed
+
+- release builderがWindows working treeのCRLFをarchiveへ持ち込み、同一commitのUbuntu buildとSHA-256が一致しなかった問題を修正した。UTF-8 text entryをLFへcanonicalizeし、LF/CRLF fixtureからsource ZIP、plugin ZIP、SBOM、SHA256SUMSが完全一致することをfailure testで固定した。
+- `.gitattributes`でtext checkoutをLFに固定し、binary assetを明示した。builderのcanonicalizationは既存checkoutやglobal Git設定に依存しないため、長寿命Windows worktreeでも同じartifactを生成する。
+
 ## [2.0.3] - 2026-08-17
 
 ### Security
@@ -96,7 +103,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.3...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.4...HEAD
+[2.0.4]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.2...v2.0.3
 [2.0.2]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.0...v2.0.1

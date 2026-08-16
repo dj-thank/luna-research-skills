@@ -18,6 +18,8 @@ EXCLUDED_PARTS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_
 EXCLUDED_NAMES = {".coverage", "coverage.xml"}
 EXCLUDED_TOP_LEVEL = {"dist", "build", "reports", "artifacts", "release", "release-check"}
 SEMVER = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+CANONICAL_TEXT_SUFFIXES = {".json", ".md", ".ps1", ".py", ".toml", ".txt", ".yaml", ".yml"}
+CANONICAL_TEXT_NAMES = {".gitattributes", ".gitignore", "LICENSE", "VERSION"}
 
 
 def version(root: Path) -> str:
@@ -82,6 +84,18 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def canonical_release_bytes(name: str, data: bytes) -> bytes:
+    """Canonicalize UTF-8 text so one Git tree builds identically on every OS."""
+    path = Path(name)
+    if path.suffix.lower() not in CANONICAL_TEXT_SUFFIXES and path.name not in CANONICAL_TEXT_NAMES:
+        return data
+    try:
+        text = data.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"release text source is not UTF-8: {name}") from exc
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
 def build(root: Path, output: Path) -> dict[str, Path]:
     ver = version(root)
     files = tracked_files(root)
@@ -91,7 +105,10 @@ def build(root: Path, output: Path) -> dict[str, Path]:
         if not output.is_dir() or any(output.iterdir()):
             raise ValueError(f"release output must be new or empty: {output}")
     output.mkdir(parents=True, exist_ok=True)
-    snapshot = [(name, path, path.read_bytes()) for name, path in files]
+    snapshot = []
+    for name, path in files:
+        source = path.read_bytes()
+        snapshot.append((name, path, source, canonical_release_bytes(name, source)))
     stem = f"luna-skill-v{ver}"
     archive = output / f"{stem}.zip"
     def write_archive(path: Path, entries: list[tuple[str, bytes]]) -> None:
@@ -104,7 +121,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
                 info.create_system = 3
                 info.external_attr = 0o100644 << 16
                 zf.writestr(info, data)
-    write_archive(archive, [(name, data) for name, _, data in snapshot])
+    write_archive(archive, [(name, data) for name, _, _, data in snapshot])
     plugin_name = f"luna-hierarchical-skills-{ver}-plugin.zip"
     plugin_entries: list[tuple[str, bytes]] = []
     manifest = {
@@ -135,7 +152,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
         },
     }
     plugin_entries.append((".codex-plugin/plugin.json", (json.dumps(manifest, sort_keys=True, separators=(",", ":")) + "\n").encode()))
-    for name, _, data in snapshot:
+    for name, _, _, data in snapshot:
         if name.startswith(".agents/skills/"):
             plugin_entries.append(("skills/" + name[len(".agents/skills/"):], data))
         elif name in {"LICENSE", "README.md", "SECURITY.md"}:
@@ -143,7 +160,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
     plugin_archive = output / plugin_name
     write_archive(plugin_archive, plugin_entries)
     inventory = []
-    for name, _, data in snapshot:
+    for name, _, _, data in snapshot:
         inventory.append({"SPDXID": f"SPDXRef-File-{hashlib.sha1(name.encode()).hexdigest()[:16]}", "fileName": name, "checksums": [{"algorithm": "SHA256", "checksumValue": hashlib.sha256(data).hexdigest()}]})
     sbom = output / f"{stem}.spdx.json"
     document = {
@@ -168,8 +185,8 @@ def build(root: Path, output: Path) -> dict[str, Path]:
         encoding="utf-8",
         newline="\n",
     )
-    for name, path, data in snapshot:
-        if is_link_or_reparse(path) or path.read_bytes() != data:
+    for name, path, source, _ in snapshot:
+        if is_link_or_reparse(path) or path.read_bytes() != source:
             raise RuntimeError(f"release source changed during snapshot build: {name}")
     return {"archive": archive, "plugin": plugin_archive, "sums": sums, "sbom": sbom}
 
