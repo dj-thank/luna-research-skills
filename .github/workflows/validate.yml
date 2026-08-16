@@ -47,18 +47,26 @@ jobs:
           python tools/validate_repository.py
           python -m compileall -q .agents tools
 
-  migration-safety:
-    name: Migration safety (${{ matrix.shell }})
+  migration-safety-pwsh:
+    name: Migration safety (PowerShell 7)
     runs-on: windows-latest
     timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        shell: [pwsh, powershell]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Run isolated migration safety tests
-        shell: ${{ matrix.shell }}
+        shell: pwsh
+        run: >-
+          ./tools/Test-LunaMigrationTools.ps1
+          -Source (Resolve-Path -LiteralPath '.agents/skills').Path
+
+  migration-safety-windows-powershell:
+    name: Migration safety (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Run isolated migration safety tests
+        shell: powershell
         run: >-
           ./tools/Test-LunaMigrationTools.ps1
           -Source (Resolve-Path -LiteralPath '.agents/skills').Path
