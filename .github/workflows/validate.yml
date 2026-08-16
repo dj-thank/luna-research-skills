@@ -14,41 +14,76 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  skill-contracts:
-    name: Skill contracts (Python)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  python-matrix:
+    name: Python ${{ matrix.python }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.11', '3.12', '3.13']
     steps:
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.12"
-      - name: Test research checker
+          python-version: ${{ matrix.python }}
+      - name: Run checker suites
         env:
-          PYTHONUTF8: "1"
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python .agents/skills/run-diverse-luna-research/scripts/test_check_setup.py
-      - name: Test project checker
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python .agents/skills/run-diverse-luna-research/scripts/test_check_setup.py
+          python .agents/skills/run-diverse-luna-project/scripts/test_check_setup.py
+      - name: Run repository, release, and route-manifest tests
         env:
-          PYTHONUTF8: "1"
-          PYTHONDONTWRITEBYTECODE: "1"
-        run: python .agents/skills/run-diverse-luna-project/scripts/test_check_setup.py
-      - name: Parse project-scoped agents and verify local Markdown links
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python -m unittest discover -s tools -p 'test_*.py'
+      - name: Validate repository and compile Python
         env:
-          PYTHONUTF8: "1"
-        run: python tools/validate_repository.py
+          PYTHONUTF8: '1'
+        run: |
+          python tools/validate_repository.py
+          python -m compileall -q .agents tools
 
   migration-safety:
-    name: Migration safety (PowerShell)
+    name: Migration safety (${{ matrix.shell }})
     runs-on: windows-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [pwsh, powershell]
     steps:
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Run non-mutating migration tests
-        shell: pwsh
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Run isolated migration safety tests
+        shell: ${{ matrix.shell }}
         run: >-
           ./tools/Test-LunaMigrationTools.ps1
           -Source (Resolve-Path -LiteralPath '.agents/skills').Path
+
+  stress-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with: {python-version: '3.12'}
+      - name: Repeat 4,225 contract cases
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: python tools/stress_contracts.py --iterations 25
+
+  stress-migration:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Repeat disposable migration attack fixtures
+        shell: pwsh
+        run: |
+          1..5 | ForEach-Object {
+            ./tools/Test-LunaMigrationTools.ps1 -Source .agents/skills
+          }

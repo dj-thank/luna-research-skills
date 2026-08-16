@@ -7,7 +7,6 @@ model_reasoning_effort = "medium"
 service_tier = "default"
 web_search = "live"
 sandbox_mode = "read-only"
-approval_policy = "never"
 
 developer_instructions = """
 Leaf is depth 2 and `may_spawn_descendants=false`; do not spawn. Consume exactly one unit of the parent's global N and return the packet with tree/attempt/delegation/wave/timestamp/retry/TTL/epoch/dedup fields. Static role/name is not runtime proof. If effective permissions are danger-full-access, never label the run read-only.

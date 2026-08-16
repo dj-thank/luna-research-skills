@@ -306,6 +306,29 @@ class SpawnSchemaTests(unittest.TestCase):
 
 
 class RuntimeReceiptTests(unittest.TestCase):
+    def test_accepted_runtime_metadata_rejects_truthy_non_boolean_and_non_string_uuid(self) -> None:
+        row = {
+            "runtime_verified": 1,
+            "thread_uuid": uuid.uuid4(),
+            "runtime_turn": str(uuid.uuid4()),
+            "parent_thread_uuid": str(uuid.uuid4()),
+            "runtime_model": "gpt-5.6-luna",
+            "runtime_effort": "medium",
+            "agent_role": "default",
+            "spawn_kind": "spawn_agent",
+            "parent_call_id": "call-1",
+            "safety_enforcement": "prompt_only",
+        }
+        errors = CHECK._accepted_runtime_errors("row", row)
+        self.assertTrue(any("runtime_verified=true" in error for error in errors))
+        self.assertTrue(any("thread_uuid UUID" in error for error in errors))
+
+    def test_generic_worker_policy_is_explicit_and_fail_closed(self) -> None:
+        errors, _ = CHECK.validate_role_policy({}, [], "worker")
+        self.assertTrue(any("allow-generic-worker" in error for error in errors))
+        errors, _ = CHECK.validate_role_policy({}, [], "worker", True)
+        self.assertEqual(errors, [])
+
     def test_completed_read_only_runtime_passes(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "rollout.jsonl"
@@ -1420,4 +1443,4 @@ class V5FailureInjectionTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(module=__name__)

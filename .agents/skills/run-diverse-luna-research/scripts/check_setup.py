@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 EXPECTED_MODEL = "gpt-5.6-luna"
 EXPECTED_REASONING_EFFORT = "medium"
-CHECKER_CONTRACT_VERSION = "2026-08-16.12"
+CHECKER_CONTRACT_VERSION = "2026-08-17.1"
 MIN_CONCURRENT_THREADS = 2
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
@@ -96,6 +96,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--agent-role",
         default="default",
         help="Selected spawn agent_type or custom agent role. Default: default.",
+    )
+    parser.add_argument(
+        "--allow-generic-worker",
+        action="store_true",
+        help=(
+            "Explicitly opt in to the built-in worker role; requires a fresh "
+            "route with explicit model=gpt-5.6-luna and reasoning_effort=medium."
+        ),
     )
     parser.add_argument(
         "--spawn-schema-json",
@@ -261,6 +269,7 @@ def validate_role_policy(
     config: dict[str, Any],
     definitions: list[tuple[Path, dict[str, Any]]],
     role_name: str,
+    allow_generic_worker: bool = False,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -274,6 +283,21 @@ def validate_role_policy(
         and config_model == EXPECTED_MODEL
         and config_effort == EXPECTED_REASONING_EFFORT
     )
+
+    if role_name == "worker" and allow_generic_worker:
+        if definitions:
+            errors.append("generic worker mode must not pretend a custom TOML definition exists")
+        warnings.append(
+            "generic worker mode is explicitly enabled; runtime and parent provenance "
+            "must prove exact Luna/medium fields"
+        )
+        return errors, warnings
+    if role_name == "worker" and not allow_generic_worker:
+        errors.append(
+            "built-in generic worker is disabled by default; pass --allow-generic-worker "
+            "for an explicit Luna/medium fresh-context route"
+        )
+        return errors, warnings
 
     role_pin = False
     for path, role in definitions:
@@ -759,6 +783,16 @@ def _valid_timestamp(value: object) -> bool:
     return parsed.tzinfo is not None
 
 
+def _canonical_uuid(value: object) -> bool:
+    """Accept only string UUIDs in canonical hyphenated form."""
+    if not isinstance(value, str):
+        return False
+    try:
+        return str(uuid.UUID(value)) == value
+    except (ValueError, AttributeError):
+        return False
+
+
 def _parse_timestamp(value: object) -> datetime | None:
     if not _valid_timestamp(value):
         return None
@@ -877,14 +911,12 @@ def _access_errors(
 
 def _accepted_runtime_errors(prefix: str, row: dict[str, Any]) -> list[str]:
     errors: list[str] = []
-    if row.get("runtime_verified") is not True or row.get("thread_uuid") is None:
+    if row.get("runtime_verified") is not True or not _canonical_uuid(row.get("thread_uuid")):
         errors.append(
             f"{prefix}: accepted result requires runtime_verified=true and thread_uuid"
         )
     for key in ("thread_uuid", "runtime_turn", "parent_thread_uuid"):
-        try:
-            uuid.UUID(str(row.get(key)))
-        except (ValueError, TypeError):
+        if not _canonical_uuid(row.get(key)):
             errors.append(f"{prefix}: accepted result requires a {key} UUID")
     if row.get("runtime_model") != EXPECTED_MODEL:
         errors.append(
@@ -1116,7 +1148,12 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         allowed_accept = {"planned": {"pending"}, "not_dispatched": {"excluded"}, "started": {"pending"}, "completed": {"accepted", "rejected"}, "failed": {"excluded"}, "timed_out": {"excluded"}, "abandoned": {"excluded"}}
         acceptance = row.get("acceptance_status", "pending")
         if status in allowed_accept and acceptance not in allowed_accept[status]: errors.append(f"{pfx}: invalid state transition {status}->{acceptance}")
-        if acceptance == "accepted" and (not row.get("runtime_verified") or not row.get("thread_uuid") or not row.get("runtime_turn")): errors.append(f"{pfx}: accepted row requires runtime fields")
+        if acceptance == "accepted" and (
+            row.get("runtime_verified") is not True
+            or not _canonical_uuid(row.get("thread_uuid"))
+            or not _canonical_uuid(row.get("runtime_turn"))
+        ):
+            errors.append(f"{pfx}: accepted row requires strict runtime fields")
         if status in {"timed_out", "abandoned"} and acceptance == "accepted": errors.append(f"{pfx}: late completion after timeout cannot be accepted")
         if row.get("hidden_spawn") or row.get("spawn_agent_calls"):
             if role in leaf_roles: errors.append(f"{pfx}: leaf rollout contains spawn_agent call")
@@ -1710,9 +1747,7 @@ def validate_research_ledger(
             errors.append(f"{prefix}.runtime_verified must be a boolean")
         thread_uuid = raw.get("thread_uuid")
         if thread_uuid is not None:
-            try:
-                uuid.UUID(str(thread_uuid))
-            except (ValueError, TypeError):
+            if not _canonical_uuid(thread_uuid):
                 errors.append(f"{prefix}.thread_uuid is not a UUID: {thread_uuid!r}")
 
         retry_of = raw.get("retry_of")
@@ -2051,9 +2086,7 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None) -> tu
             errors.append(f"{prefix}.runtime_verified must be a boolean")
         thread_uuid = row.get("thread_uuid")
         if thread_uuid is not None:
-            try:
-                uuid.UUID(str(thread_uuid))
-            except (ValueError, TypeError):
+            if not _canonical_uuid(thread_uuid):
                 errors.append(f"{prefix}.thread_uuid is not a UUID: {thread_uuid!r}")
 
         if kind == "evidence_lane":
@@ -2175,6 +2208,7 @@ def validate_runtime_rollout(
     role_name: str,
     require_read_only: bool = False,
     runtime_turn: str | None = None,
+    allow_generic_worker: bool = False,
 ) -> tuple[list[str], list[str]]:
     latest_context: tuple[int, dict[str, Any]] | None = None
     contexts_by_turn: dict[str, list[tuple[int, dict[str, Any]]]] = {}
@@ -2239,6 +2273,8 @@ def validate_runtime_rollout(
                     f"got {thread_id!r}"
                 )
         actual_role = session_meta.get("agent_role")
+        if role_name == "worker" and not allow_generic_worker:
+            errors.append("generic worker runtime requires --allow-generic-worker")
         if actual_role != role_name:
             errors.append(
                 f"runtime agent role must be {role_name!r}, got {actual_role!r}"
@@ -2397,6 +2433,7 @@ def validate_spawn_provenance(
     child_path: Path,
     role_name: str,
     expected_call_id: str | None = None,
+    allow_generic_worker: bool = False,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -2503,6 +2540,19 @@ def validate_spawn_provenance(
 
     explicit_model = arguments.get("model")
     explicit_effort = arguments.get("reasoning_effort")
+    if role_name == "worker" and not allow_generic_worker:
+        errors.append("generic worker provenance requires --allow-generic-worker")
+    if role_name == "worker" and allow_generic_worker:
+        if explicit_model != EXPECTED_MODEL:
+            errors.append(
+                "generic worker spawn request must explicitly set model="
+                f"{EXPECTED_MODEL!r}"
+            )
+        if explicit_effort != EXPECTED_REASONING_EFFORT:
+            errors.append(
+                "generic worker spawn request must explicitly set reasoning_effort="
+                f"{EXPECTED_REASONING_EFFORT!r}"
+            )
     if explicit_model is not None and explicit_model != EXPECTED_MODEL:
         errors.append(
             f"spawn request model conflicts with Luna policy: {explicit_model!r}"
@@ -2711,7 +2761,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     warnings.extend(role_warnings)
     role_errors, more_role_warnings = validate_role_policy(
-        config, definitions, args.agent_role
+        config, definitions, args.agent_role, args.allow_generic_worker
     )
     errors.extend(role_errors)
     warnings.extend(more_role_warnings)
@@ -2762,6 +2812,7 @@ def main(argv: list[str] | None = None) -> int:
             args.agent_role,
             args.require_read_only,
             args.runtime_turn,
+            args.allow_generic_worker,
         )
         errors.extend(runtime_errors)
         warnings.extend(runtime_warnings)
@@ -2793,7 +2844,10 @@ def main(argv: list[str] | None = None) -> int:
                 errors.append(str(exc))
         if parent_path is not None:
             provenance_errors, provenance_warnings = validate_spawn_provenance(
-                parent_path, runtime_path, args.agent_role
+                parent_path,
+                runtime_path,
+                args.agent_role,
+                allow_generic_worker=args.allow_generic_worker,
             )
             errors.extend(provenance_errors)
             warnings.extend(provenance_warnings)
@@ -2829,4 +2883,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main() or 0)

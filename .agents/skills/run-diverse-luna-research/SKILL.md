@@ -5,6 +5,16 @@ description: Run bounded, source-backed research or fact-checking through divers
 
 # Run Diverse Luna Research
 
+## First 60 seconds
+
+1. Confirm the requested deliverable is evidence and synthesis only. If it includes code, artifacts, migrations, release work, or external operations, route the whole job through `run-diverse-luna-project` and use this skill only as a bounded evidence lane.
+2. Write non-overlapping primary, adversarial, and measurement cells; choose flat mode for a few cells and hierarchy only when at least six are independently ready.
+3. Fix one tree-wide `N`, `C`, `W`, verifier reserve `V`, deadlines, source planes, and access modes before dispatch.
+4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/medium child route before the wider wave.
+5. Accept packets only after exact runtime/provenance validation; the root reopens sources, deduplicates source families, and alone synthesizes conclusions.
+
+The remaining sections are the normative contract. Use [references/research-packet.md](references/research-packet.md) for the machine-readable packet and ledger fields.
+
 ## Operating hierarchy (normative)
 
 This skill supports `flat` (root dispatches independent leaves) and `hierarchical` (root -> one or more coordinators -> leaves -> root fan-in). If at least six ready, independent cells exist, prefer hierarchical. Maximum workflow depth is two edges: root depth 0, coordinator depth 1, leaf depth 2. Leaves may not spawn descendants. A coordinator may spend only the exact global credits delegated by root; it may not mint, borrow, or reassign credits. Root owns the global ledger, unique cell leases, source-plane/access gates, integration, shared writes, external authority, and final confidence.
@@ -52,7 +62,7 @@ Completion criterion: two scouts can receive different bounded cells without red
 
 ## 2. Pass the live routing and safety gate
 
-Resolve this skill directory and run:
+Resolve this skill directory. If discovery exposes more than one active `run-diverse-luna-research`, compare complete package manifests. Differing copies are a hard stop. Byte-identical repository/user copies are allowed only as a documented migration or repository-scope overlap: record every matching root, the selected absolute `SKILL.md` path, and checker version in the ledger, then remove or disable the redundant scope when practical. Run:
 
 ```text
 python <skill-dir>/scripts/check_setup.py --agent-role <selected-role>
@@ -60,10 +70,11 @@ python <skill-dir>/scripts/check_setup.py --agent-role <selected-role>
 
 Inspect the active `spawn_agent` schema and use only fields it exposes. Select one complete non-history route from that schema; never create a route by combining fields from different schema variants.
 
-- When `fork_turns` is exposed, require the value `"none"`; include `agent_type="default"` when that field is exposed and the ordinary Luna default route is selected.
-- On a legacy surface exposing both fields, use `agent_type="default"` and `fork_context=false`.
-- A custom research role may be used only when `agent_type` exposes it; pass the same role to `check_setup.py`.
-- Explicit model or effort values are valid Codex controls when the live schema and governing workflow permit them, but they do not replace completed-rollout verification and must not contradict this skill's Luna/medium acceptance policy.
+- Prefer `research_coordinator` / `research_scout_luna` only when those exact custom roles are exposed. Pass the selected role to `check_setup.py`.
+- When custom roles are unavailable but the live schema exposes built-in `worker`, explicit `model`, explicit `reasoning_effort`, and `fork_turns`, use `agent_type="worker"`, `model="gpt-5.6-luna"`, `reasoning_effort="medium"`, and `fork_turns="none"`. Validate that route with `--agent-role worker --allow-generic-worker`; this is an explicit capability fallback, not a silent model fallback.
+- A `default` route may be used only when it is actually exposed and its configured Luna/medium policy passes the checker. Never assume that an official built-in role is enabled on the current surface.
+- On a historical surface that exposes no `fork_turns` but does expose the complete `agent_type="default"` plus `fork_context=false` route, treat that route as a transitional compatibility path and verify its exact parent request. Do not advertise it as a current portable guarantee.
+- Explicit model or effort values do not replace completed-rollout verification. Any non-Luna or non-medium child is rejected even if the request was pinned correctly.
 
 Put the full assignment in `message`. Do not rely on inherited conversation history. Task names and nicknames are logistics, not model evidence.
 
@@ -81,7 +92,7 @@ Completion criterion: static setup passes, one complete live route is named, and
 
 ### Hierarchical dispatch route
 
-Use hierarchy only after one direct useful scout passes the runtime gate. The root then creates one to four counted coordinator attempts and gives each coordinator an exact `descendant_budget`, unique `planned_child_attempt_ids`, leased coverage cells, permitted roles, wave width, deadline, and explicit permission to spawn only those descendants. Prefer `research_coordinator` and `research_scout_luna` when those live `agent_type` values are exposed. If either custom role is absent, the verified `default` Luna role may perform that bounded function; do not invent an unexposed role or fall back to another model.
+Use hierarchy only after one direct useful scout passes the runtime gate. The root then creates one to four counted coordinator attempts and gives each coordinator an exact `descendant_budget`, unique `planned_child_attempt_ids`, leased coverage cells, permitted roles, wave width, deadline, and explicit permission to spawn only those descendants. Prefer `research_coordinator` and `research_scout_luna` when those live `agent_type` values are exposed. If custom roles are absent, a live-schema `worker` route pinned explicitly to Luna/medium and accepted with `--allow-generic-worker` may perform that bounded function from a complete packet. Do not invent an unexposed role, infer a role from a task name, or fall back to another model.
 
 A coordinator may dispatch and collect only its leased depth-2 leaves. It must return `collected_result_ids`, terminal counts, duplicate/gap records, and the compact packets; it may not synthesize final conclusions, write shared state, delegate another coordinator, or reuse an unlisted child. The root reopens every accepted coordinator and leaf receipt, checks the exact parent call edge, reconciles the global `N/C/V` ledger, and alone performs source reopening and synthesis. If the coordinator role, descendant call, or collection receipt cannot be proven, reject that branch and continue flat or root-only.
 
@@ -123,6 +134,8 @@ Wait for the child to finish, then validate the returned UUID:
 ```text
 python <skill-dir>/scripts/check_setup.py --agent-role <selected-role> --runtime-thread <child-thread-uuid> --runtime-turn <child-turn-uuid> --require-spawn-provenance
 ```
+
+Add `--allow-generic-worker` whenever `<selected-role>` is the built-in `worker`; without that explicit opt-in the checker rejects the generic route.
 
 Add `--require-spawn-provenance` so the checker binds the child receipt to the unique parent `spawn_agent` request and verifies the non-history route. Add `--require-read-only` for any lane whose contract requires enforced read-only access. Reject the packet and stop new dispatch if the parent request is missing or ambiguous, the selected turn is incomplete, the rollout is ambiguous, parent/depth/role/model/effort mismatches, or the required sandbox is absent. The probe consumes one unit of `N` regardless of outcome.
 

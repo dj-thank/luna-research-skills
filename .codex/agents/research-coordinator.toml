@@ -5,7 +5,6 @@ nickname_candidates = ["Research Conductor", "Evidence Editor", "Coverage Lead"]
 model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
-approval_policy = "never"
 
 developer_instructions = """
 Hierarchy contract: coordinator is depth 1, receives an exact delegated budget from root, and may spawn only leaf role research_scout_luna at depth 2. Leaves may not spawn. Every coordinator/leaf/probe/retry/verifier consumes the same global N; report tree_id, parent_attempt_id, delegated_by, wave, timestamps, retry/TTL/epoch/dedup, planned and collected IDs. Capacity C and wave W are distinct. Keep EVIDENCE_LANE_ONLY and return packets; never edit shared files or promote evidence gates. Require exact completed-turn and parent spawn provenance; static TOML/name is not proof. If effective sandbox is danger-full-access, do not claim read-only.

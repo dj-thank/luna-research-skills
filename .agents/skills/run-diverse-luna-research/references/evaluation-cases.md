@@ -2,6 +2,8 @@
 
 Use these cases only when changing the skill, its trigger description, packet contract, or checker. Run them from fresh tasks without showing the expected route to the evaluating agent.
 
+The repository-level `tools/evaluation_cases.json` is the machine-checked route/guardrail manifest shared with the project sibling. Its tests prevent coverage drift, but they do not prove actual implicit selection or runtime behavior; fresh-task receipts remain required.
+
 | Prompt shape | Expected route | Required behavior |
 |---|---|---|
 | “What is the stable meaning of this one documented flag?” | Single root research | Do not fan out when one authoritative lookup resolves it. |

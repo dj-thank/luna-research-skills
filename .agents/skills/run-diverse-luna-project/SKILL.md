@@ -1,9 +1,19 @@
 ---
 name: run-diverse-luna-project
-description: Orchestrate broad projects through bounded, runtime-verified GPT-5.6 Luna workstreams, using outcome decomposition, independent perspectives, safe parallel execution, root integration, and adversarial verification. Use when a feature, refactor, audit, migration, release, investigation, or multi-artifact project benefits from splitting work across deliverables, subsystems, stakeholder views, risks, or lifecycle stages. Use the research sibling for source-heavy evidence scans. Skip one narrow task or work that cannot be separated safely.
+description: "Route broad, safely decomposable work into bounded, runtime-verified GPT-5.6 Luna workstreams. This is the sole implicit Luna entrypoint: use it directly for code, artifacts, migrations, releases, operations, or integrated deliverables, and have it explicitly hand packet-only evidence or fact-checking to run-diverse-luna-research before dispatch. If classification is ambiguous, remain root-only until resolved. Skip one narrow task or shared-state work that cannot be separated safely."
 ---
 
 # Run Diverse Luna Project
+
+## First 60 seconds
+
+1. Classify before fan-out. Keep mixed delivery—code, artifacts, tests, migration, integration, release, or operations—here. Explicitly load and hand packet-only research to `run-diverse-luna-research`. If both descriptions appear to match or the final deliverable is unclear, do not dispatch until one route is selected.
+2. Define deliverables and acceptance evidence, then split only ready work with disjoint files, environments, or perspectives; keep the root as the single integrator.
+3. Fix one tree-wide `N`, `C`, `W`, verifier reserve `V`, dependency graph, and deadlines before dispatch.
+4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/medium child route before wider fan-out.
+5. Integrate candidate work at the root, run the real checks, then give fresh reviewers the contract and artifacts before any external or public gate.
+
+The remaining sections are the normative contract. Use [references/task-packet.md](references/task-packet.md) for assignments and [references/project-ledger.md](references/project-ledger.md) for the tree-wide receipt.
 
 ## Operating hierarchy (normative)
 
@@ -35,7 +45,7 @@ Completion criterion: every deliverable has an observable acceptance check, ever
 
 ## 2. Pass the Luna gate
 
-Resolve this skill directory and run:
+Resolve this skill directory. If discovery exposes more than one active `run-diverse-luna-project`, compare complete package manifests. Differing copies are a hard stop. Byte-identical repository/user copies are allowed only as a documented migration or repository-scope overlap: record every matching root, the selected absolute `SKILL.md` path, and checker version in the ledger, then remove or disable the redundant scope when practical. Run:
 
 ```text
 python <skill-dir>/scripts/check_setup.py --agent-role <selected-role>
@@ -43,7 +53,7 @@ python <skill-dir>/scripts/check_setup.py --agent-role <selected-role>
 
 The project skill ships its own copy of the same versioned route/runtime checker contract as the research sibling. It must remain runnable when the research skill is not installed. When maintaining both skills together, compare checker versions and behavior before release so they cannot drift silently.
 
-Inspect the active `spawn_agent` schema as runtime truth and pass only exposed fields. Require `message` plus one complete fresh-context route from the same schema variant. When exposed and allowed, use `fork_turns="none"` and set `agent_type="default"`; on a legacy surface use `agent_type="default"` with `fork_context=false`. Explicit model or effort values are valid when the live schema and workflow permit them, but they do not replace completed-rollout verification and must not contradict Luna/medium acceptance. Put the complete task-local context in `message`. Task names and nicknames are logistics, not model evidence.
+Inspect the active `spawn_agent` schema as runtime truth and pass only exposed fields. Require `message` plus one complete fresh-context route from the same schema variant. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` only when those exact custom roles are exposed. If custom roles are unavailable but built-in `worker`, explicit `model`, explicit `reasoning_effort`, and `fork_turns` are exposed, use `agent_type="worker"`, `model="gpt-5.6-luna"`, `reasoning_effort="medium"`, and `fork_turns="none"`, then pass `--agent-role worker --allow-generic-worker` to the checker. A `default` route is valid only when it is actually exposed and its Luna/medium policy passes. A historical `agent_type="default"` plus `fork_context=false` route is transitional compatibility, not a portable guarantee. Explicit pins never replace completed-rollout verification. Put the complete task-local context in `message`; task names and nicknames are logistics, not model evidence.
 
 Reserve one unit from `N` and run the highest-priority read-only reconnaissance cell as the runtime probe. Wait for completion, then verify its rollout with one supported locator:
 
@@ -52,13 +62,15 @@ python <skill-dir>/scripts/check_setup.py --agent-role <selected-role> --runtime
 python <skill-dir>/scripts/check_setup.py --agent-role <selected-role> --runtime-rollout <child-rollout.jsonl> --runtime-turn <child-turn-uuid> --require-spawn-provenance
 ```
 
+Add `--allow-generic-worker` whenever `<selected-role>` is the built-in `worker`; without that explicit opt-in the checker rejects the generic route.
+
 Accept the probe result only when the checker reports a unique parent spawn request using the selected non-history route and a matching completed child turn with `gpt-5.6-luna` and medium effort. If static setup, the live schema, request provenance, or runtime verification fails, discard the result and stop new dispatch. Continue sequentially at the root when safe, but report that it is not verified Luna fan-out; never silently switch models or authority.
 
 Completion criterion: the first accepted result has verified Luna runtime metadata, or zero further subagents start and one concrete blocker is reported.
 
 ### Hierarchical dispatch route
 
-After the direct reconnaissance probe passes, the root may create counted coordinator attempts with exact descendant credits, workstream IDs, ownership paths, dependencies, permitted roles, wave width, deadline, and explicit permission to spawn only the listed depth-2 descendants. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` when the live `agent_type` schema exposes them. On a runtime that exposes only `default`, verified default Luna agents may fill those bounded functions from complete packets; custom role names must never be guessed or treated as runtime proof.
+After the direct reconnaissance probe passes, the root may create counted coordinator attempts with exact descendant credits, workstream IDs, ownership paths, dependencies, permitted roles, wave width, deadline, and explicit permission to spawn only the listed depth-2 descendants. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` when the live `agent_type` schema exposes them. Otherwise, a live-schema built-in `worker` route explicitly pinned to Luna/medium and accepted with `--allow-generic-worker` may fill those bounded functions from complete packets. Custom role names must never be guessed or treated as runtime proof.
 
 Coordinators may partition, dispatch, normalize, and collect. They may not integrate shared files, grant new credits, open another coordinator level, perform provider/public writes, or promote evidence gates. Builders own disjoint paths or worktrees. Reviewers and verifiers start fresh only after their dependencies are terminal and receive artifacts plus the contract, not inherited builder conclusions. The root validates every coordinator-to-leaf call and collection receipt against the single v2 ledger before accepting work, then remains the only shared-state integrator and external authority.
 

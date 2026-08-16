@@ -1,6 +1,6 @@
-# Luna hierarchical skills
+# Luna Hierarchical Skills 2.0
 
-このリポジトリは、Codex のネイティブ subagent を使う調査・プロジェクト作業のための、repository-scoped Skill、custom-agent definition、安全な発見・移行ツール、運用文書を収録します。GitHubをCodex cloudのenvironmentへ接続した場合も、リポジトリrootの公式配置からSkillを発見できます。project-scoped custom agentの公開範囲は現在のsurfaceで別途確認します。Luna は、短い応答だけでなく、**高速・効率的な高ボリューム fan-out** と、複数の bounded assignment を同時に処理する coordinator に向きます。ただし、モデル、spawn schema、同時実行上限、利用可能な機能は Codex のsurface・アカウント・workspace・cloud environmentごとに異なります。
+このリポジトリは、Codex のネイティブ subagent を使う調査・開発・監査・移行・リリース作業のための、repository-scoped Skill、optional custom-agent definition、安全な発見・移行ツール、再現可能なrelease assetsを収録します。GitHubをCodex cloudのenvironmentへ接続した場合も、リポジトリrootの公式配置からSkillを発見できます。Luna は、**高速・効率的な高ボリューム fan-out** と、複数の bounded assignment を同時に処理する用途に向きます。ただし、モデル、spawn schema、同時実行上限、利用可能な機能は Codex のsurface・アカウント・workspace・cloud environmentごとに異なります。
 
 canonical source package はこのリポジトリの `.agents/skills/` と `.codex/agents/` です。前者はrepository-scoped Skill、後者はproject-scoped custom agentとして、cloneされたリポジトリ内からCodexが発見する公式配置です。実際に有効なのは、現在のCodexが発見したコピーです。README、静的設定、Git tag、過去の観測記録だけでは、そのセッションでのruntime proofになりません。
 
@@ -14,16 +14,42 @@ source package と公式 user-scope の対応は次のとおりです。
 .codex/agents/*.toml                       ->  $HOME/.codex/agents/*.toml
 ```
 
-`$HOME/.agents/skills` が現在の公式 user-scope Skill path です。既存ビルドが `$HOME/.codex/skills` を実際に発見している環境では、fresh task で新pathの発見を確認するまでworking legacy copyを消さないでください。両pathへ同名Skillを同時に置くと重複候補になり得ます。hashを比較し、一方だけを有効にし、restart後にprojectless taskとrepository内taskの両方で明示呼出しを確認します。credential、provider、公開操作はインストール検証と分離します。
+`$HOME/.agents/skills` が現在の公式 user-scope Skill path です。既存ビルドが `$HOME/.codex/skills` を実際に発見している環境では、fresh task で新pathの発見を確認するまでworking legacy copyを消さないでください。両pathやrepository scopeに同名Skillが見える場合、異なるhashはhard stopです。完全なpackage manifestがbyte-identicalならmigration/repository overlapとして全rootと実際に選ばれたpathを記録できますが、可能な限り冗長scopeを無効化します。restart後にprojectless taskとrepository内taskの双方で明示呼出しを確認し、credential、provider、公開操作はインストール検証と分離します。
 
 公式の背景資料: [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) / [Build skills](https://learn.chatgpt.com/docs/build-skills) / [Codex cloud](https://learn.chatgpt.com/docs/cloud)。
+
+## Quick start
+
+用途を先に選びます。
+
+```text
+$run-diverse-luna-research 現行仕様を一次資料・反証・測定品質の観点で調査し、証拠パケットだけ返して
+$run-diverse-luna-project この機能を調査、実装、テスト、独立レビュー、リリース準備まで進めて
+```
+
+- 成果物が証拠・fact-checkだけなら `research`。
+- code、artifact、test、migration、integration、release、operationsを一つでも含むなら `project`。
+- 狭い一問、一ファイルの小修正、同じmutable stateしか触れない作業には、この広域fan-outを使いません。
+
+runtimeは、公開されているcustom roleを優先します。cloudや一部surfaceでcustom roleが見えない場合でも、live schemaが `worker`、explicit model/effort、fresh contextを公開していれば、Skillはbuilt-in `worker`を `gpt-5.6-luna` / `medium` / `fork_turns="none"` に明示固定し、親spawn requestとcompleted child receiptの両方を検査します。custom role名、task名、静的TOMLだけからLunaを推測することはありません。
+
+## Release assets
+
+各 `v*.*.*` GitHub Release は次を配布します。
+
+- `luna-skill-vX.Y.Z.zip`: repository source snapshot。
+- `luna-hierarchical-skills-X.Y.Z-plugin.zip`: root `.codex-plugin/plugin.json` と `skills/` を持つinstallable plugin bundle。custom-agent TOMLは含めず、上記のbuilt-in `worker` fallbackで可搬性を保ちます。
+- `SHA256SUMS`: 両ZIPの固定SHA-256。
+- `luna-skill-vX.Y.Z.spdx.json`: source inventoryのSPDX 2.3 SBOM。
+
+ダウンロード後は `SHA256SUMS` を照合してから展開または導入してください。source treeとplugin/user treeに同名Skillを同時に有効化するとselectorが重複します。通常は一scopeだけを使い、repository/user overlapが必要な場合はcomplete package hash一致とselected pathを記録します。
 
 ### Codex cloudで使う
 
 1. GitHub上のこのリポジトリをCodex cloudへ接続し、対象branchのenvironmentを作成します。
 2. リポジトリrootの`.agents/skills`はrepository scopeとしてclone時に含まれるため、user-scope installerは不要です。
 3. 最初のcloud taskでは`$run-diverse-luna-research`または`$run-diverse-luna-project`を明示し、Skill path、公開spawn schema、実効model/effort、permission modeを確認します。
-4. `.codex/agents`のcustom roleが現在のcloud surfaceに公開されない場合、Skillは存在しないroleを推測せず、公開されているfresh-context routeかroot-onlyへfail closedします。
+4. `.codex/agents`のcustom roleが現在のcloud surfaceに公開されない場合、Skillは存在しないroleを推測しません。explicit Luna/medium/fresh-contextを持つbuilt-in `worker` routeが公開されていればそのrouteをreceipt検証付きで使用し、それもなければroot-onlyへfail closedします。
 5. cloud environmentの秘密値、internet access、GitHub write権限はこのリポジトリに含まれません。必要な場合だけenvironment側で個別に設定し、provider/public/HUMAN gateと分離します。
 
 Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、結果をreviewしてからPRへ進める仕組みです。このリポジトリを接続しただけでinstaller、provider操作、公開、外部送信が自動実行されることはありません。
@@ -31,8 +57,8 @@ Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、
 ### 安全な導入順序
 
 1. [`tools/Test-LunaSkillDiscovery.ps1`](tools/Test-LunaSkillDiscovery.ps1) で、legacy/user/repository scope、同名Skill、hash、custom-agent設定を読み取り専用で確認します。
-2. [`tools/Test-LunaMigrationTools.ps1`](tools/Test-LunaMigrationTools.ps1) に `-Source .agents/skills` を渡し、discovery/installerの構文、欠損path、Markdown、dry-run、`-WhatIf`、manifest境界を非変更で検査します。
-3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) に `-Source .agents/skills` を渡して`-Apply`なしで実行し、公式user-scopeへ置かれるpackageとhashを確認します。`-Apply -WhatIf`も非変更です。real applyでは、同じowner境界に新規manifestを先に作り、既存manifestや任意pathを上書きしません。
+2. [`tools/Test-LunaMigrationTools.ps1`](tools/Test-LunaMigrationTools.ps1) に `-Source .agents/skills` を渡し、discovery/installerの構文、dry-run、`-WhatIf`、OS-temp real apply、単一snapshot/hash照合、atomic journal、partial failure、排他的target lock、root/nested/staging reparse point拒否、非再帰cleanupを検査します。実user scopeは変更しません。
+3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) に `-Source .agents/skills` を渡して`-Apply`なしで実行し、公式user-scopeへ置かれるpackageとhashを確認します。`-Apply -WhatIf`も非変更です。real applyでは、同じowner境界にdurable journalを先に作り、排他的lock下で各atomic moveの前後を再検査し、既存manifest・既存package・任意pathを上書きしません。失敗時のnon-empty stageは再帰削除せずjournalのexact pathに保存します。
 4. 現在動いている `$HOME/.codex/skills` copyは、fresh taskで公式pathの発見を証明するまで消しません。同名の二重配置が検出された場合は適用を止めます。
 5. custom-agent TOMLは既存 `$HOME/.codex/agents` をバックアップ・比較し、同名fileを上書きせずに導入します。Skill installerはagent設定を変更しません。
 6. Codexを再起動し、projectless taskとrepository内taskの双方で、明示的なSkill invocation、custom roleの公開有無、Luna/mediumのcompleted runtime receiptを確認します。
@@ -48,14 +74,14 @@ Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、
 
 どちらも、依頼に合わせて小さな flat wave または階層型 wave を選びます。全案件で階層を強制するものではありません。
 
-発見確認後は、任意のprojectless taskまたはrepository内taskから明示的に呼び出せます。また、同梱descriptionのpositive/negative triggerに一致する深い調査や広い分割可能projectでは暗黙選択できます。
+発見確認後は、任意のprojectless taskまたはrepository内taskから明示的に呼び出せます。また、深い調査や広い分割可能projectでは `run-diverse-luna-project` だけが暗黙routerになります。routerはdispatch前に、packet-onlyなら明示的にresearch siblingへhandoffし、code/artifact/test/release等が一つでもあればprojectに残し、曖昧ならroot-onlyで分類を確定します。これにより二つのSkillが同時に暗黙選択される競合を作りません。
 
 ```text
 $run-diverse-luna-research 直近仕様を一次資料・反証・測定品質の観点で調査して
 $run-diverse-luna-project この機能を調査、実装、テスト、独立レビューまで進めて
 ```
 
-同梱 `agents/openai.yaml` はimplicit invocationを許可しますが、Skill descriptionは狭く安定した一問、単一ソースの順次確認、小さな一修正、共有mutable stateを分割できない作業を明示的に除外します。つまり、幅広い独立セルがある案件には自動適用でき、何でも無条件にfan-outする設定ではありません。確実に選びたい場合は上の `$run-diverse-luna-*` を明示します。
+project側の `agents/openai.yaml` だけがimplicit invocationを許可し、research側は明示呼出しまたはproject routerからのhandoffに限定します。両descriptionは、狭く安定した一問、単一ソースの順次確認、小さな一修正、共有mutable stateを分割できない作業を除外します。つまり、幅広い独立セルがある案件には自動適用でき、何でも無条件にfan-outする設定ではありません。確実に選びたい場合は上の `$run-diverse-luna-*` を明示します。
 
 ## Hierarchical fan-out / fan-in
 

@@ -2,6 +2,8 @@
 
 Run these as raw prompts in fresh tasks after any routing, checker, or contract change. Do not reveal the expected route or failure condition to the evaluator. Record selection, fixed `N`, calls, latency, runtime metadata, ownership collisions, ledger outcome, gate status, and false completion claims.
 
+The repository-level `tools/evaluation_cases.json` is the machine-checked route/guardrail manifest shared with the research sibling. Passing its unit tests proves only case completeness; it never substitutes for fresh-task Skill selection and completed runtime receipts.
+
 | Raw task shape | Required behavior |
 |---|---|
 | Read-only, source-heavy policy audit with no artifacts | Route to the research sibling, not the project workflow |
