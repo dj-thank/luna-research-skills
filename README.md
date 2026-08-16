@@ -1,28 +1,38 @@
 # Luna hierarchical skills
 
-このリポジトリは、Codex のネイティブ subagent を使う調査・プロジェクト作業のための、Skill source package、custom-agent definition、安全な発見・移行ツール、運用文書を収録します。Luna は、短い応答だけでなく、**高速・効率的な高ボリューム fan-out** と、複数の bounded assignment を同時に処理する coordinator に向きます。ただし、モデル、spawn schema、同時実行上限、利用可能な機能は Codex の surface・アカウント・workspace ごとに異なります。
+このリポジトリは、Codex のネイティブ subagent を使う調査・プロジェクト作業のための、repository-scoped Skill、custom-agent definition、安全な発見・移行ツール、運用文書を収録します。GitHubをCodex cloudのenvironmentへ接続した場合も、リポジトリrootの公式配置からSkillを発見できます。project-scoped custom agentの公開範囲は現在のsurfaceで別途確認します。Luna は、短い応答だけでなく、**高速・効率的な高ボリューム fan-out** と、複数の bounded assignment を同時に処理する coordinator に向きます。ただし、モデル、spawn schema、同時実行上限、利用可能な機能は Codex のsurface・アカウント・workspace・cloud environmentごとに異なります。
 
-canonical source package はこのリポジトリの `skills/` と `custom-agents/` です。実際に有効なのは、利用者がインストールし、現在の Codex が発見したコピーです。README、静的設定、Git tag、過去の観測記録だけでは、そのセッションでの runtime proof になりません。
+canonical source package はこのリポジトリの `.agents/skills/` と `.codex/agents/` です。前者はrepository-scoped Skill、後者はproject-scoped custom agentとして、cloneされたリポジトリ内からCodexが発見する公式配置です。実際に有効なのは、現在のCodexが発見したコピーです。README、静的設定、Git tag、過去の観測記録だけでは、そのセッションでのruntime proofになりません。
 
 ## Canonical package layout
 
 source package と公式 user-scope の対応は次のとおりです。
 
 ```text
-skills/run-diverse-luna-research/  ->  $HOME/.agents/skills/run-diverse-luna-research/
-skills/run-diverse-luna-project/   ->  $HOME/.agents/skills/run-diverse-luna-project/
-custom-agents/*.toml               ->  $HOME/.codex/agents/*.toml
+.agents/skills/run-diverse-luna-research/  ->  $HOME/.agents/skills/run-diverse-luna-research/
+.agents/skills/run-diverse-luna-project/   ->  $HOME/.agents/skills/run-diverse-luna-project/
+.codex/agents/*.toml                       ->  $HOME/.codex/agents/*.toml
 ```
 
 `$HOME/.agents/skills` が現在の公式 user-scope Skill path です。既存ビルドが `$HOME/.codex/skills` を実際に発見している環境では、fresh task で新pathの発見を確認するまでworking legacy copyを消さないでください。両pathへ同名Skillを同時に置くと重複候補になり得ます。hashを比較し、一方だけを有効にし、restart後にprojectless taskとrepository内taskの両方で明示呼出しを確認します。credential、provider、公開操作はインストール検証と分離します。
 
-公式の背景資料: [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) / [Build skills](https://learn.chatgpt.com/docs/build-skills)。
+公式の背景資料: [Subagents](https://learn.chatgpt.com/docs/agent-configuration/subagents) / [Build skills](https://learn.chatgpt.com/docs/build-skills) / [Codex cloud](https://learn.chatgpt.com/docs/cloud)。
+
+### Codex cloudで使う
+
+1. GitHub上のこのリポジトリをCodex cloudへ接続し、対象branchのenvironmentを作成します。
+2. リポジトリrootの`.agents/skills`はrepository scopeとしてclone時に含まれるため、user-scope installerは不要です。
+3. 最初のcloud taskでは`$run-diverse-luna-research`または`$run-diverse-luna-project`を明示し、Skill path、公開spawn schema、実効model/effort、permission modeを確認します。
+4. `.codex/agents`のcustom roleが現在のcloud surfaceに公開されない場合、Skillは存在しないroleを推測せず、公開されているfresh-context routeかroot-onlyへfail closedします。
+5. cloud environmentの秘密値、internet access、GitHub write権限はこのリポジトリに含まれません。必要な場合だけenvironment側で個別に設定し、provider/public/HUMAN gateと分離します。
+
+Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、結果をreviewしてからPRへ進める仕組みです。このリポジトリを接続しただけでinstaller、provider操作、公開、外部送信が自動実行されることはありません。
 
 ### 安全な導入順序
 
 1. [`tools/Test-LunaSkillDiscovery.ps1`](tools/Test-LunaSkillDiscovery.ps1) で、legacy/user/repository scope、同名Skill、hash、custom-agent設定を読み取り専用で確認します。
-2. [`tools/Test-LunaMigrationTools.ps1`](tools/Test-LunaMigrationTools.ps1) で discovery/installer の構文、欠損path、Markdown、dry-run、`-WhatIf`、manifest境界を非変更で検査します。
-3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) を `-Apply` なしで実行し、公式 user-scope へ置かれるpackageとhashを確認します。`-Apply -WhatIf` も非変更です。real applyでは、同じowner境界に新規manifestを先に作り、既存manifestや任意pathを上書きしません。
+2. [`tools/Test-LunaMigrationTools.ps1`](tools/Test-LunaMigrationTools.ps1) に `-Source .agents/skills` を渡し、discovery/installerの構文、欠損path、Markdown、dry-run、`-WhatIf`、manifest境界を非変更で検査します。
+3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) に `-Source .agents/skills` を渡して`-Apply`なしで実行し、公式user-scopeへ置かれるpackageとhashを確認します。`-Apply -WhatIf`も非変更です。real applyでは、同じowner境界に新規manifestを先に作り、既存manifestや任意pathを上書きしません。
 4. 現在動いている `$HOME/.codex/skills` copyは、fresh taskで公式pathの発見を証明するまで消しません。同名の二重配置が検出された場合は適用を止めます。
 5. custom-agent TOMLは既存 `$HOME/.codex/agents` をバックアップ・比較し、同名fileを上書きせずに導入します。Skill installerはagent設定を変更しません。
 6. Codexを再起動し、projectless taskとrepository内taskの双方で、明示的なSkill invocation、custom roleの公開有無、Luna/mediumのcompleted runtime receiptを確認します。

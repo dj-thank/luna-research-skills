@@ -1,6 +1,6 @@
 # Security and data handling
 
-This repository contains Codex Skill source packages, custom-agent definitions, read-only discovery tooling, and an explicit opt-in user-scope Skill installer. It does not include a server, credential store, provider client, deployment runner, or code that performs external actions by itself. The installer changes only new package directories under the official user Skill root after `-Apply`; it refuses existing destination packages, atomically creates a new prepared manifest directly under the owned `$HOME/.agents` parent before any move, refuses arbitrary or existing manifest paths, and never deletes or disables a legacy root.
+This repository contains repository-scoped Codex Skills under `.agents/skills`, project-scoped custom agents under `.codex/agents`, read-only discovery tooling, and an explicit opt-in user-scope Skill installer. It does not include a server, credential store, provider client, deployment runner, or code that performs external actions by itself. Merely connecting the repository to Codex cloud does not run the installer or perform external writes. The installer changes only new package directories under the official user Skill root after `-Apply`; it refuses existing destination packages, atomically creates a new prepared manifest directly under the owned `$HOME/.agents` parent before any move, refuses arbitrary or existing manifest paths, and never deletes or disables a legacy root.
 
 ## Safe use
 

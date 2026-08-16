@@ -1,6 +1,6 @@
 # Contributing
 
-Keep the repository source-first and read-only by default. The `skills/` and `custom-agents/` directories are the canonical distributable source; an installed copy becomes runtime authority only after current Codex discovery and receipt verification.
+Keep the repository source-first and read-only by default. The `.agents/skills/` and `.codex/agents/` directories are the canonical repository-scoped source; an installed or cloud-discovered copy becomes runtime authority only after current Codex discovery and receipt verification.
 
 - Keep README guidance aligned with both source packages and verify that their checker/test copies remain byte-identical.
 - Do not add credentials, private session rollouts, personal data, or machine-specific filesystem paths.

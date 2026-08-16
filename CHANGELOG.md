@@ -9,6 +9,7 @@
 - 実行可能な `run-diverse-luna-research` / `run-diverse-luna-project` source packages と、Luna coordinator / builder / reviewer custom-agent definitions。
 - 全tree共通の `N`、同時実行capacity `C`、wave width `W`、verifier reserve `V`、depth 2、exact runtime receiptを使うhierarchical fan-out/fan-in契約。
 - read-only discovery、dry-run/`ShouldProcess`、staging hash検証、既存package拒否、非変更failure testsを備えたuser-scope migration tools。
+- Codex cloudとrepository taskで自動発見できる`.agents/skills` / `.codex/agents`配置と、Python契約・TOML・Markdown link・PowerShell migration safetyを検査する最小権限GitHub Actions workflow。
 
 ### Changed
 

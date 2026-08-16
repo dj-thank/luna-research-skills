@@ -23,13 +23,13 @@ $d = Join-Path (Get-Location) 'work\luna-skill-v5\discovery'
   -OutputMarkdown (Join-Path (Get-Location) 'work\luna-discovery.md')
 
 # Dry run: no target directory is created
-& (Join-Path $d 'Install-LunaSkillsUserScope.ps1') -Source 'C:\path\to\candidate'
+& (Join-Path $d 'Install-LunaSkillsUserScope.ps1') -Source 'C:\path\to\repository\.agents\skills'
 
 # Apply only after human review; -WhatIf remains non-mutating
-& (Join-Path $d 'Install-LunaSkillsUserScope.ps1') -Source 'C:\path\to\candidate' -Apply -WhatIf
+& (Join-Path $d 'Install-LunaSkillsUserScope.ps1') -Source 'C:\path\to\repository\.agents\skills' -Apply -WhatIf
 
 # Real apply is still a separate human gate
-& (Join-Path $d 'Install-LunaSkillsUserScope.ps1') -Source 'C:\path\to\candidate' -Apply
+& (Join-Path $d 'Install-LunaSkillsUserScope.ps1') -Source 'C:\path\to\repository\.agents\skills' -Apply
 ```
 
 ## Fresh-task verification boundary
