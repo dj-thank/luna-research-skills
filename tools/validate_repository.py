@@ -286,7 +286,34 @@ def validate_repository(root: Path = ROOT) -> list[dict[str, str]]:
         value = (_read_text(version_path, root, errors) or "").strip()
         if not SEMVER.fullmatch(value):
             errors.append(_error("version", version_path, "VERSION must be strict semver", root))
+        errors.extend(validate_release_workflow(root))
     _validate_plugin_manifest(root, errors)
+    return errors
+
+
+def validate_release_workflow(root: Path = ROOT) -> list[dict[str, str]]:
+    """Require a manual, tag-bound, asset-complete, immutable release path."""
+    errors: list[dict[str, str]] = []
+    path = root / ".github" / "workflows" / "release.yml"
+    if not path.is_file():
+        return [_error("release_workflow", path, "VERSION requires a release workflow", root)]
+    text = _read_text(path, root, errors)
+    if text is None:
+        return errors
+    required = {
+        "workflow_dispatch:": "release must require explicit workflow dispatch",
+        'test "${GITHUB_REF_TYPE}" = "tag"': "release must run against a tag ref",
+        "gh release create": "release workflow must create the GitHub Release",
+        "release/*": "all verified release assets must be attached before publication",
+        "--verify-tag": "release creation must refuse an absent remote tag",
+        "--json isImmutable": "published release immutability must be verified",
+        ".isImmutable": "published release immutability result must be asserted",
+    }
+    for marker, message in required.items():
+        if marker not in text:
+            errors.append(_error("release_workflow", path, message, root))
+    if re.search(r"(?m)^\s*tags:\s*$", text):
+        errors.append(_error("release_workflow", path, "pushing a tag must not publish automatically", root))
     return errors
 
 
