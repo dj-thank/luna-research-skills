@@ -54,7 +54,7 @@ def rollout_records(
             "payload": {
                 "turn_id": turn_id,
                 "model": "gpt-5.6-luna",
-                "effort": "medium",
+                "effort": "max",
                 "sandbox_policy": {"type": sandbox},
             },
         },
@@ -110,7 +110,7 @@ def assignment(
         "runtime_turn": str(uuid.uuid4()) if accepted else None,
         "agent_role": "default" if accepted else None,
         "runtime_model": "gpt-5.6-luna" if accepted else None,
-        "runtime_effort": "medium" if accepted else None,
+        "runtime_effort": "max" if accepted else None,
         "parent_thread_uuid": str(uuid.uuid4()) if accepted else None,
         "parent_call_id": "call-test" if accepted else None,
         "spawn_kind": "spawn_agent" if accepted else None,
@@ -148,7 +148,7 @@ def project_assignment(
         "runtime_turn": str(uuid.uuid4()) if accepted else None,
         "agent_role": "default" if accepted else None,
         "runtime_model": "gpt-5.6-luna" if accepted else None,
-        "runtime_effort": "medium" if accepted else None,
+        "runtime_effort": "max" if accepted else None,
         "parent_thread_uuid": str(uuid.uuid4()) if accepted else None,
         "parent_call_id": "call-test" if accepted else None,
         "spawn_kind": "spawn_agent" if accepted else None,
@@ -247,7 +247,7 @@ class SpawnSchemaTests(unittest.TestCase):
             errors, _ = CHECK.validate_spawn_schema(path, "default")
         self.assertEqual(errors, [])
 
-    def test_validator_rejects_optional_base_request_fields(self) -> None:
+    def test_validator_accepts_optional_message_property(self) -> None:
         document = {
             "name": "spawn_agent",
             "parameters": {
@@ -258,6 +258,24 @@ class SpawnSchemaTests(unittest.TestCase):
                     "fork_turns": {"enum": ["none"]},
                 },
                 "required": [],
+            },
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "schema.json"
+            write_json(path, document)
+            errors, warnings = CHECK.validate_spawn_schema(path, "default")
+        self.assertEqual(errors, [])
+        self.assertTrue(any("message is optional" in warning for warning in warnings))
+
+    def test_validator_rejects_missing_message_property(self) -> None:
+        document = {
+            "name": "spawn_agent",
+            "parameters": {
+                "properties": {
+                    "agent_type": {"enum": ["default"]},
+                    "fork_turns": {"enum": ["none"]},
+                },
+                "required": ["agent_type", "fork_turns"],
             },
         }
         with tempfile.TemporaryDirectory() as temp:
@@ -313,7 +331,7 @@ class RuntimeReceiptTests(unittest.TestCase):
             "runtime_turn": str(uuid.uuid4()),
             "parent_thread_uuid": str(uuid.uuid4()),
             "runtime_model": "gpt-5.6-luna",
-            "runtime_effort": "medium",
+            "runtime_effort": "max",
             "agent_role": "default",
             "spawn_kind": "spawn_agent",
             "parent_call_id": "call-1",
@@ -352,7 +370,7 @@ class RuntimeReceiptTests(unittest.TestCase):
                     "payload": {
                         "turn_id": str(uuid.uuid4()),
                         "model": "gpt-5.6-luna",
-                        "effort": "medium",
+                        "effort": "max",
                         "sandbox_policy": {"type": "read-only"},
                     },
                 }
@@ -375,7 +393,7 @@ class RuntimeReceiptTests(unittest.TestCase):
                         "payload": {
                             "turn_id": second_turn,
                             "model": "gpt-5.6-terra",
-                            "effort": "medium",
+                            "effort": "max",
                             "sandbox_policy": {"type": "read-only"},
                         },
                     },
@@ -444,7 +462,7 @@ class RuntimeReceiptTests(unittest.TestCase):
             errors, _ = CHECK.validate_runtime_rollout(path, "default")
         self.assertTrue(any("after its turn_context" in error for error in errors))
 
-    def test_runtime_requires_parent_depth_role_and_path(self) -> None:
+    def test_runtime_requires_parent_depth_and_role(self) -> None:
         records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         spawn = records[0]["payload"]["source"]["subagent"]["thread_spawn"]
         spawn.pop("agent_path")
@@ -454,7 +472,17 @@ class RuntimeReceiptTests(unittest.TestCase):
             write_jsonl(path, records)
             errors, _ = CHECK.validate_runtime_rollout(path, "default")
         self.assertTrue(any("depth" in error for error in errors))
-        self.assertTrue(any("agent_path" in error for error in errors))
+
+    def test_runtime_allows_missing_agent_path_with_warning(self) -> None:
+        records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
+        spawn = records[0]["payload"]["source"]["subagent"]["thread_spawn"]
+        spawn.pop("agent_path")
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "rollout.jsonl"
+            write_jsonl(path, records)
+            errors, warnings = CHECK.validate_runtime_rollout(path, "default")
+        self.assertEqual(errors, [])
+        self.assertTrue(any("agent_path is unavailable" in warning for warning in warnings))
 
     def test_lookup_falls_back_to_session_meta_when_filename_is_unrelated(self) -> None:
         thread_id = str(uuid.uuid4())
@@ -481,6 +509,7 @@ class RuntimeReceiptTests(unittest.TestCase):
     def test_parent_spawn_request_is_bound_to_child(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]
+        child_id = child_meta["id"]
         parent_id = child_meta["parent_thread_id"]
         parent_records = [
             {"type": "session_meta", "payload": {"id": parent_id}},
@@ -500,6 +529,14 @@ class RuntimeReceiptTests(unittest.TestCase):
                     ),
                 },
             },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "call-test",
+                    "output": json.dumps({"agent_id": child_id}),
+                },
+            },
         ]
         with tempfile.TemporaryDirectory() as temp:
             parent_path = Path(temp) / "parent.jsonl"
@@ -515,7 +552,7 @@ class RuntimeReceiptTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertTrue(any("call_id" in error for error in mismatch_errors))
 
-    def test_parent_full_history_spawn_is_rejected(self) -> None:
+    def test_parent_task_name_without_returned_child_uuid_is_rejected(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]
         parent_records = [
@@ -525,6 +562,137 @@ class RuntimeReceiptTests(unittest.TestCase):
                 "payload": {
                     "type": "function_call",
                     "name": "spawn_agent",
+                    "call_id": "call-test",
+                    "arguments": json.dumps({
+                        "task_name": "test_assignment",
+                        "message": "bounded task",
+                        "agent_type": "default",
+                        "fork_turns": "none",
+                    }),
+                },
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            parent_path = Path(temp) / "parent.jsonl"
+            child_path = Path(temp) / "child.jsonl"
+            write_jsonl(parent_path, parent_records)
+            write_jsonl(child_path, child_records)
+            errors, _ = CHECK.validate_spawn_provenance(parent_path, child_path, "default")
+        self.assertTrue(any("child_id" in error for error in errors))
+
+    def test_parent_subagent_activity_binds_child_uuid(self) -> None:
+        child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
+        child_meta = child_records[0]["payload"]
+        child_id = child_meta["id"]
+        parent_records = [
+            {"type": "session_meta", "payload": {"id": child_meta["parent_thread_id"]}},
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "spawn_agent",
+                    "call_id": "call-test",
+                    "arguments": json.dumps({
+                        "task_name": "test_assignment",
+                        "message": "bounded task",
+                        "agent_type": "default",
+                        "fork_turns": "none",
+                    }),
+                },
+            },
+            {
+                "type": "event_msg",
+                "payload": {
+                    "type": "item_completed",
+                    "item": {
+                        "type": "SubAgentActivity",
+                        "id": "call-test",
+                        "kind": "started",
+                        "agent_thread_id": child_id,
+                    },
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "call-test",
+                    "output": json.dumps({"task_name": "/root/test_assignment"}),
+                },
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            parent_path = Path(temp) / "parent.jsonl"
+            child_path = Path(temp) / "child.jsonl"
+            write_jsonl(parent_path, parent_records)
+            write_jsonl(child_path, child_records)
+            errors, _ = CHECK.validate_spawn_provenance(parent_path, child_path, "default")
+        self.assertEqual(errors, [])
+
+    def test_nested_exec_spawn_request_is_bound_to_child_uuid(self) -> None:
+        child_records = rollout_records(
+            str(uuid.uuid4()), str(uuid.uuid4()), role="luna_reviewer"
+        )
+        child_meta = child_records[0]["payload"]
+        child_meta["source"]["subagent"]["thread_spawn"].pop("agent_path")
+        parent_id = child_meta["parent_thread_id"]
+        child_id = child_meta["id"]
+        call_id = "call-nested"
+        parent_records = [
+            {"type": "session_meta", "payload": {"id": parent_id}},
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "custom_tool_call",
+                    "name": "exec",
+                    "call_id": call_id,
+                    "input": (
+                        "const r = await tools.multi_agent_v1__spawn_agent({\n"
+                        '  agent_type: "luna_reviewer",\n'
+                        "  fork_context: false,\n"
+                        "  message: `bounded task`,\n"
+                        "});\ntext(r);"
+                    ),
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "custom_tool_call_output",
+                    "call_id": call_id,
+                    "output": [
+                        {
+                            "type": "input_text",
+                            "text": json.dumps(
+                                {"agent_id": child_id, "nickname": "Adversarial Lens"}
+                            ),
+                        }
+                    ],
+                },
+            },
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            parent_path = Path(temp) / "parent.jsonl"
+            child_path = Path(temp) / "child.jsonl"
+            write_jsonl(parent_path, parent_records)
+            write_jsonl(child_path, child_records)
+            errors, _ = CHECK.validate_spawn_provenance(
+                parent_path, child_path, "luna_reviewer"
+            )
+        self.assertEqual(errors, [])
+
+    def test_parent_full_history_spawn_is_rejected(self) -> None:
+        child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
+        child_meta = child_records[0]["payload"]
+        child_id = child_meta["id"]
+        parent_records = [
+            {"type": "session_meta", "payload": {"id": child_meta["parent_thread_id"]}},
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call",
+                    "name": "spawn_agent",
+                    "call_id": "call-test",
                     "arguments": json.dumps(
                         {
                             "task_name": "test_assignment",
@@ -533,6 +701,14 @@ class RuntimeReceiptTests(unittest.TestCase):
                             "fork_turns": "all",
                         }
                     ),
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "call-test",
+                    "output": json.dumps({"agent_id": child_id}),
                 },
             },
         ]
@@ -549,6 +725,7 @@ class RuntimeReceiptTests(unittest.TestCase):
     def test_parent_default_role_must_be_explicit(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]
+        child_id = child_meta["id"]
         parent_records = [
             {"type": "session_meta", "payload": {"id": child_meta["parent_thread_id"]}},
             {
@@ -564,6 +741,14 @@ class RuntimeReceiptTests(unittest.TestCase):
                             "fork_turns": "none",
                         }
                     ),
+                },
+            },
+            {
+                "type": "response_item",
+                "payload": {
+                    "type": "function_call_output",
+                    "call_id": "call-test",
+                    "output": json.dumps({"agent_id": child_id}),
                 },
             },
         ]
@@ -860,6 +1045,14 @@ class LedgerTests(unittest.TestCase):
                             ),
                         },
                     },
+                    {
+                        "type": "response_item",
+                        "payload": {
+                            "type": "function_call_output",
+                            "call_id": "call-test",
+                            "output": json.dumps({"agent_id": thread_id}),
+                        },
+                    },
                 ],
             )
             ledger_path = codex_home / "ledger.json"
@@ -1027,6 +1220,8 @@ class TreeV2Tests(unittest.TestCase):
              "descendant_budget": 3, "planned_child_attempt_ids": ["l1", "l2", "l3"],
              "collected_result_ids": ["l1", "l2", "l3"], "execution_status": "completed",
              "acceptance_status": "accepted", "runtime_verified": True, "thread_uuid": coordinator_thread, "runtime_turn": str(uuid.uuid4()), "collection_receipt": "receipt:c",
+             "parent_thread_uuid": root_parent, "parent_call_id": "root-call", "agent_role": "coordinator",
+             "runtime_model": "gpt-5.6-luna", "runtime_effort": "max", "spawn_kind": "spawn_agent", "safety_enforcement": "prompt_only",
              "started_at": "2026-01-01T00:00:00Z", "finished_at": "2026-01-01T00:04:00Z"},
             {"attempt_id": "l1", "parent_attempt_id": "c", "depth": 2, "wave": 2,
              "delegated_by": {"parent_attempt_id": "c", "parent_thread_uuid": coordinator_thread, "parent_call_id": "call-1"},
@@ -1058,6 +1253,103 @@ class TreeV2Tests(unittest.TestCase):
         errors, _ = CHECK._validate_tree_ledger(self._ledger(self._valid_rows()))
         self.assertEqual(errors, [])
 
+    def test_tree_v2_requires_explicit_acceptance_status(self):
+        rows = self._valid_rows()
+        rows[1].pop("acceptance_status")
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("acceptance_status is required" in error for error in errors))
+
+    def test_tree_v2_accepted_requires_full_runtime_fields(self):
+        rows = self._valid_rows()
+        rows[0].pop("parent_call_id")
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("parent_call_id" in error for error in errors))
+
+    def test_tree_v2_rejects_nested_phase_conflict(self):
+        ledger = self._ledger(self._valid_rows(), phase="integration")
+        ledger["tree"] = dict(ledger)
+        ledger["tree"]["phase"] = "planning"
+        errors, _ = CHECK._validate_tree_ledger(ledger, project=True)
+        self.assertTrue(any("phase conflicts" in error for error in errors))
+
+    def test_planning_rejects_collecting_nonterminal_child(self):
+        rows = self._valid_rows()
+        rows[0].update({
+            "collected_result_ids": ["l1"],
+            "execution_status": "started",
+            "acceptance_status": "pending",
+            "finished_at": None,
+        })
+        rows[1].update({
+            "execution_status": "started",
+            "acceptance_status": "pending",
+            "finished_at": None,
+        })
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows, phase="planning"))
+        self.assertTrue(any("collected child is not terminal" in error for error in errors))
+
+    def test_research_synthesis_rejects_duplicate_source_family(self):
+        rows = self._valid_rows()
+        for row in (rows[1], rows[3]):
+            row.update({
+                "acceptance_status": "accepted",
+                "runtime_verified": True,
+                "thread_uuid": str(uuid.uuid4()),
+                "runtime_turn": str(uuid.uuid4()),
+                "parent_thread_uuid": rows[0]["thread_uuid"],
+                "parent_call_id": f"call-{row['attempt_id']}",
+                "agent_role": "research_scout_luna",
+                "runtime_model": "gpt-5.6-luna",
+                "runtime_effort": "max",
+                "spawn_kind": "spawn_agent",
+                "safety_enforcement": "prompt_only",
+                "source_family_id": "same-upstream",
+            })
+        errors, _ = CHECK._validate_tree_ledger(
+            self._ledger(rows, phase="synthesis", closure_status="blocked")
+        )
+        self.assertTrue(any("source_family_id" in error for error in errors))
+
+    def test_project_evidence_lane_enforces_plane_access_pair(self):
+        rows = self._valid_rows()
+        rows[1].update({
+            "source_plane": "provider",
+            "access_mode": "prompt_only_public",
+        })
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows), project=True)
+        self.assertTrue(any("provider" in error and "root_only" in error for error in errors))
+
+    def test_verifier_results_are_typed(self):
+        self.assertTrue(CHECK._verifier_result_errors("v", {}))
+        row = {
+            "criterion_results": [
+                {
+                    "criterion_id": "routing",
+                    "status": "passed",
+                    "evidence_locator": "receipt:routing",
+                }
+            ]
+        }
+        self.assertEqual(CHECK._verifier_result_errors("v", row), [])
+
+    def test_tree_v2_planning_allows_uncollected_nonterminal_children(self):
+        rows = self._valid_rows()
+        rows[0].update({
+            "collected_result_ids": [],
+            "execution_status": "started",
+            "acceptance_status": "pending",
+            "finished_at": None,
+        })
+        for child in rows[1:]:
+            child.update({
+                "execution_status": "planned",
+                "acceptance_status": "pending",
+                "started_at": None,
+                "finished_at": None,
+            })
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows, phase="planning"))
+        self.assertEqual(errors, [])
+
     def test_tree_v2_rejects_depth_cycle_and_budget(self):
         rows = self._valid_rows(); rows[2]["parent_attempt_id"] = "l2"; rows[2]["depth"] = 3
         errors, _ = CHECK._validate_tree_ledger(self._ledger(rows, attempt_budget_N=1))
@@ -1066,7 +1358,7 @@ class TreeV2Tests(unittest.TestCase):
     def test_tree_v2_rejects_leaf_spawn_and_unlisted_child(self):
         rows = self._valid_rows(); rows[1]["hidden_spawn"] = True; rows[0]["planned_child_attempt_ids"] = ["l1"]
         errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
-        self.assertTrue(any("leaf rollout" in e for e in errors))
+        self.assertTrue(any("non-coordinator rollout" in e for e in errors))
         self.assertTrue(any("planned child list" in e for e in errors))
 
     def test_tree_v2_rejects_accepted_completion_after_assignment_deadline(self):
@@ -1105,6 +1397,20 @@ class TreeV2Tests(unittest.TestCase):
             "priority": True,
             "gap_reason": "private connector access remains root-only",
         })
+        for child, reason in zip(
+            rows[2:],
+            ("no independent adversarial source", "no measurement source"),
+        ):
+            child.update({
+                "execution_status": "not_dispatched",
+                "acceptance_status": "excluded",
+                "runtime_verified": False,
+                "thread_uuid": None,
+                "runtime_turn": None,
+                "started_at": None,
+                "finished_at": "2026-01-01T00:01:30Z",
+                "gap_reason": reason,
+            })
         errors, _ = CHECK._validate_tree_ledger(
             self._ledger(rows, phase="synthesis", closure_status="blocked")
         )

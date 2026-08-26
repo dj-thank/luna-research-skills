@@ -36,7 +36,7 @@
   },
   {
     "id": "api-research-and-components",
-    "prompt": "Research several current APIs and implement two disjoint components.",
+    "prompt": "Use Luna to research several current APIs and implement two disjoint components.",
     "expected_skill": "run-diverse-luna-project",
     "expected_mode": "flat",
     "required_controls": ["source_plane_separation", "disjoint_ownership", "root_integration"]

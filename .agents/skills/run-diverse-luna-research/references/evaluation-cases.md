@@ -8,7 +8,10 @@ The repository-level `tools/evaluation_cases.json` is the machine-checked route/
 |---|---|---|
 | “What is the stable meaning of this one documented flag?” | Single root research | Do not fan out when one authoritative lookup resolves it. |
 | “Compare the current technical, policy, market, and contrary evidence for this decision.” | Parallel research | Fix N, create independent primary/adversarial/measurement cells, verify every accepted runtime. |
-| “Research the options, implement one, run tests, commit it, and prepare a release.” | Project + bounded evidence lane | run-diverse-luna-project owns delivery; research scouts return packets only. |
+| “Research the options, implement one, run tests, commit it, and prepare a release.” | Caller workflow + bounded evidence lane | Research scouts return packets; the caller's selected workflow owns delivery. |
+| “Use Luna to research the options, implement one, run tests, commit it, and prepare a release.” | Project + bounded evidence lane | run-diverse-luna-project owns delivery; research scouts return packets only. |
+| Two accepted evidence rows mirror one upstream source family | Collapse to one independent family or reject the duplicate unless it is an explicit retry. |
+| Synthesis quotas are represented only by rejected rows | Do not count them as final coverage; require accepted evidence or an explicit gap. |
 | “Is this DM invitation link official and safe to redeem?” | Parallel research with root-only activation | Separate functional behavior, sender authority, official campaign terms, adversarial phishing/privacy, and payment risk; redact the token. |
 | “Open this authenticated private connector and send the result to the provider.” | Root-only access | Filesystem read-only does not prove connector/provider tool permissions; do not delegate secrets or perform the send as research. |
 | Private/provider ledger row uses `prompt_only_public` | Reject ledger | `prompt_only_public` is valid only for `public_web`; connector/provider remains undispatched `root_only`. |

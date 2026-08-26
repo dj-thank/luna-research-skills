@@ -1,16 +1,16 @@
 ---
 name: run-diverse-luna-project
-description: "Route broad, safely decomposable work into bounded, runtime-verified GPT-5.6 Luna workstreams. This is the sole implicit Luna entrypoint: use it directly for code, artifacts, migrations, releases, operations, or integrated deliverables, and have it explicitly hand packet-only evidence or fact-checking to run-diverse-luna-research before dispatch. If classification is ambiguous, remain root-only until resolved. Skip one narrow task or shared-state work that cannot be separated safely."
+description: "Use when the user explicitly asks to implement, build, audit, migrate, release, or deliver with Luna: orchestrate a broad project through bounded, runtime-verified GPT-5.6 Luna workstreams."
 ---
 
 # Run Diverse Luna Project
 
 ## First 60 seconds
 
-1. Classify before fan-out. Keep mixed delivery—code, artifacts, tests, migration, integration, release, or operations—here. Explicitly load and hand packet-only research to `run-diverse-luna-research`. If both descriptions appear to match or the final deliverable is unclear, do not dispatch until one route is selected.
+1. Confirm that the user explicitly requested Luna for a broad implementation, build, audit with artifacts or fixes, migration, integration, release, or operation; this is the entry gate. A prompt without that request exits this skill before dispatch and returns control to the caller's current workflow. Route evidence-only research with no delivery outcome to `run-diverse-luna-research`.
 2. Define deliverables and acceptance evidence, then split only ready work with disjoint files, environments, or perspectives; keep the root as the single integrator.
 3. Fix one tree-wide `N`, `C`, `W`, verifier reserve `V`, dependency graph, and deadlines before dispatch.
-4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/medium child route before wider fan-out.
+4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/max child route before wider fan-out.
 5. Integrate candidate work at the root, run the real checks, then give fresh reviewers the contract and artifacts before any external or public gate.
 
 The remaining sections are the normative contract. Use [references/task-packet.md](references/task-packet.md) for assignments and [references/project-ledger.md](references/project-ledger.md) for the tree-wide receipt.
@@ -25,7 +25,7 @@ Use the hierarchy fields in `references/project-ledger.md`; names, static TOML, 
 
 Own the outcome at the root. Use verified Luna subagents as bounded workstreams, not as a substitute for integration judgment. Move through contract, map, waves, and gates until every acceptance criterion has evidence or an explicit boundary.
 
-GPT-5.6 Luna with medium effort is this skill's acceptance policy, not a universal Codex default. Treat the live `spawn_agent` schema and an exact completed child turn as runtime truth. Keep research, implementation, shared-state integration, provider operations, publication, and human approval as distinct phases and evidence gates.
+GPT-5.6 Luna with max effort is this skill's acceptance policy, not a universal Codex default. Treat the live `spawn_agent` schema and an exact completed child turn as runtime truth. Keep research, implementation, shared-state integration, provider operations, publication, and human approval as distinct phases and evidence gates.
 
 ## 1. Define the project contract
 
@@ -53,7 +53,7 @@ python <skill-dir>/scripts/check_setup.py --agent-role <selected-role>
 
 The project skill ships its own copy of the same versioned route/runtime checker contract as the research sibling. It must remain runnable when the research skill is not installed. When maintaining both skills together, compare checker versions and behavior before release so they cannot drift silently.
 
-Inspect the active `spawn_agent` schema as runtime truth and pass only exposed fields. Require `message` plus one complete fresh-context route from the same schema variant. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` only when those exact custom roles are exposed. If custom roles are unavailable but built-in `worker`, explicit `model`, explicit `reasoning_effort`, and `fork_turns` are exposed, use `agent_type="worker"`, `model="gpt-5.6-luna"`, `reasoning_effort="medium"`, and `fork_turns="none"`, then pass `--agent-role worker --allow-generic-worker` to the checker. A `default` route is valid only when it is actually exposed and its Luna/medium policy passes. A historical `agent_type="default"` plus `fork_context=false` route is transitional compatibility, not a portable guarantee. Explicit pins never replace completed-rollout verification. Put the complete task-local context in `message`; task names and nicknames are logistics, not model evidence.
+Inspect the active `spawn_agent` schema as runtime truth and pass only exposed fields. Require `message` plus one complete fresh-context route from the same schema variant. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` only when those exact custom roles are exposed. If custom roles are unavailable but built-in `worker`, explicit `model`, explicit `reasoning_effort`, and `fork_turns` are exposed, use `agent_type="worker"`, `model="gpt-5.6-luna"`, `reasoning_effort="max"`, and `fork_turns="none"`, then pass `--agent-role worker --allow-generic-worker` to the checker. A `default` route is valid only when it is actually exposed and its Luna/max policy passes. A historical `agent_type="default"` plus `fork_context=false` route is transitional compatibility, not a portable guarantee. Explicit pins never replace completed-rollout verification. Put the complete task-local context in `message`; task names and nicknames are logistics, not model evidence.
 
 Reserve one unit from `N` and run the highest-priority read-only reconnaissance cell as the runtime probe. Wait for completion, then verify its rollout with one supported locator:
 
@@ -64,13 +64,13 @@ python <skill-dir>/scripts/check_setup.py --agent-role <selected-role> --runtime
 
 Add `--allow-generic-worker` whenever `<selected-role>` is the built-in `worker`; without that explicit opt-in the checker rejects the generic route.
 
-Accept the probe result only when the checker reports a unique parent spawn request using the selected non-history route and a matching completed child turn with `gpt-5.6-luna` and medium effort. If static setup, the live schema, request provenance, or runtime verification fails, discard the result and stop new dispatch. Continue sequentially at the root when safe, but report that it is not verified Luna fan-out; never silently switch models or authority.
+Accept the probe result only when the checker reports a unique parent spawn request whose output contains the child UUID, using the selected non-history route and a matching completed child turn with `gpt-5.6-luna` and max effort. Task-name equality is diagnostic only. If static setup, the live schema, request provenance, or runtime verification fails, discard the result and stop new dispatch. Continue sequentially at the root when safe, but report that it is not verified Luna fan-out; never silently switch models or authority.
 
 Completion criterion: the first accepted result has verified Luna runtime metadata, or zero further subagents start and one concrete blocker is reported.
 
 ### Hierarchical dispatch route
 
-After the direct reconnaissance probe passes, the root may create counted coordinator attempts with exact descendant credits, workstream IDs, ownership paths, dependencies, permitted roles, wave width, deadline, and explicit permission to spawn only the listed depth-2 descendants. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` when the live `agent_type` schema exposes them. Otherwise, a live-schema built-in `worker` route explicitly pinned to Luna/medium and accepted with `--allow-generic-worker` may fill those bounded functions from complete packets. Custom role names must never be guessed or treated as runtime proof.
+After the direct reconnaissance probe passes, the root may create counted coordinator attempts with exact descendant credits, workstream IDs, ownership paths, dependencies, permitted roles, wave width, deadline, and explicit permission to spawn only the listed depth-2 descendants. Prefer `luna_project_coordinator`, `luna_builder`, and `luna_reviewer` when the live `agent_type` schema exposes them. Otherwise, a live-schema built-in `worker` route explicitly pinned to Luna/max and accepted with `--allow-generic-worker` may fill those bounded functions from complete packets. Custom role names must never be guessed or treated as runtime proof.
 
 Coordinators may partition, dispatch, normalize, and collect. They may not integrate shared files, grant new credits, open another coordinator level, perform provider/public writes, or promote evidence gates. Builders own disjoint paths or worktrees. Reviewers and verifiers start fresh only after their dependencies are terminal and receive artifacts plus the contract, not inherited builder conclusions. The root validates every coordinator-to-leaf call and collection receipt against the single v2 ledger before accepting work, then remains the only shared-state integrator and external authority.
 
@@ -112,7 +112,7 @@ Use waves rather than filling every slot:
 
 Use bounded waits. When an assignment or wave deadline expires, interrupt or safely abandon the work, record `timed_out` or `abandoned`, and exclude late unverified output. A result started after its deadline or accepted after its assignment/overall deadline is invalid. A sensitive `root_only` evidence row that was never delegated closes as `not_dispatched/excluded` with a terminal timestamp and explicit gap; it never carries child runtime evidence. Do not make “no live assignment remains” depend on an unbounded wait.
 
-Use read-only assignments for reconnaissance, perspectives, and critique. `read-only` ownership is a behavioral scope, not sandbox evidence: record the completed child’s effective sandbox separately, and never call a writable runtime `sandbox_read_only` or “equivalent.” Give implementation assignments exact file or module ownership. Keep cross-cutting edits, external actions, account changes, publication, purchases, deployments, and destructive operations at the root under the user's authority.
+Use read-only assignments for reconnaissance, perspectives, and critique. `read-only` ownership is a behavioral scope, not sandbox evidence: record the completed child’s effective sandbox separately, and never call a writable runtime `sandbox_read_only` or “equivalent.” Project evidence lanes use the same source-plane/access-mode contract as research lanes. Give implementation assignments exact file or module ownership. Keep cross-cutting edits, external actions, account changes, publication, purchases, deployments, and destructive operations at the root under the user's authority.
 
 A runtime mismatch is a routing breach. Discard the packet, stop new dispatch, and leave any touched ownership paths unaccepted for root inspection; preserve the shared tree rather than automatically reverting other work.
 
@@ -138,7 +138,7 @@ Completion criterion: every accepted change maps to a contract deliverable, depe
 
 ## 6. Run independent gates
 
-Assign a fresh verifier when budget permits; otherwise verify directly at the root. Give the verifier the contract and resulting artifact, not the builders' conclusions. Include an adversarial pass for high-risk assumptions and a boundary pass for claims local tests cannot prove. Verify the verifier's Luna runtime before accepting its report.
+Assign a fresh verifier when budget permits; otherwise verify directly at the root. Give the verifier criterion IDs, the contract, and resulting artifact, not the builders' conclusions. Require typed `criterion_results` with a status and exact evidence locator for every checked criterion; prose is explanatory only. Include an adversarial pass for high-risk assumptions and a boundary pass for claims local tests cannot prove. Verify the verifier's Luna runtime before accepting its report.
 
 Classify each acceptance criterion as:
 

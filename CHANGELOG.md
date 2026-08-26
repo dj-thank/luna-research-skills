@@ -4,6 +4,11 @@
 
 ## [Unreleased]
 
+### Changed
+
+- 現行の `gpt-5.6-luna` / `max` 受入方針へSkill、checker、custom-agent定義、README、SECURITY、CONTRIBUTINGを同期した。親spawn出力に含まれる子UUIDとexact completed receiptを必須のruntime provenanceとし、task名だけでは受理しない。
+- Research/projectのルーティングを明示的なLuna実装依頼と証拠専用調査に分離し、source-family重複排除、typed verifier criterion、evidence-laneのsource/access境界をcheckerとpacket契約へ追加した。
+
 ## [2.0.6] - 2026-08-17
 
 ### Added

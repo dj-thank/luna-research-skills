@@ -55,14 +55,14 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         for identifier in delivery_ids:
             self.assertEqual(by_id[identifier]["expected_skill"], "run-diverse-luna-project")
 
-    def test_single_implicit_router_and_deterministic_handoff(self) -> None:
+    def test_implicit_discovery_and_explicit_delivery_boundary(self) -> None:
         project_yaml = (ROOT / ".agents/skills/run-diverse-luna-project/agents/openai.yaml").read_text(encoding="utf-8")
         research_yaml = (ROOT / ".agents/skills/run-diverse-luna-research/agents/openai.yaml").read_text(encoding="utf-8")
         self.assertIn("allow_implicit_invocation: true", project_yaml)
-        self.assertIn("sole implicit Luna router", project_yaml)
-        self.assertIn("allow_implicit_invocation: false", research_yaml)
-        self.assertIn("evidence or fact-checking only", project_yaml)
-        self.assertIn("root-only", project_yaml)
+        self.assertIn("allow_implicit_invocation: true", research_yaml)
+        self.assertIn("explicitly requested", project_yaml)
+        self.assertIn("evidence packet", research_yaml)
+        self.assertIn("only when I explicitly requested Luna implementation", research_yaml)
 
     def test_safety_and_verification_controls_are_represented(self) -> None:
         controls = {

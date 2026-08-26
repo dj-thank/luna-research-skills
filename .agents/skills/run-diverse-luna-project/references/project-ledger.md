@@ -22,6 +22,9 @@ Keep one UTF-8 JSON ledger for every project run. It is the machine-readable bou
 - `gate_receipts`: one non-empty locator for every verified gate.
 - `external_authority`: boolean; required true before `PROVIDER_PASS`, `PUBLIC_PASS`, or `HUMAN_GO` can be recorded.
 - `assignments`: no more than `N` child-attempt rows.
+- `acceptance_criteria`: required at complete closure as unique criterion IDs; accepted verifier results must cover this set exactly.
+
+When a nested `tree` object is used, duplicate top-level `phase` or `closure_status` values must match it exactly. Prefer one canonical location rather than maintaining both.
 
 ## Assignment row
 
@@ -37,7 +40,19 @@ Every row requires:
 
 For an evidence lane, also include `source_plane`, `access_mode`, and `safety_enforcement`. `prompt_only_public` is valid only for `public_web`. `connector_private` and `provider` remain `root_only` while external tool permissions cannot be mechanically proven. A root-only row closes without child runtime metadata as `not_dispatched/excluded`, with a terminal timestamp and explicit gap. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
-Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-5.6-luna`, `runtime_effort=medium`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
+Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-5.6-luna`, `runtime_effort=max`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
+
+The exact parent `spawn_agent` call output must contain the child thread UUID. A matching task name is diagnostic only and cannot bind provenance.
+
+Project `evidence_lane` rows also require `source_plane` and `access_mode`. `prompt_only_public` is valid only for `public_web`; `connector_private` and `provider` stay `root_only`; `sandbox_read_only` requires an effective read-only filesystem receipt.
+
+An accepted `verifier` row requires `criterion_results`, with one object per checked criterion:
+
+```json
+{"criterion_id":"routing","status":"passed","evidence_locator":"receipt:routing","gap_reason":null}
+```
+
+`status` is `passed`, `failed`, `blocked`, or `not_run`. `blocked` and `not_run` require `gap_reason`. Complete closure requires every top-level acceptance criterion exactly once across accepted verifier rows and every final status `passed`.
 
 Evidence-lane rows use source plane enum `public_web|local|internal_session|connector_private|provider`, plus freshness status, exact locator or content hash, unknowns, and gap reason. Keep source-plane comparisons explicit; never infer a higher evidence gate from a lower-plane observation.
 

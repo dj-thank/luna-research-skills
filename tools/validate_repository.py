@@ -130,13 +130,13 @@ def validate_skills(root: Path = ROOT) -> list[dict[str, str]]:
                 errors.append(_error("skill_contract_file", required, "missing required checker contract file", root))
     expected_implicit = {
         "run-diverse-luna-project": True,
-        "run-diverse-luna-research": False,
+        "run-diverse-luna-research": True,
     }
     if implicit and implicit != expected_implicit:
         errors.append(_error(
             "implicit_router",
             skills_dir,
-            "project must be the sole implicit router and research must require explicit invocation or project handoff",
+            "both skills may be discoverable, but research must remain evidence-only and project delivery requires an explicit Luna implementation request",
             root,
         ))
     return errors
