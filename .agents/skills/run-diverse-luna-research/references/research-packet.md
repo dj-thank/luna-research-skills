@@ -50,8 +50,9 @@ For each item, provide:
 8. Independence: original source, independent corroboration, or dependent repetition; identify the likely upstream family.
 9. Freshness status: current for the contract, stale, undated, or unknown.
 10. Confidence: high, medium, or low, with one sentence of rationale.
-11. A limitation, contradiction, privacy concern, access limitation, or missing context.
-12. Evidence-gate note: what was directly observed and which higher gate it does **not** prove. Scouts never assign `DEVICE_PASS`, `PROVIDER_PASS`, `PUBLIC_PASS`, or `HUMAN_GO`.
+11. Source family: a stable `source_family_id` identifying the upstream publisher, dataset, repository, or authority behind mirrors and syndication.
+12. A limitation, contradiction, privacy concern, access limitation, or missing context.
+13. Evidence-gate note: what was directly observed and which higher gate it does **not** prove. Scouts never assign `DEVICE_PASS`, `PROVIDER_PASS`, `PUBLIC_PASS`, or `HUMAN_GO`.
 
 For live prices, market data, closures, schedules, laws, policies, fees, availability, or provider state, include the retrieval timestamp, jurisdiction or network, API/document version where available, and enough locator detail to refresh the observation.
 
@@ -214,4 +215,4 @@ accepted + rejected <= completed
 started <= N
 ```
 
-Before synthesis, require zero unclassified in-flight assignments. Every accepted attempt needs valid child and parent UUIDs, exact turn UUID, parent call ID, `spawn_kind=spawn_agent`, role, Luna/medium metadata, matching safety enforcement, and `runtime_verified=true`. Run the checker with `--verify-ledger-receipts`; it must reopen the exact child turn and the unique parent spawn request, so a declaration alone is not acceptance evidence. Every priority cell must be accepted or have a non-empty gap reason. A timed-out or abandoned result is excluded even if it arrives later, unless the root deliberately starts a new counted acceptance attempt.
+Before synthesis, require zero unclassified in-flight assignments. Every accepted attempt needs valid child and parent UUIDs, exact turn UUID, parent call ID, `spawn_kind=spawn_agent`, role, Luna/max metadata, matching safety enforcement, `runtime_verified=true`, and a non-empty `source_family_id` for evidence rows. Accepted synthesis rows sharing a source family collapse to one independent family unless they are an explicit retry of the original attempt. Run the checker with `--verify-ledger-receipts`; it must reopen the exact child turn and the unique parent spawn request, so a declaration alone is not acceptance evidence. Every priority cell must be accepted or have a non-empty gap reason. Rejected rows do not satisfy final quotas. A timed-out or abandoned result is excluded even if it arrives later, unless the root deliberately starts a new counted acceptance attempt.

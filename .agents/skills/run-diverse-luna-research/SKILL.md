@@ -1,16 +1,16 @@
 ---
 name: run-diverse-luna-research
-description: Run bounded, source-backed research or fact-checking through diverse GPT-5.6 Luna evidence scouts, with runtime proof, independent source-family coverage, adversarial checking, freshness, deduplication, and root verification. Use for deep or current multi-source research, literature or market scans, technical or policy comparisons, due diligence, invite/link authenticity, phishing/privacy/payment questions, or a packet-only evidence lane inside a larger project. Do not use for a narrow stable fact, an ordered single-source lookup, or as the main workflow for implementation, artifacts, migrations, shared SSOT changes, releases, provider operations, or publication; use run-diverse-luna-project for mixed delivery work.
+description: Run bounded, source-backed research or fact-checking through diverse GPT-5.6 Luna evidence scouts, with runtime proof, independent source-family coverage, adversarial checking, freshness, deduplication, and root verification. Use for deep or current multi-source research, literature or market scans, technical or policy comparisons, due diligence, invite/link authenticity, phishing/privacy/payment questions, or a packet-only evidence lane inside a larger project. For mixed delivery, remain an evidence-only lane; use run-diverse-luna-project only when the user explicitly requests Luna implementation.
 ---
 
 # Run Diverse Luna Research
 
 ## First 60 seconds
 
-1. Confirm the requested deliverable is evidence and synthesis only. If it includes code, artifacts, migrations, release work, or external operations, route the whole job through `run-diverse-luna-project` and use this skill only as a bounded evidence lane.
+1. Confirm the requested deliverable is evidence and synthesis only. For mixed delivery, keep this skill as a bounded evidence lane. Let `run-diverse-luna-project` own delivery only when the user explicitly requested Luna implementation; otherwise return evidence to the caller's current workflow.
 2. Write non-overlapping primary, adversarial, and measurement cells; choose flat mode for a few cells and hierarchy only when at least six are independently ready.
 3. Fix one tree-wide `N`, `C`, `W`, verifier reserve `V`, deadlines, source planes, and access modes before dispatch.
-4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/medium child route before the wider wave.
+4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/max child route with UUID-bound parent provenance before the wider wave.
 5. Accept packets only after exact runtime/provenance validation; the root reopens sources, deduplicates source families, and alone synthesizes conclusions.
 
 The remaining sections are the normative contract. Use [references/research-packet.md](references/research-packet.md) for the machine-readable packet and ledger fields.
@@ -25,15 +25,15 @@ All child packets and ledgers use the hierarchy contract in `references/research
 
 Research is always `EVIDENCE_LANE_ONLY`, including when nested in a project. Builders, reviewers, and evidence leaves have disjoint files/worktrees; reviewers/verifiers are fresh and independent. Keep `LOCAL_PASS -> DEVICE_PASS -> PROVIDER_PASS -> PUBLIC_PASS -> HUMAN_GO` separate. Record source plane, freshness, exact locator/hash, unknowns, and gate non-claims. Stop after two waves with no material marginal yield only when no mandatory cell is uncovered. Every timeout/cancel has TTL, epoch, retry owner, dedup key, and explicit exclusion.
 
-Operate as an `EVIDENCE_LANE_ONLY` coordinator. Scouts return research packets; the root owns source verification, synthesis, authority decisions, and every mutation. When the request also includes implementation or operational delivery, let `run-diverse-luna-project` own the project and give this skill a bounded research sub-budget.
+Operate as an `EVIDENCE_LANE_ONLY` coordinator. Scouts return research packets; the root owns source verification, synthesis, authority decisions, and every mutation. For mixed delivery with an explicit Luna implementation request, let `run-diverse-luna-project` own the project and give this skill a bounded research sub-budget. In other mixed-delivery work, return packets to the caller's current workflow.
 
-GPT-5.6 Luna with medium effort is this skill's acceptance policy, not a universal Codex default. Codex custom-agent files, explicit spawn values, `[agents]` defaults, and the parent can resolve differently. Treat the live `spawn_agent` schema and the completed child rollout as runtime truth. Field names such as `fork_turns` and `fork_context` are runtime-surface details, not portable platform guarantees. Do not confuse Codex custom agents with Responses API multi-agent orchestration.
+GPT-5.6 Luna with max effort is this skill's acceptance policy, not a universal Codex default. Codex custom-agent files, explicit spawn values, `[agents]` defaults, and the parent can resolve differently. Treat the live `spawn_agent` schema and the completed child rollout as runtime truth. Field names such as `fork_turns` and `fork_context` are runtime-surface details, not portable platform guarantees. Do not confuse Codex custom agents with Responses API multi-agent orchestration.
 
 ## 0. Decide whether to fan out
 
 Use multiple scouts only when at least two independent, bounded evidence cells can run without shared mutable state and parallel work materially improves coverage or latency.
 
-Use one root agent instead for a small or stable lookup, an ordered chain, one slow external operation, a deterministic execution graph, or work that must continuously mutate the same state. Route implementation, tests, file generation, SSOT integration, browser/provider writes, VM changes, releases, and publishing to `run-diverse-luna-project`; this skill may supply packets to that project but must not own delivery.
+Use one root agent instead for a small or stable lookup, an ordered chain, one slow external operation, a deterministic execution graph, or work that must continuously mutate the same state. Keep implementation, tests, file generation, SSOT integration, browser/provider writes, VM changes, releases, and publishing outside this evidence lane. Route that delivery to `run-diverse-luna-project` only when the user explicitly requested Luna implementation; otherwise return packets to the caller's current workflow.
 
 For invite, identity, official-status, phishing, privacy, or payment questions, do not let successful navigation, redemption, login, or API behavior prove sender authority, campaign authenticity, safety, or privacy. Make those separate cells.
 
@@ -71,10 +71,10 @@ python <skill-dir>/scripts/check_setup.py --agent-role <selected-role>
 Inspect the active `spawn_agent` schema and use only fields it exposes. Select one complete non-history route from that schema; never create a route by combining fields from different schema variants.
 
 - Prefer `research_coordinator` / `research_scout_luna` only when those exact custom roles are exposed. Pass the selected role to `check_setup.py`.
-- When custom roles are unavailable but the live schema exposes built-in `worker`, explicit `model`, explicit `reasoning_effort`, and `fork_turns`, use `agent_type="worker"`, `model="gpt-5.6-luna"`, `reasoning_effort="medium"`, and `fork_turns="none"`. Validate that route with `--agent-role worker --allow-generic-worker`; this is an explicit capability fallback, not a silent model fallback.
-- A `default` route may be used only when it is actually exposed and its configured Luna/medium policy passes the checker. Never assume that an official built-in role is enabled on the current surface.
+- When custom roles are unavailable but the live schema exposes built-in `worker`, explicit `model`, explicit `reasoning_effort`, and `fork_turns`, use `agent_type="worker"`, `model="gpt-5.6-luna"`, `reasoning_effort="max"`, and `fork_turns="none"`. Validate that route with `--agent-role worker --allow-generic-worker`; this is an explicit capability fallback, not a silent model fallback.
+- A `default` route may be used only when it is actually exposed and its configured Luna/max policy passes the checker. Never assume that an official built-in role is enabled on the current surface.
 - On a historical surface that exposes no `fork_turns` but does expose the complete `agent_type="default"` plus `fork_context=false` route, treat that route as a transitional compatibility path and verify its exact parent request. Do not advertise it as a current portable guarantee.
-- Explicit model or effort values do not replace completed-rollout verification. Any non-Luna or non-medium child is rejected even if the request was pinned correctly.
+- Explicit model or effort values do not replace completed-rollout verification. Any non-Luna or non-max child is rejected even if the request was pinned correctly.
 
 Put the full assignment in `message`. Do not rely on inherited conversation history. Task names and nicknames are logistics, not model evidence.
 
@@ -92,7 +92,7 @@ Completion criterion: static setup passes, one complete live route is named, and
 
 ### Hierarchical dispatch route
 
-Use hierarchy only after one direct useful scout passes the runtime gate. The root then creates one to four counted coordinator attempts and gives each coordinator an exact `descendant_budget`, unique `planned_child_attempt_ids`, leased coverage cells, permitted roles, wave width, deadline, and explicit permission to spawn only those descendants. Prefer `research_coordinator` and `research_scout_luna` when those live `agent_type` values are exposed. If custom roles are absent, a live-schema `worker` route pinned explicitly to Luna/medium and accepted with `--allow-generic-worker` may perform that bounded function from a complete packet. Do not invent an unexposed role, infer a role from a task name, or fall back to another model.
+Use hierarchy only after one direct useful scout passes the runtime gate. The root then creates one to four counted coordinator attempts and gives each coordinator an exact `descendant_budget`, unique `planned_child_attempt_ids`, leased coverage cells, permitted roles, wave width, deadline, and explicit permission to spawn only those descendants. Prefer `research_coordinator` and `research_scout_luna` when those live `agent_type` values are exposed. If custom roles are absent, a live-schema `worker` route pinned explicitly to Luna/max and accepted with `--allow-generic-worker` may perform that bounded function from a complete packet. Do not invent an unexposed role, infer a role from a task name, or fall back to another model.
 
 A coordinator may dispatch and collect only its leased depth-2 leaves. It must return `collected_result_ids`, terminal counts, duplicate/gap records, and the compact packets; it may not synthesize final conclusions, write shared state, delegate another coordinator, or reuse an unlisted child. The root reopens every accepted coordinator and leaf receipt, checks the exact parent call edge, reconciles the global `N/C/V` ledger, and alone performs source reopening and synthesis. If the coordinator role, descendant call, or collection receipt cannot be proven, reject that branch and continue flat or root-only.
 
@@ -139,7 +139,7 @@ Add `--allow-generic-worker` whenever `<selected-role>` is the built-in `worker`
 
 Add `--require-spawn-provenance` so the checker binds the child receipt to the unique parent `spawn_agent` request and verifies the non-history route. Add `--require-read-only` for any lane whose contract requires enforced read-only access. Reject the packet and stop new dispatch if the parent request is missing or ambiguous, the selected turn is incomplete, the rollout is ambiguous, parent/depth/role/model/effort mismatches, or the required sandbox is absent. The probe consumes one unit of `N` regardless of outcome.
 
-Completion criterion: the first accepted packet has a completed, unambiguous Luna/medium runtime receipt and an allowed safety mode, or no further scouts start and the rejected output is excluded.
+Completion criterion: the first accepted packet has a completed, unambiguous Luna/max runtime receipt and an allowed safety mode, or no further scouts start and the rejected output is excluded.
 
 ## 5. Dispatch bounded waves
 
@@ -160,14 +160,14 @@ Use bounded waits. When a per-scout or wave deadline expires, interrupt or safel
 After each wave:
 
 1. verify every completed thread before accepting its packet;
-2. normalize canonical URLs and upstream source families;
+2. normalize canonical URLs and assign stable upstream `source_family_id` values;
 3. collapse dependent repetitions and reject scope or plane drift;
 4. open replacements only for uncovered, contradictory, stale, or weak cells;
 5. update quota feasibility and remaining time before dispatching again.
 
 Stop new work when a hard budget or deadline is reached, or every priority cell is covered or has an explicit per-cell gap reason. Two consecutive verified no-material-result assignments may close optional cells, but must never hide an uncovered priority cell.
 
-Completion criterion: `started <= N`; every accepted packet has a passing receipt bound to its exact turn and unique parent spawn provenance; all in-flight work is completed, interrupted, or explicitly abandoned; and every priority cell is covered or has a named gap reason.
+Completion criterion: `started <= N`; every accepted packet has a passing receipt bound to its exact turn and parent call output containing the child UUID; synthesis quotas count only accepted evidence or explicit gap rows; accepted evidence is deduplicated by `source_family_id`; all in-flight work is completed, interrupted, or explicitly abandoned; and every priority cell is covered or has a named gap reason.
 
 ## 6. Verify, compare planes, and synthesize at the root
 
@@ -179,7 +179,7 @@ Return an answer-first synthesis with citations beside claims, material contradi
 
 - planned, started, completed, failed, rejected, timed-out, abandoned, and accepted assignment counts;
 - quota coverage and uncovered priority cells with reasons;
-- distinct accepted scout threads with verified Luna/medium metadata;
+- distinct accepted scout threads with verified Luna/max metadata;
 - selected route and safety enforcement (`sandbox_read_only`, `prompt_only`, or mixed);
 - source-family deduplication count and any excluded routing breach;
 - current evidence gates without promotion.

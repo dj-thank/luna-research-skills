@@ -42,7 +42,9 @@ Require the agent to return:
 5. Assumptions, integration notes, and conflicts detected.
 6. Remaining risks and the smallest next action.
 
-The root appends the exact child thread UUID, turn UUID, role, model, effort, effective sandbox, completion receipt, parent thread UUID, matching parent spawn call ID/non-history route, and accepted/rejected status. Never relabel a writable effective sandbox as `sandbox_read_only` or “equivalent” because the assignment prohibited edits. Use a fresh `spawn_agent` request for every production-accepted row; follow-up turns are not accepted receipts. Task names, static TOML, opaque message bodies, and agent self-report are not runtime receipts.
+For verifier assignments, return a machine-readable `criterion_results` list keyed by the supplied criterion IDs. Each result contains `status=passed|failed|blocked|not_run`, an exact `evidence_locator`, and `gap_reason` for blocked or not-run work. Prose may explain the packet but never replaces it.
+
+The root appends the exact child thread UUID, turn UUID, role, model, effort, effective sandbox, completion receipt, parent thread UUID, matching parent spawn call ID/non-history route, and accepted/rejected status. The parent call output must contain the child UUID; task-name equality cannot establish the edge. Never relabel a writable effective sandbox as `sandbox_read_only` or “equivalent” because the assignment prohibited edits. Use a fresh `spawn_agent` request for every production-accepted row; follow-up turns are not accepted receipts. Task names, static TOML, opaque message bodies, and agent self-report are not runtime receipts.
 
 ## Assignment quality gate
 

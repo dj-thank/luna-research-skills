@@ -15,8 +15,8 @@ from pathlib import Path
 from typing import Any, Iterable
 
 EXPECTED_MODEL = "gpt-5.6-luna"
-EXPECTED_REASONING_EFFORT = "medium"
-CHECKER_CONTRACT_VERSION = "2026-08-17.1"
+EXPECTED_REASONING_EFFORT = "max"
+CHECKER_CONTRACT_VERSION = "2026-08-25.2"
 MIN_CONCURRENT_THREADS = 2
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
@@ -39,6 +39,7 @@ EXECUTION_STATES = {
 ACCEPTANCE_STATES = {"pending", "accepted", "rejected", "excluded"}
 ACCESS_MODES = {"sandbox_read_only", "prompt_only_public", "root_only"}
 SAFETY_ENFORCEMENT = {"sandbox_read_only", "prompt_only", "unknown"}
+VERIFIER_STATUSES = {"passed", "failed", "blocked", "not_run"}
 PROJECT_KINDS = {
     "coordinator",
     "builder",
@@ -66,7 +67,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised on old Python only
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate a skill-local GPT-5.6 Luna/medium subagent route."
+        description="Validate a skill-local GPT-5.6 Luna/max subagent route."
     )
     parser.add_argument(
         "--version",
@@ -102,7 +103,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help=(
             "Explicitly opt in to the built-in worker role; requires a fresh "
-            "route with explicit model=gpt-5.6-luna and reasoning_effort=medium."
+            "route with explicit model=gpt-5.6-luna and reasoning_effort=max."
         ),
     )
     parser.add_argument(
@@ -289,13 +290,13 @@ def validate_role_policy(
             errors.append("generic worker mode must not pretend a custom TOML definition exists")
         warnings.append(
             "generic worker mode is explicitly enabled; runtime and parent provenance "
-            "must prove exact Luna/medium fields"
+            "must prove exact Luna/max fields"
         )
         return errors, warnings
     if role_name == "worker" and not allow_generic_worker:
         errors.append(
             "built-in generic worker is disabled by default; pass --allow-generic-worker "
-            "for an explicit Luna/medium fresh-context route"
+            "for an explicit Luna/max fresh-context route"
         )
         return errors, warnings
 
@@ -339,7 +340,7 @@ def validate_role_policy(
 
     if role_name == "default" and role_pin and not config_pin:
         warnings.append(
-            "[agents] defaults are not Luna/medium, but the selected custom "
+            "[agents] defaults are not Luna/max, but the selected custom "
             "default role is pinned; completed-rollout verification remains required"
         )
     return errors, warnings
@@ -667,27 +668,30 @@ def validate_spawn_schema(
     for schema in schemas:
         for properties, required in spawn_agent_route_variants(schema):
             fields_seen.append((sorted(properties), sorted(required)))
-            if not {"task_name", "message"}.issubset(properties):
-                continue
-            if not {"task_name", "message"}.issubset(required):
+            if "message" not in properties:
                 continue
             variant_routes, variant_warnings = _routes_for_variant(
                 properties, role_name
             )
             routes.extend(variant_routes)
             warnings.extend(variant_warnings)
+            if "message" not in required:
+                warnings.append(
+                    "message is optional in the live schema; the task packet must "
+                    "still provide a non-empty message"
+                )
 
     if not fields_seen or not any(
-        {"task_name", "message"}.issubset(fields) for fields, _ in fields_seen
+        "message" in fields for fields, _ in fields_seen
     ):
-        return ["spawn_agent schema does not expose task_name and message"], []
+        return ["spawn_agent schema does not expose message"], []
     if not routes:
         rendered = " | ".join(
             f"properties=[{', '.join(fields)}] required=[{', '.join(required)}]"
             for fields, required in fields_seen
         )
         return [
-            "no single spawn_agent schema variant requires task_name/message and "
+            "no single spawn_agent schema variant supports message and "
             "supports the selected role plus a non-history route; variants: "
             f"{rendered}"
         ], warnings
@@ -949,6 +953,38 @@ def _accepted_runtime_errors(prefix: str, row: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _verifier_result_errors(prefix: str, row: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    results = row.get("criterion_results")
+    if not isinstance(results, list) or not results:
+        return [f"{prefix}: accepted verifier requires criterion_results"]
+    seen: set[str] = set()
+    for index, result in enumerate(results):
+        item = f"{prefix}.criterion_results[{index}]"
+        if not isinstance(result, dict):
+            errors.append(f"{item} must be an object")
+            continue
+        criterion_id = result.get("criterion_id")
+        if not isinstance(criterion_id, str) or not criterion_id.strip():
+            errors.append(f"{item}.criterion_id is required")
+        elif criterion_id in seen:
+            errors.append(f"{item}.criterion_id is duplicated")
+        else:
+            seen.add(criterion_id)
+        status = result.get("status")
+        if status not in VERIFIER_STATUSES:
+            errors.append(f"{item}.status must be one of {sorted(VERIFIER_STATUSES)}")
+        locator = result.get("evidence_locator")
+        if not isinstance(locator, str) or not locator.strip():
+            errors.append(f"{item}.evidence_locator is required")
+        if status in {"blocked", "not_run"} and (
+            not isinstance(result.get("gap_reason"), str)
+            or not result["gap_reason"].strip()
+        ):
+            errors.append(f"{item}.gap_reason is required for {status}")
+    return errors
+
+
 def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, configured_cap: int | None = None) -> tuple[list[str], list[str]]:
     """Validate the v2 machine-readable root/coordinator/leaf tree contract.
 
@@ -960,6 +996,11 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
     warnings: list[str] = []
     prefix = "project ledger" if project else "research ledger"
     tree = ledger.get("tree") if isinstance(ledger.get("tree"), dict) else ledger
+    phase = tree.get("phase", ledger.get("phase"))
+    if tree is not ledger:
+        for key in ("phase", "closure_status"):
+            if key in tree and key in ledger and tree.get(key) != ledger.get(key):
+                errors.append(f"{prefix}.{key} conflicts with tree.{key}")
     tree_id, run_id = tree.get("tree_id"), tree.get("run_id")
     for key, value in (("tree_id", tree_id), ("run_id", run_id)):
         try:
@@ -1032,6 +1073,7 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         "measurement_gap": set(),
     }
     research_coverage_owners: dict[str, str] = {}
+    research_family_owners: dict[str, str] = {}
     research_priority_groups: dict[str, list[dict[str, Any]]] = {}
     tree_overall_deadline = _parse_timestamp(
         tree.get("overall_deadline", ledger.get("overall_deadline"))
@@ -1125,8 +1167,8 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
             if not isinstance(row.get("collected_result_ids"), list): errors.append(f"{pfx}.collected_result_ids is required")
         leaf_roles = {"research_scout_luna", "leaf", "builder", "luna_builder", "evidence_lane", "reviewer", "luna_reviewer", "verifier", "operator"}
         if role in leaf_roles and depth not in {1, 2}: errors.append(f"{pfx}: leaf role has invalid depth")
-        if role in leaf_roles and children.get(aid): errors.append(f"{pfx}: leaf role may not spawn descendants")
-        if row.get("may_spawn_descendants") is True and role in leaf_roles: errors.append(f"{pfx}: leaf may_spawn_descendants must be false")
+        if not is_coord and children.get(aid): errors.append(f"{pfx}: non-coordinator may not spawn descendants")
+        if row.get("may_spawn_descendants") is True and not is_coord: errors.append(f"{pfx}: non-coordinator may_spawn_descendants must be false")
         if row.get("retry_of") is not None and row.get("retry_of") not in ids:
             errors.append(f"{pfx}.retry_of must reference an earlier attempt")
         if row.get("retry_of") == aid: errors.append(f"{pfx}.retry_of creates a cycle")
@@ -1146,17 +1188,17 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
             elif isinstance(prior.get("retry_owner"), str) and row["retry_owner"] != prior["retry_owner"]:
                 errors.append(f"{pfx}: retry must keep the same retry_owner")
         allowed_accept = {"planned": {"pending"}, "not_dispatched": {"excluded"}, "started": {"pending"}, "completed": {"accepted", "rejected"}, "failed": {"excluded"}, "timed_out": {"excluded"}, "abandoned": {"excluded"}}
-        acceptance = row.get("acceptance_status", "pending")
+        if "acceptance_status" not in row:
+            errors.append(f"{pfx}.acceptance_status is required")
+        acceptance = row.get("acceptance_status")
         if status in allowed_accept and acceptance not in allowed_accept[status]: errors.append(f"{pfx}: invalid state transition {status}->{acceptance}")
-        if acceptance == "accepted" and (
-            row.get("runtime_verified") is not True
-            or not _canonical_uuid(row.get("thread_uuid"))
-            or not _canonical_uuid(row.get("runtime_turn"))
-        ):
-            errors.append(f"{pfx}: accepted row requires strict runtime fields")
+        if acceptance == "accepted":
+            errors.extend(_accepted_runtime_errors(pfx, row))
+            if project and kind == "verifier":
+                errors.extend(_verifier_result_errors(pfx, row))
         if status in {"timed_out", "abandoned"} and acceptance == "accepted": errors.append(f"{pfx}: late completion after timeout cannot be accepted")
         if row.get("hidden_spawn") or row.get("spawn_agent_calls"):
-            if role in leaf_roles: errors.append(f"{pfx}: leaf rollout contains spawn_agent call")
+            if not is_coord: errors.append(f"{pfx}: non-coordinator rollout contains spawn_agent call")
         if row.get("access_mode") == "root_only" and status not in {"planned", "not_dispatched"}: errors.append(f"{pfx}: root_only rows cannot run")
         if row.get("source_plane") in {"connector_private", "provider"} and row.get("access_mode") != "root_only": errors.append(f"{pfx}: private/provider must remain root_only")
         if not project and not is_coord:
@@ -1231,7 +1273,16 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
                 if isinstance(coverage_cell, str)
                 else ""
             )
-            if coverage_key:
+            eligible_coverage = (
+                phase == "planning"
+                or acceptance == "accepted"
+                or (
+                    status == "not_dispatched"
+                    and isinstance(row.get("gap_reason"), str)
+                    and bool(row["gap_reason"].strip())
+                )
+            )
+            if coverage_key and eligible_coverage:
                 previous = research_coverage_owners.get(coverage_key)
                 if previous is None:
                     research_coverage_owners[coverage_key] = aid
@@ -1245,6 +1296,20 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
             overlap_key = row.get("overlap_key")
             if priority is True and isinstance(overlap_key, str) and overlap_key:
                 research_priority_groups.setdefault(overlap_key, []).append(row)
+            if phase == "synthesis" and acceptance == "accepted" and kind == "evidence_lane":
+                family = row.get("source_family_id")
+                if not isinstance(family, str) or not family.strip():
+                    errors.append(f"{pfx}.source_family_id is required for accepted synthesis evidence")
+                else:
+                    family_key = " ".join(family.split()).casefold()
+                    previous = research_family_owners.get(family_key)
+                    if previous is None:
+                        research_family_owners[family_key] = aid
+                    elif row.get("retry_of") != previous:
+                        errors.append(
+                            f"source_family_id {family!r} is duplicated by {aid!r} "
+                            f"without retry_of={previous!r}"
+                        )
         elif project and not is_coord:
             deadline = _parse_timestamp(row.get("deadline"))
             if deadline is None:
@@ -1262,6 +1327,26 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
                     tree_overall_deadline,
                 )
             )
+            if kind == "evidence_lane":
+                plane = row.get("source_plane")
+                access_mode = row.get("access_mode")
+                if plane not in SOURCE_PLANES:
+                    errors.append(f"{pfx}.source_plane must be one of {sorted(SOURCE_PLANES)}")
+                if access_mode not in ACCESS_MODES:
+                    errors.append(f"{pfx}.access_mode must be one of {sorted(ACCESS_MODES)}")
+                errors.extend(
+                    _access_errors(
+                        pfx,
+                        plane,
+                        access_mode,
+                        status,
+                        acceptance,
+                        row.get("safety_enforcement"),
+                        row.get("runtime_verified"),
+                        row.get("thread_uuid"),
+                        row.get("gap_reason"),
+                    )
+                )
         elif is_coord:
             errors.extend(
                 _deadline_errors(
@@ -1371,7 +1456,22 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
                 errors.append(f"coordinator {aid}: collected result list contains duplicates")
             actual = set(children.get(aid, []))
             if set(planned) != actual: errors.append(f"coordinator {aid}: planned child list mismatch")
-            if set(collected) != actual: errors.append(f"coordinator {aid}: collected result list mismatch")
+            collection_required = (
+                phase != "planning"
+                or row.get("execution_status")
+                in {"completed", "failed", "timed_out", "abandoned", "not_dispatched"}
+            )
+            if collection_required and set(collected) != actual:
+                errors.append(f"coordinator {aid}: collected result list mismatch")
+            elif not collection_required and not set(collected).issubset(actual):
+                errors.append(f"coordinator {aid}: collected result list contains an unplanned child")
+            if not collection_required and any(
+                ids[x].get("execution_status")
+                not in {"completed", "failed", "timed_out", "abandoned", "not_dispatched"}
+                for x in collected
+                if x in ids
+            ):
+                errors.append(f"coordinator {aid}: collected child is not terminal")
             for field in ("collection_uuid", "collection_call_id"):
                 if field in row and (not isinstance(row.get(field), str) or not row[field].strip()):
                     errors.append(f"coordinator {aid}: {field} must be non-empty")
@@ -1380,7 +1480,7 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
                 except (ValueError, TypeError): errors.append(f"coordinator {aid}: collection_uuid must be UUID")
             if "collection_receipt" in row and (not isinstance(row.get("collection_receipt"), str) or not row["collection_receipt"].strip()):
                 errors.append(f"coordinator {aid}: collection_receipt must be non-empty")
-            if any(ids[x].get("execution_status") not in {"completed", "failed", "timed_out", "abandoned", "not_dispatched"} for x in actual): errors.append(f"coordinator {aid}: child is not terminal")
+            if collection_required and any(ids[x].get("execution_status") not in {"completed", "failed", "timed_out", "abandoned", "not_dispatched"} for x in actual): errors.append(f"coordinator {aid}: child is not terminal")
             budget_c = row.get("descendant_budget")
             if isinstance(budget_c, int) and len(planned) > budget_c: errors.append(f"coordinator {aid}: descendant budget exceeded")
             if row.get("execution_status") == "completed":
@@ -1549,6 +1649,19 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
         kind = row.get("kind")
         if kind not in PROJECT_KINDS:
             errors.append(f"{pfx}.kind must be one of {sorted(PROJECT_KINDS)}")
+        for key in ("objective", "evidence_locator"):
+            if not isinstance(row.get(key), str) or not row[key].strip():
+                errors.append(f"{pfx}.{key} must be a non-empty string")
+        ownership = row.get("ownership")
+        if not isinstance(ownership, list) or not ownership or any(
+            not isinstance(value, str) or not value.strip() for value in ownership
+        ):
+            errors.append(f"{pfx}.ownership must be a non-empty string array")
+        row_criteria = row.get("acceptance_criteria")
+        if not isinstance(row_criteria, list) or not row_criteria or any(
+            not isinstance(value, str) or not value.strip() for value in row_criteria
+        ):
+            errors.append(f"{pfx}.acceptance_criteria must be a non-empty string array")
         dependencies = row.get("dependencies", [])
         if not isinstance(dependencies, list) or any(
             not isinstance(value, str) for value in dependencies
@@ -1615,6 +1728,23 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
                 errors.append(
                     f"complete project closure has not verified target_gate {target!r}"
                 )
+            criteria = ledger.get("acceptance_criteria")
+            if not isinstance(criteria, list) or not criteria or any(
+                not isinstance(value, str) or not value.strip() for value in criteria
+            ) or len(criteria) != len(set(criteria)):
+                errors.append("complete project closure requires unique acceptance_criteria")
+            else:
+                semantic: dict[str, str] = {}
+                for row in assignments:
+                    if not isinstance(row, dict) or row.get("kind") != "verifier" or row.get("acceptance_status") != "accepted":
+                        continue
+                    for result in row.get("criterion_results", []):
+                        if isinstance(result, dict) and isinstance(result.get("criterion_id"), str):
+                            semantic[result["criterion_id"]] = str(result.get("status"))
+                if set(semantic) != set(criteria):
+                    errors.append("complete project closure verifier coverage does not match acceptance_criteria")
+                elif any(status != "passed" for status in semantic.values()):
+                    errors.append("complete project closure requires all criterion results passed")
     return errors
 
 
@@ -1921,7 +2051,7 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None) -> tu
             ledger, project=True, configured_cap=configured_cap
         )
         tree_errors.extend(_validate_project_v2_contract(ledger))
-        return tree_errors, tree_warnings
+        return [*errors, *tree_errors], tree_warnings
     if ledger.get("version") != 1:
         errors.append(f"project ledger.version must be 1, got {ledger.get('version')!r}")
     phase = ledger.get("phase")
@@ -2304,7 +2434,10 @@ def validate_runtime_rollout(
                 f"{role_name!r}, got {spawned_role!r}"
             )
         if not isinstance(agent_path, str) or not agent_path.strip():
-            errors.append("runtime source.thread_spawn agent_path must be non-empty")
+            warnings.append(
+                "runtime source.thread_spawn agent_path is unavailable; parent "
+                "provenance must bind the child UUID to one exact spawn request"
+            )
 
     selected_entry = latest_context
     if runtime_turn is not None:
@@ -2428,6 +2561,184 @@ def _parse_spawn_arguments(value: object) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
+def _canonical_uuid_strings(value: object) -> set[str]:
+    """Extract canonical UUIDs from a tool result without trusting free text."""
+    if isinstance(value, (dict, list)):
+        text = json.dumps(value, ensure_ascii=False, sort_keys=True)
+    elif isinstance(value, str):
+        text = value
+    else:
+        return set()
+    pattern = (
+        r"(?<![0-9A-Fa-f])([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-"
+        r"[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})(?![0-9A-Fa-f])"
+    )
+    result: set[str] = set()
+    for candidate in re.findall(pattern, text):
+        try:
+            normalized = str(uuid.UUID(candidate))
+        except ValueError:
+            continue
+        if candidate == normalized:
+            result.add(normalized)
+    return result
+
+
+def _wrapped_string_property(body: str, key: str) -> str | None:
+    pattern = (
+        r"(?:^|[,\{\n])\s*"
+        + re.escape(key)
+        + r"\s*:\s*(['\"])(.*?)\1"
+    )
+    matches = re.findall(pattern, body, flags=re.DOTALL)
+    if len(matches) != 1:
+        return None
+    return matches[0][1]
+
+
+def _wrapped_boolean_property(body: str, key: str) -> bool | None:
+    pattern = (
+        r"(?:^|[,\{\n])\s*"
+        + re.escape(key)
+        + r"\s*:\s*(true|false)\b"
+    )
+    matches = re.findall(pattern, body)
+    if len(matches) != 1:
+        return None
+    return matches[0] == "true"
+
+
+def _parse_wrapped_spawn_arguments(value: object) -> dict[str, Any] | None:
+    """Parse the app's nested exec -> multi_agent spawn receipt conservatively.
+
+    The desktop app records nested tool calls as a JavaScript ``custom_tool_call``
+    rather than a direct JSON ``function_call``.  The route fields are simple
+    literals; the task message itself is intentionally treated as opaque.
+    """
+    if not isinstance(value, str):
+        return None
+    call_matches = list(
+        re.finditer(r"\btools\.[A-Za-z_][A-Za-z0-9_.]*spawn_agent\s*\(", value)
+    )
+    if len(call_matches) != 1:
+        return None
+    object_start = value.find("{", call_matches[0].end())
+    if object_start < 0:
+        return None
+
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    object_end: int | None = None
+    for index in range(object_start, len(value)):
+        character = value[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {'"', "'", "`"}:
+            quote = character
+        elif character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                object_end = index
+                break
+    if object_end is None:
+        return None
+
+    body = value[object_start + 1 : object_end]
+    message_marker = re.search(r"(?:^|[,\{\n])\s*message\s*:", body)
+    if message_marker is None:
+        return None
+    arguments: dict[str, Any] = {"message": "__wrapped_message__"}
+    for key in ("task_name", "agent_type", "fork_turns", "model", "reasoning_effort"):
+        literal = _wrapped_string_property(body, key)
+        if literal is not None:
+            arguments[key] = literal
+    for key in ("fork_context",):
+        literal_boolean = _wrapped_boolean_property(body, key)
+        if literal_boolean is not None:
+            arguments[key] = literal_boolean
+    return arguments
+
+
+def _parent_spawn_calls(
+    path: Path,
+) -> tuple[list[tuple[str | None, dict[str, Any], set[str]]], str | None]:
+    """Return direct or nested spawn calls and child IDs returned by each call."""
+    records: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                try:
+                    document = json.loads(line)
+                except json.JSONDecodeError as exc:
+                    return [], f"invalid JSONL at {path}:{line_number}: {exc}"
+                if isinstance(document, dict):
+                    records.append(document)
+    except OSError as exc:
+        return [], f"cannot read parent rollout {path}: {exc}"
+
+    returned_ids: dict[str, set[str]] = {}
+    for document in records:
+        payload = document.get("payload")
+        if not isinstance(payload, dict):
+            continue
+        if document.get("type") == "event_msg" and payload.get("type") == "item_completed":
+            item = payload.get("item")
+            if (
+                isinstance(item, dict)
+                and item.get("type") == "SubAgentActivity"
+                and item.get("kind") == "started"
+                and isinstance(item.get("id"), str)
+                and _canonical_uuid(item.get("agent_thread_id"))
+            ):
+                returned_ids.setdefault(item["id"], set()).add(item["agent_thread_id"])
+            continue
+        if payload.get("type") not in {"function_call_output", "custom_tool_call_output"}:
+            continue
+        call_id = payload.get("call_id")
+        if not isinstance(call_id, str):
+            continue
+        returned_ids.setdefault(call_id, set()).update(
+            _canonical_uuid_strings(payload.get("output"))
+        )
+
+    calls: list[tuple[str | None, dict[str, Any], set[str]]] = []
+    for document in records:
+        payload = document.get("payload")
+        if not isinstance(payload, dict) or document.get("type") != "response_item":
+            continue
+        call_id = payload.get("call_id")
+        normalized_call_id = call_id if isinstance(call_id, str) else None
+        name = payload.get("name")
+        if (
+            payload.get("type") == "function_call"
+            and isinstance(name, str)
+            and (
+                name == "spawn_agent"
+                or name.endswith(".spawn_agent")
+                or name.endswith("__spawn_agent")
+            )
+        ):
+            arguments = _parse_spawn_arguments(payload.get("arguments"))
+        elif payload.get("type") == "custom_tool_call":
+            arguments = _parse_wrapped_spawn_arguments(payload.get("input"))
+        else:
+            continue
+        if arguments is not None:
+            calls.append(
+                (normalized_call_id, arguments, returned_ids.get(normalized_call_id or "", set()))
+            )
+    return calls, None
+
+
 def validate_spawn_provenance(
     parent_path: Path,
     child_path: Path,
@@ -2445,6 +2756,7 @@ def validate_spawn_provenance(
 
     depth, spawned_parent, spawned_role, agent_path = _spawn_metadata(child_meta)
     child_parent = child_meta.get("parent_thread_id") or spawned_parent
+    child_id = child_meta.get("id")
     if parent_meta.get("id") != child_parent:
         errors.append(
             "parent rollout id does not match child parent_thread_id: "
@@ -2457,48 +2769,36 @@ def validate_spawn_provenance(
     if not isinstance(depth, int) or isinstance(depth, bool) or depth < 1:
         errors.append(f"child provenance depth is invalid: {depth!r}")
     if not isinstance(agent_path, str) or not agent_path.strip("/"):
-        errors.append(f"child provenance agent_path is invalid: {agent_path!r}")
+        warnings.append(
+            "child provenance agent_path is unavailable; using the child UUID "
+            "returned by the exact parent spawn call"
+        )
         task_name = None
     else:
         task_name = agent_path.rstrip("/").rsplit("/", 1)[-1]
 
-    calls: list[tuple[str | None, dict[str, Any]]] = []
-    try:
-        with parent_path.open("r", encoding="utf-8") as handle:
-            for line_number, line in enumerate(handle, start=1):
-                try:
-                    document = json.loads(line)
-                except json.JSONDecodeError as exc:
-                    return [f"invalid JSONL at {parent_path}:{line_number}: {exc}"], warnings
-                payload = document.get("payload")
-                if not isinstance(payload, dict):
-                    continue
-                name = payload.get("name")
-                if (
-                    document.get("type") == "response_item"
-                    and payload.get("type") == "function_call"
-                    and isinstance(name, str)
-                    and (
-                        name == "spawn_agent"
-                        or name.endswith(".spawn_agent")
-                        or name.endswith("__spawn_agent")
-                    )
-                ):
-                    arguments = _parse_spawn_arguments(payload.get("arguments"))
-                    if arguments is not None and arguments.get("task_name") == task_name:
-                        call_id = payload.get("call_id")
-                        calls.append((call_id if isinstance(call_id, str) else None, arguments))
-    except OSError as exc:
-        return [f"cannot read parent rollout {parent_path}: {exc}"], warnings
+    calls, scan_error = _parent_spawn_calls(parent_path)
+    if scan_error is not None:
+        return [scan_error], warnings
 
-    if len(calls) != 1:
+    matching_calls = [
+        (call_id, arguments)
+        for call_id, arguments, returned_ids in calls
+        if isinstance(call_id, str)
+        and bool(call_id.strip())
+        and isinstance(child_id, str)
+        and child_id in returned_ids
+    ]
+
+    if len(matching_calls) != 1:
+        binding = f"child_id={child_id!r}"
         errors.append(
-            f"expected one parent spawn request for task_name={task_name!r}, "
-            f"found {len(calls)}"
+            f"expected one parent spawn request bound to {binding}, "
+            f"found {len(matching_calls)}"
         )
         return errors, warnings
 
-    call_id, arguments = calls[0]
+    call_id, arguments = matching_calls[0]
     if expected_call_id is not None and call_id != expected_call_id:
         errors.append(
             f"spawn request call_id does not match ledger: {call_id!r} != "
@@ -2559,15 +2859,20 @@ def validate_spawn_provenance(
         )
     if explicit_effort is not None and explicit_effort != EXPECTED_REASONING_EFFORT:
         errors.append(
-            "spawn request reasoning_effort conflicts with medium policy: "
+            "spawn request reasoning_effort conflicts with max policy: "
             f"{explicit_effort!r}"
         )
 
     if not errors:
+        binding = (
+            f"task_name={task_name}"
+            if task_name is not None
+            else f"child_id={child_id}"
+        )
         print(
             "OK: spawn provenance "
             f"parent={parent_meta.get('id')}, call_id={call_id}, "
-            f"task_name={task_name}, child={child_meta.get('id')}"
+            f"binding={binding}, child={child_meta.get('id')}"
         )
     return errors, warnings
 
@@ -2860,7 +3165,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        "READY: skill-local Luna/medium routing policy passed the available checks."
+        "READY: skill-local Luna/max routing policy passed the available checks."
     )
     print(
         "REQUIRED: select one complete live non-history route; do not combine "
@@ -2878,7 +3183,7 @@ def main(argv: list[str] | None = None) -> int:
             "work root-only."
         )
     else:
-        print("VERIFIED: this completed child executed with Luna/medium metadata.")
+        print("VERIFIED: this completed child executed with Luna/max metadata.")
     return 0
 
 

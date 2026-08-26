@@ -15,7 +15,7 @@ class RepositoryValidatorTests(unittest.TestCase):
         root = Path(tempfile.mkdtemp())
         for name, implicit in (
             ("run-diverse-luna-project", "true"),
-            ("run-diverse-luna-research", "false"),
+            ("run-diverse-luna-research", "true"),
         ):
             package = root / ".agents" / "skills" / name
             (package / "agents").mkdir(parents=True)
@@ -121,12 +121,12 @@ class RepositoryValidatorTests(unittest.TestCase):
         self.assertIn("machine_user_path", codes)
         self.assertIn("builtin_agent_override", codes)
 
-    def test_implicit_router_contract_is_fail_closed(self):
+    def test_implicit_discovery_contract_is_fail_closed(self):
         root = self.fixture()
         research = root / ".agents/skills/run-diverse-luna-research/agents/openai.yaml"
         research.write_text(
             research.read_text(encoding="utf-8").replace(
-                "allow_implicit_invocation: false", "allow_implicit_invocation: true"
+                "allow_implicit_invocation: true", "allow_implicit_invocation: false"
             ),
             encoding="utf-8",
         )

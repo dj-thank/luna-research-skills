@@ -31,7 +31,7 @@ $run-diverse-luna-project この機能を調査、実装、テスト、独立レ
 - code、artifact、test、migration、integration、release、operationsを一つでも含むなら `project`。
 - 狭い一問、一ファイルの小修正、同じmutable stateしか触れない作業には、この広域fan-outを使いません。
 
-runtimeは、公開されているcustom roleを優先します。cloudや一部surfaceでcustom roleが見えない場合でも、live schemaが `worker`、explicit model/effort、fresh contextを公開していれば、Skillはbuilt-in `worker`を `gpt-5.6-luna` / `medium` / `fork_turns="none"` に明示固定し、親spawn requestとcompleted child receiptの両方を検査します。custom role名、task名、静的TOMLだけからLunaを推測することはありません。
+runtimeは、公開されているcustom roleを優先します。cloudや一部surfaceでcustom roleが見えない場合でも、live schemaが `worker`、explicit model/effort、fresh contextを公開していれば、Skillはbuilt-in `worker`を `gpt-5.6-luna` / `max` / `fork_turns="none"` に明示固定し、親spawn requestとcompleted child receiptの両方を検査します。親spawnの出力に返された子UUIDが含まれない場合はprovenanceを結べません。custom role名、task名、静的TOMLだけからLunaを推測することはありません。
 
 ## Release assets
 
@@ -61,8 +61,8 @@ python tools/cloud_smoke.py \
 
 `cloud_smoke.py`はGET/HEADに加え、`https://httpbin.org/post`へ固定文字列`codex_cloud_smoke=ok`だけをPOSTします。test/build/compileの書込みはOS temporary directoryへ隔離し、前後のGit treeがcleanでなければ失敗します。`pwsh`がないLinux CloudではPowerShell migration testを`not_run`として明示し、WindowsのPowerShell 7/5.1 GitHub Actions gateを代替証拠として残します。JSON verdictは最大でも`LOCAL_PASS`です。
 
-6. 最初のcloud taskでは`$run-diverse-luna-research`または`$run-diverse-luna-project`を明示し、Skill path、公開spawn schema、実効model/effort、permission modeを確認します。
-7. 公式Subagents仕様でcustom-agent設定はlocal Codex clientの機能です。`.codex/agents`のcustom roleが現在のCloud surfaceに公開されない場合、Skillは存在しないroleを推測しません。explicit Luna/medium/fresh-contextを持つbuilt-in `worker` routeとexact completed receiptが公開されていればそのrouteを検証付きで使用し、どれかが欠ければroot-onlyへfail closedします。
+6. 最初のcloud taskでは、Lunaによる実装・監査・移行・リリースなどを明示的に依頼した場合だけ`$run-diverse-luna-project`を選びます。証拠専用の調査は`$run-diverse-luna-research`を選び、Skill path、公開spawn schema、実効model/effort、permission modeを確認します。
+7. 公式Subagents仕様でcustom-agent設定はlocal Codex clientの機能です。`.codex/agents`のcustom roleが現在のCloud surfaceに公開されない場合、Skillは存在しないroleを推測しません。explicit Luna/max/fresh-contextを持つbuilt-in `worker` routeと、親spawn出力に子UUIDを含むexact completed receiptが公開されていればそのrouteを検証付きで使用し、どれかが欠ければroot-onlyへfail closedします。
 8. cloud environmentの秘密値、internet access、GitHub write権限はこのリポジトリに含まれません。必要な場合だけenvironment側で個別に設定し、provider/public/HUMAN gateと分離します。
 
 Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、結果をreviewしてからPRへ進める仕組みです。このリポジトリを接続しただけでinstaller、provider操作、公開、外部送信が自動実行されることはありません。
@@ -87,14 +87,14 @@ Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、
 
 どちらも、依頼に合わせて小さな flat wave または階層型 wave を選びます。全案件で階層を強制するものではありません。
 
-発見確認後は、任意のprojectless taskまたはrepository内taskから明示的に呼び出せます。また、深い調査や広い分割可能projectでは `run-diverse-luna-project` だけが暗黙routerになります。routerはdispatch前に、packet-onlyなら明示的にresearch siblingへhandoffし、code/artifact/test/release等が一つでもあればprojectに残し、曖昧ならroot-onlyで分類を確定します。これにより二つのSkillが同時に暗黙選択される競合を作りません。
+発見確認後は、任意のprojectless taskまたはrepository内taskから明示的に呼び出せます。両Skillは自動発見可能ですが、researchは証拠専用のまま、projectはユーザーがLunaによる実装・監査・移行・リリース等を明示的に依頼した場合だけdeliveryを所有します。Luna指定のないmixed deliveryは、現在のcaller workflowへpacketを返し、曖昧ならroot-onlyで分類を確定します。これにより、証拠収集とdeliveryの境界を保ったまま、暗黙選択の競合を避けます。
 
 ```text
 $run-diverse-luna-research 直近仕様を一次資料・反証・測定品質の観点で調査して
 $run-diverse-luna-project この機能を調査、実装、テスト、独立レビューまで進めて
 ```
 
-project側の `agents/openai.yaml` だけがimplicit invocationを許可し、research側は明示呼出しまたはproject routerからのhandoffに限定します。両descriptionは、狭く安定した一問、単一ソースの順次確認、小さな一修正、共有mutable stateを分割できない作業を除外します。つまり、幅広い独立セルがある案件には自動適用でき、何でも無条件にfan-outする設定ではありません。確実に選びたい場合は上の `$run-diverse-luna-*` を明示します。
+両descriptionは、狭く安定した一問、単一ソースの順次確認、小さな一修正、共有mutable stateを分割できない作業を除外します。つまり、幅広い独立セルがある案件には自動適用できますが、projectのdelivery所有には明示的なLuna依頼が必要で、何でも無条件にfan-outする設定ではありません。確実に選びたい場合は上の `$run-diverse-luna-*` を明示します。
 
 ## Hierarchical fan-out / fan-in
 
