@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 import uuid
 
 
@@ -1065,6 +1066,68 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(receipt_errors, [])
 
 
+class WorkerLedgerIntegrationTests(unittest.TestCase):
+    def _run(self, *, opt_in=True, explicit_model="gpt-5.6-luna"):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp) / "codex-home"
+            sessions = home / "sessions" / "test"
+            sessions.mkdir(parents=True)
+            workspace = Path(temp) / "workspace"
+            workspace.mkdir()
+            (home / "config.toml").write_text(
+                "[agents]\nenabled = true\nmax_concurrent_threads_per_session = 4\n",
+                encoding="utf-8")
+            child, parent, turn = (str(uuid.uuid4()) for _ in range(3))
+            write_jsonl(sessions / f"rollout-{child}.jsonl",
+                        rollout_records(child, turn, role="worker", parent_id=parent))
+            arguments = {"task_name":"test_assignment", "message":"public source cell",
+                         "agent_type":"worker", "fork_turns":"none",
+                         "reasoning_effort":"max"}
+            if explicit_model is not None:
+                arguments["model"] = explicit_model
+            write_jsonl(sessions / f"rollout-{parent}.jsonl", [
+                {"type":"session_meta", "payload":{"id":parent}},
+                {"type":"response_item", "payload":{"type":"function_call", "name":"spawn_agent",
+                 "call_id":"call-test", "arguments":json.dumps(arguments)}},
+                {"type":"response_item", "payload":{"type":"function_call_output", "call_id":"call-test",
+                 "output":json.dumps({"agent_id":child})}},
+            ])
+            row = assignment("R-01", "primary", status="completed", acceptance="accepted",
+                             runtime_verified=True, thread_uuid=child)
+            row.update(runtime_turn=turn, parent_thread_uuid=parent, agent_role="worker")
+            ledger = {"version":1, "phase":"synthesis", "N":3,
+                      "overall_deadline":"2026-08-16T12:00:00+09:00", "assignments":[row,
+                assignment("R-02", "adversarial", status="failed", acceptance="excluded", gap_reason="No source"),
+                assignment("R-03", "measurement_gap", status="failed", acceptance="excluded", gap_reason="No data")]}
+            ledger_path=Path(temp)/"ledger.json"
+            write_json(ledger_path,ledger)
+            argv=["--codex-home",str(home),"--workspace",str(workspace),"--agent-role","worker",
+                  "--ledger-json",str(ledger_path),"--verify-ledger-receipts"]
+            if opt_in:argv.append("--allow-generic-worker")
+            output=io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code=CHECK.main(argv)
+            return code,output.getvalue()
+
+    def test_worker_opt_in_reaches_final_ledger_verification(self):
+        code,output=self._run()
+        self.assertEqual(code,0,output)
+        self.assertIn("accepted runtime receipts passed revalidation",output)
+        self.assertNotIn("NEXT: verify a completed probe",output)
+
+    def test_worker_final_verification_requires_opt_in(self):
+        code,output=self._run(opt_in=False)
+        self.assertNotEqual(code,0)
+        self.assertIn("allow-generic-worker",output)
+
+    def test_worker_final_verification_still_requires_explicit_model(self):
+        code,output=self._run(explicit_model=None)
+        self.assertNotEqual(code,0)
+        self.assertIn("must explicitly set model",output)
+
+
 class ProjectLedgerTests(unittest.TestCase):
     def test_project_planning_ledger_passes(self) -> None:
         ledger = {
@@ -1288,7 +1351,7 @@ class TreeV2Tests(unittest.TestCase):
         errors, _ = CHECK._validate_tree_ledger(self._ledger(rows, phase="planning"))
         self.assertTrue(any("collected child is not terminal" in error for error in errors))
 
-    def test_research_synthesis_rejects_duplicate_source_family(self):
+    def _same_family_synthesis_rows(self):
         rows = self._valid_rows()
         for row in (rows[1], rows[3]):
             row.update({
@@ -1305,10 +1368,43 @@ class TreeV2Tests(unittest.TestCase):
                 "safety_enforcement": "prompt_only",
                 "source_family_id": "same-upstream",
             })
+        # A distinct adversarial cell is a terminal, explicit root-only gap.
+        rows[2].update(execution_status="not_dispatched", acceptance_status="excluded",
+                       started_at=None, access_mode="root_only", gap_reason="No independent authority available")
+        return rows
+
+    def test_research_synthesis_accepts_distinct_cells_from_one_family(self):
+        rows = self._same_family_synthesis_rows()
+        errors, warnings = CHECK._validate_tree_ledger(
+            self._ledger(rows, phase="synthesis", closure_status="blocked")
+        )
+        self.assertEqual(errors, [])
+        self.assertTrue(any("one independent source family" in warning for warning in warnings))
+
+    def test_research_synthesis_normalizes_repeated_family(self):
+        rows = self._same_family_synthesis_rows()
+        rows[3]["source_family_id"] = "  SAME-UPSTREAM  "
+        errors, warnings = CHECK._validate_tree_ledger(
+            self._ledger(rows, phase="synthesis", closure_status="blocked")
+        )
+        self.assertEqual(errors, [])
+        self.assertTrue(any("one independent source family" in warning for warning in warnings))
+
+    def test_research_synthesis_still_rejects_duplicate_coverage(self):
+        rows = self._same_family_synthesis_rows()
+        rows[3]["coverage_cell"] = rows[1]["coverage_cell"]
         errors, _ = CHECK._validate_tree_ledger(
             self._ledger(rows, phase="synthesis", closure_status="blocked")
         )
-        self.assertTrue(any("source_family_id" in error for error in errors))
+        self.assertTrue(any("coverage_cell" in error and "duplicated" in error for error in errors))
+
+    def test_research_synthesis_still_requires_source_family(self):
+        rows = self._same_family_synthesis_rows()
+        rows[3]["source_family_id"] = " "
+        errors, _ = CHECK._validate_tree_ledger(
+            self._ledger(rows, phase="synthesis", closure_status="blocked")
+        )
+        self.assertTrue(any("source_family_id is required" in error for error in errors))
 
     def test_project_evidence_lane_enforces_plane_access_pair(self):
         rows = self._valid_rows()
@@ -1485,6 +1581,36 @@ class V5FailureInjectionTests(unittest.TestCase):
         ledger_kw = {k: kw.pop(k) for k in list(kw) if k in {"phase", "closure_status", "verifier_reserve_V", "concurrency_cap_C", "wave_width_W", "attempt_budget_N"}}
         row.update(kw); value = {"version":2,"tree_id":str(uuid.uuid4()),"run_id":str(uuid.uuid4()),"attempt_budget_N":4,"concurrency_cap_C":2,"wave_width_W":2,"max_workflow_depth":2,"verifier_reserve_V":1,"phase":"planning","closure_status":"open","overall_deadline":"2026-01-01T01:00:00Z","assignments":rows}; value.update(ledger_kw); return value
     def check(self, ledger): return CHECK._validate_tree_ledger(ledger)
+    def test_nonaccepted_followup_is_a_counted_assignment(self):
+        import copy
+        ledger = self.base()
+        original = ledger["assignments"][1]
+        original.update(execution_status="completed", acceptance_status="rejected",
+                        started_at="2026-01-01T00:01:00Z", finished_at="2026-01-01T00:02:00Z",
+                        thread_uuid=str(uuid.uuid4()))
+        followup = copy.deepcopy(original)
+        followup.update(attempt_id="clarify", retry_of=original["attempt_id"], wave=3,
+                        spawn_kind="followup_task", runtime_turn=None, retry_owner="root",
+                        started_at="2026-01-01T00:03:00Z", finished_at="2026-01-01T00:04:00Z",
+                        root_parent_call_id="call-followup", parent_call_id="call-followup",
+                        gap_reason="Activation proof unavailable; root assesses sources separately")
+        followup["delegated_by"]["parent_call_id"] = "call-followup"
+        ledger["assignments"].append(followup)
+        self.assertEqual(self.check(ledger)[0], [])
+        ledger["attempt_budget_N"] = 3
+        self.assertTrue(any("budget" in e or "attempts" in e for e in self.check(ledger)[0]))
+
+    def test_unused_public_cells_close_without_fake_execution(self):
+        ledger = self.base(phase="synthesis", closure_status="blocked")
+        for row in ledger["assignments"]:
+            row.update(execution_status="not_dispatched", acceptance_status="excluded",
+                       started_at=None, finished_at="2026-01-01T00:02:00Z",
+                       gap_reason="Source unavailable; no child evidence accepted")
+        self.assertEqual(self.check(ledger)[0], [])
+        ledger["assignments"][0]["execution_status"] = "planned"
+        ledger["assignments"][0]["acceptance_status"] = "pending"
+        self.assertTrue(any("planned/started" in e for e in self.check(ledger)[0]))
+
     def test_reserve_zero_for_large_n(self): self.assertTrue(self.check(self.base(verifier_reserve_V=0))[0])
     def test_reserve_equal_n(self): self.assertTrue(self.check(self.base(verifier_reserve_V=4))[0])
     def test_reserve_uses_fifteen_percent_ceiling(self):
@@ -1746,6 +1872,230 @@ class V5FailureInjectionTests(unittest.TestCase):
         }
         errors, _ = CHECK._validate_tree_ledger(ledger, project=True)
         self.assertTrue(any("started before dependency" in error for error in errors))
+
+
+class ClosureRegressionTests(unittest.TestCase):
+    def _project(self, statuses):
+        rows = []
+        for i, status in enumerate(statuses):
+            row = project_assignment(f"v{i}", "verifier", status="completed", acceptance="accepted")
+            row["acceptance_criteria"] = ["C1"]
+            row["criterion_results"] = [{"criterion_id": "C1", "status": status,
+                                         "evidence_locator": f"receipt:v{i}"}]
+            rows.append(row)
+        return {"version": 2, "phase": "closure", "closure_status": "complete",
+                "overall_deadline": "2026-01-01T01:00:00Z",
+                "root_integration_status": "completed", "root_integration_receipt": "receipt:root",
+                "target_gate": "LOCAL_PASS", "verified_gates": ["LOCAL_PASS"],
+                "gate_receipts": {"LOCAL_PASS": "receipt:local"}, "external_authority": False,
+                "acceptance_criteria": ["C1"], "assignments": rows}
+
+    def test_project_duplicate_results_cannot_hide_failure_in_either_order(self):
+        for statuses in [("failed", "passed"), ("passed", "failed"), ("passed", "passed")]:
+            with self.subTest(statuses=statuses):
+                errors = CHECK._validate_project_v2_contract(self._project(statuses))
+                self.assertTrue(any("duplicate criterion" in e for e in errors), errors)
+
+    def test_project_single_passing_verdict_remains_valid(self):
+        self.assertEqual(CHECK._validate_project_v2_contract(self._project(["passed"])), [])
+
+    def test_nested_accepted_receipts_are_actually_reopened(self):
+        row = project_assignment("v", "verifier", status="completed", acceptance="accepted")
+        row["delegated_by"] = {"parent_thread_uuid": row["parent_thread_uuid"],
+                               "parent_call_id": row["parent_call_id"]}
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "ledger.json"
+            for key in ["assignments", "attempts"]:
+                with self.subTest(key=key):
+                    write_json(path, {"version": 2, "tree": {key: [row]}})
+                    runtime_home = Path(temp) / "missing-home"
+                    with patch.object(CHECK, "find_runtime_rollout", wraps=CHECK.find_runtime_rollout) as lookup:
+                        errors, _ = CHECK.validate_ledger_receipts(path, runtime_home)
+                    lookup.assert_called_once_with(runtime_home, row["thread_uuid"])
+                    self.assertTrue(errors)
+
+    def test_nested_rows_cannot_be_shadowed_by_empty_top_level(self):
+        row = project_assignment("v", "verifier", status="completed", acceptance="accepted")
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "ledger.json"
+            value = {"version": 2, "tree": {"assignments": [row]}, "assignments": []}
+            write_json(path, value)
+            errors, _ = CHECK.validate_ledger_receipts(path, Path(temp))
+            self.assertTrue(any("conflicting assignment" in e for e in errors), errors)
+            errors, _ = CHECK._validate_tree_ledger(value)
+            self.assertTrue(any("conflicting assignment" in e for e in errors), errors)
+
+    def test_top_level_attempts_alias_cannot_shadow_assignments(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "ledger.json"
+            write_json(path, {"version": 2, "attempts": [{"acceptance_status": "accepted"}], "assignments": []})
+            errors, _ = CHECK.validate_ledger_receipts(path, Path(temp))
+            self.assertTrue(any("conflicting assignment" in e for e in errors), errors)
+
+
+
+class PeerCollaborationTests(unittest.TestCase):
+    def fixture(self):
+        revision = "a" * 64
+        return {"closure_status": "complete", "collaboration": {
+            "mode": "bounded_peer", "message_budget": 8, "round_limit": 2,
+            "peer_links": [{"from": "B", "to": "R"}, {"from": "R", "to": "B"}],
+            "issues": [{"id": "I", "owner": "B", "reviewer": "R", "state": "verified",
+                        "blocking": True, "revision": revision, "verified_revision": revision,
+                        "resolution_receipt": "call:verify"}],
+            "messages": [
+                {"id": "m1", "from": "B", "to": "R", "issue_id": "I", "type": "candidate", "round": 1, "revision": revision, "receipt": "call:candidate"},
+                {"id": "m2", "from": "R", "to": "B", "issue_id": "I", "type": "verification", "status": "passed", "round": 1, "revision": revision, "receipt": "call:verify"}]
+        }}
+
+    def check(self, value):
+        return CHECK._validate_collaboration(value, [{"attempt_id": "B"}, {"attempt_id": "R"}])
+
+    def test_verified_peer_exchange(self):
+        self.assertEqual(self.check(self.fixture()), [])
+
+    def test_existing_nonpeer_ledger_remains_supported(self):
+        self.assertEqual(self.check({}), [])
+
+    def test_nested_peer_record_cannot_bypass_validation(self):
+        x = self.fixture()
+        x["tree"] = {"collaboration": x.pop("collaboration")}
+        self.assertTrue(any("top level" in e for e in self.check(x)))
+
+    def test_unresolved_issue_blocks_closure(self):
+        x = self.fixture(); x["collaboration"]["issues"][0]["state"] = "acknowledged"
+        self.assertTrue(any("unresolved" in e for e in self.check(x)))
+
+    def test_stale_verification_rejected(self):
+        x = self.fixture(); x["collaboration"]["issues"][0]["revision"] = "b" * 64
+        self.assertTrue(any("stale" in e for e in self.check(x)))
+
+    def test_later_candidate_invalidates_verification(self):
+        x = self.fixture(); x["collaboration"]["messages"].append(dict(x["collaboration"]["messages"][0], id="m3", revision="b" * 64))
+        self.assertTrue(any("lacks owner candidate" in e for e in self.check(x)))
+
+    def test_owner_cannot_verify_own_candidate(self):
+        x = self.fixture(); x["collaboration"]["messages"][1].update({"from": "B", "to": "R"})
+        self.assertTrue(any("must come from reviewer" in e for e in self.check(x)))
+
+    def test_verification_before_candidate_rejected(self):
+        x = self.fixture(); x["collaboration"]["messages"].reverse()
+        self.assertTrue(self.check(x))
+
+    def test_unauthorized_peer_link_rejected(self):
+        x = self.fixture(); x["collaboration"]["peer_links"] = []
+        self.assertTrue(any("unauthorized" in e for e in self.check(x)))
+
+    def test_unknown_peer_rejected(self):
+        x = self.fixture(); x["collaboration"]["messages"][0]["to"] = "missing"
+        self.assertTrue(any("participants" in e for e in self.check(x)))
+
+    def test_message_and_round_budgets_enforced(self):
+        x = self.fixture(); x["collaboration"]["message_budget"] = 1
+        x["collaboration"]["messages"][0]["round"] = 3
+        errors = self.check(x)
+        self.assertTrue(any("message budget" in e for e in errors))
+        self.assertTrue(any("round limit" in e for e in errors))
+
+    def test_blocking_issue_cannot_be_deferred(self):
+        x = self.fixture(); x["collaboration"]["issues"][0].update(state="deferred", root_decision="root:defer")
+        self.assertTrue(any("cannot defer" in e for e in self.check(x)))
+
+    def test_nonblocking_explicit_root_deferral(self):
+        x = self.fixture(); x["collaboration"]["issues"][0].update(state="deferred", blocking=False, root_decision="root:defer")
+        self.assertEqual(self.check(x), [])
+
+    def test_malformed_peer_fields_return_errors(self):
+        for field in ["owner", "reviewer", "state", "revision"]:
+            with self.subTest(field=field):
+                x = self.fixture(); x["collaboration"]["issues"][0][field] = []
+                self.assertTrue(self.check(x))
+        for field in ["from", "to", "type", "id", "issue_id"]:
+            with self.subTest(field=field):
+                x = self.fixture(); x["collaboration"]["messages"][0][field] = []
+                self.assertTrue(self.check(x))
+
+    def test_project_closure_invokes_peer_guard(self):
+        x = ClosureRegressionTests()._project(["passed"])
+        c = self.fixture()["collaboration"]
+        c["issues"][0]["state"] = "open"
+        x["collaboration"] = c
+        self.assertTrue(any("unresolved" in e for e in CHECK._validate_project_v2_contract(x)))
+
+    def test_new_finding_or_interface_change_reopens_issue(self):
+        for kind in ["finding", "interface_change"]:
+            with self.subTest(kind=kind):
+                x = self.fixture()
+                x["collaboration"]["messages"].append(dict(x["collaboration"]["messages"][1], id="m3", type=kind))
+                self.assertTrue(any("lacks owner candidate" in e for e in self.check(x)))
+
+    def test_failed_or_blocked_verification_cannot_close(self):
+        for status in ["failed", "blocked", None]:
+            with self.subTest(status=status):
+                x = self.fixture(); x["collaboration"]["messages"][1]["status"] = status
+                self.assertTrue(self.check(x))
+
+    def test_later_failed_verification_revokes_pass(self):
+        x = self.fixture()
+        x["collaboration"]["messages"].append(dict(x["collaboration"]["messages"][1], id="m3", status="failed"))
+        self.assertTrue(self.check(x))
+
+
+class V2ActivationTests(unittest.TestCase):
+    def record(self, with_v2=True):
+        self.initial, self.followup = str(uuid.uuid4()), str(uuid.uuid4())
+        records = rollout_records(str(uuid.uuid4()), self.initial)
+        if with_v2:
+            records[0]["payload"]["multi_agent_version"] = "v2"
+        records += [
+            {"type": "turn_context", "payload": {"turn_id": self.followup, "model": "gpt-5.6-luna", "effort": "max", "sandbox_policy": {"type": "read-only"}}},
+            {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": self.followup}}]
+        return records
+
+    def test_initial_turn_still_valid_with_later_turn(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)/"child.jsonl"; write_jsonl(p,self.record())
+            errors,_ = CHECK.validate_runtime_rollout(p,"default",runtime_turn=self.initial,require_initial_turn=True,require_v2=True)
+            self.assertEqual(errors, [])
+
+    def test_followup_cannot_borrow_initial_spawn_proof(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"child.jsonl"; write_jsonl(p,self.record())
+            errors,_=CHECK.validate_runtime_rollout(p,"default",runtime_turn=self.followup,require_initial_turn=True)
+            self.assertTrue(any("initial child turn" in e for e in errors))
+
+    def test_metadata_only_followup_check_is_supported(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"child.jsonl"; write_jsonl(p,self.record())
+            errors,_=CHECK.validate_runtime_rollout(p,"default",runtime_turn=self.followup)
+            self.assertEqual(errors, [])
+
+    def test_v2_runtime_must_be_evidenced_when_required(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"child.jsonl"; write_jsonl(p,self.record(False))
+            errors,_=CHECK.validate_runtime_rollout(p,"default",runtime_turn=self.initial,require_v2=True)
+            self.assertTrue(any("multi_agent_version" in e for e in errors))
+
+    def test_missing_turn_id_is_error_not_crash_with_initial_guard(self):
+        with tempfile.TemporaryDirectory() as d:
+            records=self.record(); records[1]["payload"].pop("turn_id")
+            p=Path(d)/"child.jsonl"; write_jsonl(p,records)
+            errors,_=CHECK.validate_runtime_rollout(p,"default",runtime_turn=self.followup,require_initial_turn=True)
+            self.assertTrue(errors)
+
+    def test_malformed_initial_context_cannot_hide_followup(self):
+        with tempfile.TemporaryDirectory() as d:
+            records=self.record(); records[1]["payload"]=[]
+            p=Path(d)/"child.jsonl"; write_jsonl(p,records)
+            errors,_=CHECK.validate_runtime_rollout(p,"default",runtime_turn=self.followup,require_initial_turn=True)
+            self.assertTrue(any("invalid runtime metadata" in e for e in errors))
+
+    def test_nonobject_jsonl_returns_structured_error(self):
+        for value in [[],None,1,"bad"]:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as d:
+                p=Path(d)/"child.jsonl"; write_jsonl(p,[value])
+                errors,_=CHECK.validate_runtime_rollout(p,"default",require_initial_turn=True)
+                self.assertTrue(any("expected object" in e for e in errors))
 
 
 if __name__ == "__main__":

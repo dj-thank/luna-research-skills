@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 EXPECTED_MODEL = "gpt-5.6-luna"
 EXPECTED_REASONING_EFFORT = "max"
-CHECKER_CONTRACT_VERSION = "2026-08-25.2"
+CHECKER_CONTRACT_VERSION = "2026-09-05.4"
 MIN_CONCURRENT_THREADS = 2
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
@@ -125,6 +125,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--require-read-only",
         action="store_true",
         help="Reject a runtime receipt unless the effective child sandbox is read-only.",
+    )
+    parser.add_argument(
+        "--require-v2", action="store_true",
+        help="Require saved V2 enablement and V2 metadata on supplied runtime receipts; does not prove nested tool exposure.",
     )
     runtime = parser.add_mutually_exclusive_group()
     runtime.add_argument(
@@ -985,6 +989,25 @@ def _verifier_result_errors(prefix: str, row: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _resolve_assignment_rows(ledger: dict[str, Any]) -> tuple[list[Any], list[str]]:
+    """Resolve supported aliases once; reject conflicting validation views."""
+    containers = [("ledger", ledger)]
+    if isinstance(ledger.get("tree"), dict):
+        containers.insert(0, ("tree", ledger["tree"]))
+    found = [(f"{label}.{key}", container[key])
+             for label, container in containers
+             for key in ("attempts", "assignments") if key in container]
+    if not found:
+        return [], ["ledger.assignments/attempts must be an array"]
+    first_label, rows = found[0]
+    if any(not isinstance(value, list) for _, value in found):
+        return [], ["ledger.assignments/attempts must be an array at every supplied location"]
+    conflicts = [label for label, value in found[1:] if value != rows]
+    if conflicts:
+        return [], [f"conflicting assignment containers: {first_label}, {', '.join(conflicts)}"]
+    return rows, []
+
+
 def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, configured_cap: int | None = None) -> tuple[list[str], list[str]]:
     """Validate the v2 machine-readable root/coordinator/leaf tree contract.
 
@@ -1043,9 +1066,9 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         warnings.append(f"{prefix}.concurrency_cap_C requires live configured-cap proof")
     if tree.get("max_workflow_depth") != 2:
         errors.append(f"{prefix}.max_workflow_depth must be 2")
-    rows = tree.get("attempts", tree.get("assignments", ledger.get("attempts", ledger.get("assignments"))))
-    if not isinstance(rows, list):
-        errors.append(f"{prefix}.attempts/assignments must be an array")
+    rows, row_errors = _resolve_assignment_rows(ledger)
+    if row_errors:
+        errors.extend(row_errors)
         return errors, warnings
     if isinstance(budget, int) and len(rows) > budget:
         errors.append(
@@ -1305,10 +1328,12 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
                     previous = research_family_owners.get(family_key)
                     if previous is None:
                         research_family_owners[family_key] = aid
-                    elif row.get("retry_of") != previous:
-                        errors.append(
-                            f"source_family_id {family!r} is duplicated by {aid!r} "
-                            f"without retry_of={previous!r}"
+                    else:
+                        # Coverage and source independence are separate. Different
+                        # claims may legitimately depend on the same authority.
+                        warnings.append(
+                            f"source_family_id {family!r} shared by {previous!r} and {aid!r}; "
+                            "count as one independent source family, not corroboration"
                         )
         elif project and not is_coord:
             deadline = _parse_timestamp(row.get("deadline"))
@@ -1593,6 +1618,109 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
     return errors, warnings
 
 
+def _validate_collaboration(ledger: dict[str, Any], assignments: list[Any]) -> list[str]:
+    """Check peer records; the root must independently reopen their receipts."""
+    if isinstance(ledger.get("tree"), dict) and "collaboration" in ledger["tree"]:
+        return ["collaboration must be recorded only at the top level, not inside tree"]
+    if "collaboration" not in ledger:
+        return []
+    data = ledger["collaboration"]
+    if not isinstance(data, dict) or data.get("mode") != "bounded_peer":
+        return ["collaboration.mode must be bounded_peer"]
+    errors: list[str] = []
+    members = {r.get("attempt_id") for r in assignments if isinstance(r, dict) and isinstance(r.get("attempt_id"), str)}
+    valid_id = lambda v: isinstance(v, str) and bool(v.strip())
+    valid_hash = lambda v: isinstance(v, str) and re.fullmatch(r"[0-9a-f]{64}", v) is not None
+    for key in ("message_budget", "round_limit"):
+        value = data.get(key)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            errors.append(f"collaboration.{key} must be a positive integer")
+    links, messages, issues = (data.get(k) for k in ("peer_links", "messages", "issues"))
+    if not all(isinstance(v, list) for v in (links, messages, issues)):
+        return errors + ["collaboration peer_links, messages, issues must be arrays"]
+    edges = set()
+    for link in links:
+        if not isinstance(link, dict) or not valid_id(link.get("from")) or not valid_id(link.get("to")) or link.get("from") not in members or link.get("to") not in members or link.get("from") == link.get("to"):
+            errors.append("collaboration peer link must name distinct known attempts")
+        else:
+            edges.add((link["from"], link["to"]))
+    by_issue = {}
+    for issue in issues:
+        if not isinstance(issue, dict) or not valid_id(issue.get("id")):
+            errors.append("collaboration issue requires id")
+            continue
+        iid = issue["id"]
+        if iid in by_issue:
+            errors.append(f"collaboration duplicate issue {iid}")
+        by_issue[iid] = issue
+        if not valid_id(issue.get("owner")) or not valid_id(issue.get("reviewer")) or issue.get("owner") not in members or issue.get("reviewer") not in members or issue.get("owner") == issue.get("reviewer"):
+            errors.append(f"collaboration issue {iid} requires distinct known owner/reviewer")
+        if not isinstance(issue.get("blocking"), bool) or not valid_hash(issue.get("revision")):
+            errors.append(f"collaboration issue {iid} requires blocking bool and SHA-256 revision")
+        state = issue.get("state")
+        if not isinstance(state, str) or state not in {"open", "acknowledged", "proposed", "verified", "escalated", "deferred"}:
+            errors.append(f"collaboration issue {iid} has invalid state")
+        if state == "verified" and (issue.get("verified_revision") != issue.get("revision") or not valid_id(issue.get("resolution_receipt"))):
+            errors.append(f"collaboration issue {iid} has stale or missing verification")
+        if state == "deferred" and (issue.get("blocking") is not False or not valid_id(issue.get("root_decision"))):
+            errors.append(f"collaboration issue {iid} cannot defer a blocker or omit root decision")
+        if ledger.get("closure_status") == "complete" and (not isinstance(state, str) or state not in {"verified", "deferred"}):
+            errors.append(f"collaboration unresolved issue {iid} prevents complete closure")
+    budget = data.get("message_budget")
+    if isinstance(budget, int) and len(messages) > budget:
+        errors.append("collaboration message budget exceeded")
+    seen = set()
+    candidates = {}
+    verified = set()
+    for message in messages:
+        if not isinstance(message, dict):
+            errors.append("collaboration message must be an object")
+            continue
+        mid, iid = message.get("id"), message.get("issue_id")
+        if not valid_id(mid) or mid in seen:
+            errors.append("collaboration message id missing or duplicated")
+        if isinstance(mid, str):
+            seen.add(mid)
+        issue = by_issue.get(iid) if isinstance(iid, str) else None
+        if issue is None:
+            errors.append("collaboration message references unknown issue")
+            continue
+        sender, recipient = message.get("from"), message.get("to")
+        if not isinstance(sender, str) or not isinstance(recipient, str) or sender not in members | {"root"} or recipient not in members | {"root"} or sender == recipient:
+            errors.append(f"collaboration message {mid} has invalid participants")
+        elif "root" not in (sender, recipient) and (sender, recipient) not in edges:
+            errors.append(f"collaboration message {mid} uses unauthorized peer link")
+        kind = message.get("type")
+        if not isinstance(kind, str) or kind not in {"finding", "acknowledge", "interface_change", "candidate", "verification", "escalate"}:
+            errors.append(f"collaboration message {mid} has invalid type")
+        rnd, limit = message.get("round"), data.get("round_limit")
+        if not isinstance(rnd, int) or isinstance(rnd, bool) or rnd < 1 or (isinstance(limit, int) and rnd > limit):
+            errors.append(f"collaboration message {mid} exceeds repair round limit")
+        revision = message.get("revision")
+        if not valid_hash(revision) or not valid_id(message.get("receipt")):
+            errors.append(f"collaboration message {mid} needs revision and receipt")
+        if kind in ("finding", "interface_change"):
+            verified.discard(iid)
+            candidates.pop(iid, None)
+        if kind == "candidate" and sender == issue.get("owner") and valid_hash(revision):
+            candidates[iid] = revision
+            verified.discard(iid)
+        if kind == "candidate" and sender != issue.get("owner"):
+            errors.append(f"collaboration message {mid} candidate must come from owner")
+        if kind == "verification" and sender != issue.get("reviewer"):
+            errors.append(f"collaboration message {mid} verification must come from reviewer")
+        if kind == "verification":
+            verified.discard(iid)
+            if message.get("status") not in ("passed", "failed", "blocked"):
+                errors.append(f"collaboration message {mid} verification requires passed/failed/blocked status")
+        if kind == "verification" and message.get("status") == "passed" and sender == issue.get("reviewer") and revision == issue.get("revision") and candidates.get(iid) == revision and message.get("receipt") == issue.get("resolution_receipt"):
+            verified.add(iid)
+    for iid, issue in by_issue.items():
+        if issue.get("state") == "verified" and iid not in verified:
+            errors.append(f"collaboration issue {iid} lacks owner candidate then reviewer verification for current revision")
+    return errors
+
+
 def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
     """Validate project-only integration and evidence-gate closure for v2."""
     errors: list[str] = []
@@ -1628,9 +1756,10 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
         )
     errors.extend(_validate_project_gates(ledger))
 
-    assignments = ledger.get("assignments")
-    if not isinstance(assignments, list):
-        return [*errors, "project ledger.assignments must be an array"]
+    assignments, row_errors = _resolve_assignment_rows(ledger)
+    if row_errors:
+        return [*errors, *row_errors]
+    errors.extend(_validate_collaboration(ledger, assignments))
     order = {
         row.get("attempt_id"): index
         for index, row in enumerate(assignments)
@@ -1740,7 +1869,13 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
                         continue
                     for result in row.get("criterion_results", []):
                         if isinstance(result, dict) and isinstance(result.get("criterion_id"), str):
-                            semantic[result["criterion_id"]] = str(result.get("status"))
+                            criterion_id = result["criterion_id"]
+                            if criterion_id in semantic:
+                                errors.append(
+                                    f"duplicate criterion {criterion_id!r} across accepted verifier results"
+                                )
+                            else:
+                                semantic[criterion_id] = str(result.get("status"))
                 if set(semantic) != set(criteria):
                     errors.append("complete project closure verifier coverage does not match acceptance_criteria")
                 elif any(status != "passed" for status in semantic.values()):
@@ -2339,8 +2474,11 @@ def validate_runtime_rollout(
     require_read_only: bool = False,
     runtime_turn: str | None = None,
     allow_generic_worker: bool = False,
+    require_initial_turn: bool = False,
+    require_v2: bool = False,
 ) -> tuple[list[str], list[str]]:
     latest_context: tuple[int, dict[str, Any]] | None = None
+    first_context_line: int | None = None
     contexts_by_turn: dict[str, list[tuple[int, dict[str, Any]]]] = {}
     session_meta: dict[str, Any] | None = None
     completed_turns: dict[str, list[int]] = {}
@@ -2352,12 +2490,18 @@ def validate_runtime_rollout(
                     document = json.loads(line)
                 except json.JSONDecodeError as exc:
                     return [f"invalid JSONL at {path}:{line_number}: {exc}"], []
+                if not isinstance(document, dict):
+                    return [f"invalid JSONL record at {path}:{line_number}: expected object"], []
                 payload = document.get("payload")
+                if document.get("type") in ("session_meta", "turn_context", "event_msg") and not isinstance(payload, dict):
+                    return [f"invalid runtime metadata at {path}:{line_number}: expected object payload"], []
                 if document.get("type") == "session_meta" and isinstance(payload, dict):
                     session_meta_count += 1
                     if session_meta is None:
                         session_meta = payload
                 if document.get("type") == "turn_context" and isinstance(payload, dict):
+                    if first_context_line is None:
+                        first_context_line = line_number
                     latest_context = (line_number, payload)
                     context_turn = payload.get("turn_id")
                     if isinstance(context_turn, str):
@@ -2391,6 +2535,8 @@ def validate_runtime_rollout(
             )
         if session_meta.get("thread_source") != "subagent":
             errors.append("runtime rollout is not identified as a subagent thread")
+        if require_v2 and session_meta.get("multi_agent_version") != "v2":
+            errors.append("runtime receipt does not establish multi_agent_version=v2")
         thread_id = session_meta.get("id")
         try:
             normalized_thread = str(uuid.UUID(str(thread_id)))
@@ -2463,6 +2609,9 @@ def validate_runtime_rollout(
         errors.append(f"{path} contains no turn_context runtime metadata")
         return errors, warnings
     selected_line, selected_context = selected_entry
+    if require_initial_turn:
+        if selected_line != first_context_line:
+            errors.append("spawn_agent provenance is valid only for the initial child turn; continuation needs its own activation evidence")
 
     turn_id = selected_context.get("turn_id")
     try:
@@ -2880,17 +3029,19 @@ def validate_spawn_provenance(
 def validate_ledger_receipts(
     path: Path,
     codex_home: Path,
+    require_v2: bool = False,
+    allow_generic_worker: bool = False,
 ) -> tuple[list[str], list[str]]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             ledger = json.load(handle)
     except (OSError, json.JSONDecodeError) as exc:
         return [f"cannot read research ledger JSON {path}: {exc}"], []
-    assignments = ledger.get("assignments") if isinstance(ledger, dict) else None
-    if not isinstance(assignments, list) and isinstance(ledger, dict):
-        assignments = ledger.get("attempts")
-    if not isinstance(assignments, list):
-        return ["ledger.assignments must be an array before receipt verification"], []
+    if not isinstance(ledger, dict):
+        return ["ledger must be an object before receipt verification"], []
+    assignments, row_errors = _resolve_assignment_rows(ledger)
+    if row_errors:
+        return row_errors, []
 
     errors: list[str] = []
     warnings: list[str] = []
@@ -3024,6 +3175,9 @@ def validate_ledger_receipts(
             role,
             row.get("access_mode") == "sandbox_read_only",
             turn_id,
+            allow_generic_worker=allow_generic_worker,
+            require_initial_turn=True,
+            require_v2=require_v2,
         )
         errors.extend(f"assignments[{index}]: {value}" for value in receipt_errors)
         warnings.extend(f"assignments[{index}]: {value}" for value in receipt_warnings)
@@ -3032,6 +3186,7 @@ def validate_ledger_receipts(
             rollout,
             role,
             parent_call_id,
+            allow_generic_worker=allow_generic_worker,
         )
         errors.extend(
             f"assignments[{index}]: {value}" for value in provenance_errors
@@ -3061,6 +3216,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     errors, warnings = validate_static_base(config)
+    if args.require_v2 and config.get("features", {}).get("multi_agent_v2") is not True:
+        errors.append("saved configuration must explicitly enable features.multi_agent_v2 for this V2 run")
     definitions, role_warnings = load_role_definitions(
         workspace, codex_home, args.agent_role
     )
@@ -3096,7 +3253,9 @@ def main(argv: list[str] | None = None) -> int:
         warnings.extend(ledger_warnings)
         if args.verify_ledger_receipts and not ledger_errors:
             receipt_errors, receipt_warnings = validate_ledger_receipts(
-                args.ledger_json.expanduser().resolve(), codex_home
+                args.ledger_json.expanduser().resolve(), codex_home,
+                require_v2=args.require_v2,
+                allow_generic_worker=args.allow_generic_worker,
             )
             errors.extend(receipt_errors)
             warnings.extend(receipt_warnings)
@@ -3118,6 +3277,8 @@ def main(argv: list[str] | None = None) -> int:
             args.require_read_only,
             args.runtime_turn,
             args.allow_generic_worker,
+            require_initial_turn=args.require_spawn_provenance or args.parent_rollout is not None,
+            require_v2=args.require_v2,
         )
         errors.extend(runtime_errors)
         warnings.extend(runtime_warnings)
@@ -3175,7 +3336,9 @@ def main(argv: list[str] | None = None) -> int:
         "NOTE: task names, nicknames, prompts, and static configuration are not "
         "completed runtime evidence."
     )
-    if runtime_path is None:
+    if args.verify_ledger_receipts:
+        print("VERIFIED: supplied ledger and its accepted runtime receipts passed revalidation.")
+    elif runtime_path is None:
         print(
             "NEXT: verify a completed probe with --runtime-thread "
             "<child-thread-uuid>; add --require-read-only only for non-external "

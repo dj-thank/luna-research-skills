@@ -1,4 +1,4 @@
-# Luna Hierarchical Skills 2.0
+# Luna Research and Project Skills
 
 このリポジトリは、Codex のネイティブ subagent を使う調査・開発・監査・移行・リリース作業のための、repository-scoped Skill、optional custom-agent definition、安全な発見・移行ツール、再現可能なrelease assetsを収録します。GitHubをCodex cloudのenvironmentへ接続した場合も、リポジトリrootの公式配置からSkillを発見できます。Luna は、**高速・効率的な高ボリューム fan-out** と、複数の bounded assignment を同時に処理する用途に向きます。ただし、モデル、spawn schema、同時実行上限、利用可能な機能は Codex のsurface・アカウント・workspace・cloud environmentごとに異なります。
 
@@ -28,10 +28,18 @@ $run-diverse-luna-project この機能を調査、実装、テスト、独立レ
 ```
 
 - 成果物が証拠・fact-checkだけなら `research`。
-- code、artifact、test、migration、integration、release、operationsを一つでも含むなら `project`。
+- `project` は、ユーザーがLunaによる実装・監査・移行・リリースを明示し、独立した担当範囲に分けられる場合に使います。Luna指定のない実装は現在の作業手順で進め、必要な調査だけ `research` へ分けます。
 - 狭い一問、一ファイルの小修正、同じmutable stateしか触れない作業には、この広域fan-outを使いません。
 
 runtimeは、公開されているcustom roleを優先します。cloudや一部surfaceでcustom roleが見えない場合でも、live schemaが `worker`、explicit model/effort、fresh contextを公開していれば、Skillはbuilt-in `worker`を `gpt-5.6-luna` / `max` / `fork_turns="none"` に明示固定し、親spawn requestとcompleted child receiptの両方を検査します。親spawnの出力に返された子UUIDが含まれない場合はprovenanceを結べません。custom role名、task名、静的TOMLだけからLunaを推測することはありません。
+
+## 調査で重視すること
+
+親タスクはユーザーが選んだモデルを維持します。GPT-6 Astraを親に使う場合も、証拠収集を担当する子は `gpt-5.6-luna` / `max` です。新しいAPI機能、Codexで公開されたツール、実行できた機能は別々に確認します。
+
+最初に「この調査で何を判断・作成するか」を合わせ、結論を変える論点へ担当を分けます。必要な根拠がそろえば予算を使い切らずに回答し、追加調査は未解決の論点を変え得るものに絞ります。同じ情報源の別論点は残し、独立した裏付けの数は増やしません。アクセス拒否は共有して再試行の重複を防ぎ、取得できなかった内容は不明として扱います。
+
+関連する続きにはV2の継続を使えますが、後続ターンへ初回起動の検証結果を流用しません。親が出典を直接確認した判断と、起動元まで証明できた子の結果を区別します。独立レビューには新しい文脈を使います。
 
 ## Release assets
 
@@ -74,7 +82,7 @@ Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、
 3. [`tools/Install-LunaSkillsUserScope.ps1`](tools/Install-LunaSkillsUserScope.ps1) に `-Source .agents/skills` を渡して`-Apply`なしで実行し、公式user-scopeへ置かれるpackageとhashを確認します。`-Apply`が非対話実行でも使える明示的な変更承認で、追加の対話確認が必要な場合は`-Confirm`を付けます。`-Apply -WhatIf`は非変更です。real applyでは、同じowner境界にdurable journalを先に作り、排他的lock下で各atomic moveの前後を再検査し、既存manifest・既存package・任意pathを上書きしません。失敗時のnon-empty stageは再帰削除せずjournalのexact pathに保存します。
 4. 現在動いている `$HOME/.codex/skills` copyは、fresh taskで公式pathの発見を証明するまで消しません。同名の二重配置が検出された場合は適用を止めます。
 5. custom-agent TOMLは既存 `$HOME/.codex/agents` をバックアップ・比較し、同名fileを上書きせずに導入します。Skill installerはagent設定を変更しません。
-6. Codexを再起動し、projectless taskとrepository内taskの双方で、明示的なSkill invocation、custom roleの公開有無、Luna/mediumのcompleted runtime receiptを確認します。
+6. Codexを再起動し、projectless taskとrepository内taskの双方で、明示的なSkill invocation、custom roleの公開有無、Luna/maxのcompleted runtime receiptを確認します。
 
 詳しい証拠境界とrollbackは [`tools/MIGRATION.md`](tools/MIGRATION.md) にあります。scriptsはlegacy root、設定、credential、providerを変更せず、Skill packageのreal applyは別の明示操作です。
 
@@ -83,7 +91,7 @@ Codex cloudはGitHub repositoryを接続して分離環境でtaskを実行し、
 ## どの Skill を選ぶか
 
 - `run-diverse-luna-research`: 文献レビュー、比較、一次資料確認、反証、測定品質など、主目的が research の案件。
-- `run-diverse-luna-project`: 実装、監査、移行、リリース、複数成果物など、research 以外の作業も含む mixed project。
+- `run-diverse-luna-project`: Lunaによる実装・監査・移行・リリースが明示され、複数の担当範囲に分けられる案件。
 
 どちらも、依頼に合わせて小さな flat wave または階層型 wave を選びます。全案件で階層を強制するものではありません。
 

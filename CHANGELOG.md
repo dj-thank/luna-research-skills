@@ -6,6 +6,10 @@
 
 ### Changed
 
+- 2026-09-05のローカル版から、V2継続・peer連携・実行記録の検証修正を両Skillへ同期。Researchはユーザーの判断・出力に調査を合わせ、未解決の主張を変える追加調査だけを行う手順にした。親モデルを維持し、Luna/maxは証拠収集レーンだけへ適用する。
+- sourceの取得失敗共有、出典の鮮度付き再利用、主張と反証の対応付けを追加。READMEと評価データに残る暗黙のLuna実装誘導とmedium表記を修正し、通常実装・目的訂正・同一source family・アクセス拒否・入力不変の評価ケースを追加した。
+- pluginのbuilt-in worker経路で、`--allow-generic-worker`が最終台帳検証へ渡らず正しいLuna/max実行まで拒否する不具合を修正。明示的な許可・モデル指定がない経路の拒否は維持し、CLIから完了記録まで通す回帰テストを追加した。
+
 - 現行の `gpt-5.6-luna` / `max` 受入方針へSkill、checker、custom-agent定義、README、SECURITY、CONTRIBUTINGを同期した。親spawn出力に含まれる子UUIDとexact completed receiptを必須のruntime provenanceとし、task名だけでは受理しない。
 - Research/projectのルーティングを明示的なLuna実装依頼と証拠専用調査に分離し、source-family重複排除、typed verifier criterion、evidence-laneのsource/access境界をcheckerとpacket契約へ追加した。
 

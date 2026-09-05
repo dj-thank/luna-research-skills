@@ -58,13 +58,24 @@ For live prices, market data, closures, schedules, laws, policies, fees, availab
 
 ## 3. Cell synthesis
 
+When root permits peer clarification, include issue ID, exact peer attempt, message-call locator, original claim, changed claim, supporting source, and unresolved gap. Follow [peer-evidence.md](peer-evidence.md); record initial independent findings before peer conclusions are disclosed. Root alone edits the shared ledger.
+
 - Give three to seven findings specific to the assigned cell.
 - Label each as `sourced fact`, `source interpretation`, or `inference`.
 - State the strongest disconfirming evidence and whether it changed the cell conclusion.
 - Identify conflicts with other likely cells or source planes.
 - Separate functional behavior from authenticity, authority, safety, privacy, financial viability, and legal status when applicable.
 - State important unknowns and an explicit gap reason.
-- Recommend one follow-up query only when the gap is material.
+- Recommend one follow-up query only when the gap is material; name the observation that would change the answer.
+- For a source-access failure, include the canonical source, attempted operation, retrieval time/status, and claim left unresolved. Root schedules shared-source retries; a new scout does not reset that source's retry history.
+
+For conclusion-grade claims, the root can use this compact working table (not a new checker schema):
+
+| Claim | Support / counterevidence | Family and version/date | Root-opened locator/time | Verdict and decision impact |
+|---|---|---|---|---|
+| Feature is documented in a release | Official reference / older release lacks it | One vendor; exact release | Section and retrieval time | Documented; current task execution still unverified |
+
+Keep unsupported, inaccessible, stale, and scope-mismatched evidence distinguishable. This table is for reasoning about the answer; machine-readable runtime acceptance remains in the existing ledger.
 
 ## 4. Scout self-check
 
@@ -106,7 +117,7 @@ Maintain one row per assignment attempt:
 | Evidence | canonical source-family IDs, packet locator, root-opened flag |
 | Result | material claim, contradiction, verification, no-op, or gap reason |
 
-For lifecycle validation, `planned/pending` has not started, `not_dispatched/excluded` is a terminal root-only gap, and actual child work uses `started` followed by `completed`, `failed`, `timed_out`, or `abandoned`. Every terminal row has `finished_at` or `timeout_at`. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
+For lifecycle validation, `planned/pending` has not started. Close a root-only gap or unused planned assignment as `not_dispatched/excluded`, with null `started_at`, a decision timestamp in `finished_at`, no child receipt, and an explicit reason. Actual child work uses `started` followed by `completed`, `failed`, `timed_out`, or `abandoned`. Every terminal row has `finished_at` or `timeout_at`. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
 Keep the machine-readable ledger as UTF-8 JSON with this shape:
 
@@ -116,7 +127,7 @@ Keep the machine-readable ledger as UTF-8 JSON with this shape:
   "version": 2,
   "tree_id": "550e8400-e29b-41d4-a716-446655440000",
   "run_id": "550e8400-e29b-41d4-a716-446655440001",
-  "mode": "hierarchical",
+  "mode": "flat",
   "attempt_budget_N": 4,
   "concurrency_cap_C": 4,
   "wave_width_W": 3,
@@ -200,7 +211,11 @@ Keep the machine-readable ledger as UTF-8 JSON with this shape:
 }
 ```
 
-Allowed execution states are `planned`, `not_dispatched`, `started`, `completed`, `failed`, `timed_out`, and `abandoned`. The only valid state pairs are `planned|started -> pending`, `not_dispatched -> excluded`, `completed -> accepted|rejected`, and `failed|timed_out|abandoned -> excluded`. Follow-up turns are not production-acceptable receipts; start a fresh counted assignment so every accepted row binds to one `spawn_agent` call. Change `phase` to `synthesis` before the final check. Run:
+Allowed execution states are `planned`, `not_dispatched`, `started`, `completed`, `failed`, `timed_out`, and `abandoned`. The only valid state pairs are `planned|started -> pending`, `not_dispatched -> excluded`, `completed -> accepted|rejected`, and `failed|timed_out|abandoned -> excluded`. A fully attributed accepted row binds to an initial `spawn_agent` turn. Use native follow-up for a related clarification when useful, counting each request in the same `assignments` array as described below. Start a fresh counted assignment only when independent evidence or a fully attributed initial-turn receipt is needed; a continuation must never borrow the initial spawn proof.
+
+For each `followup_task` activation or steer, create a new attempt ID before the call. Preserve the coverage cell, owner and source plane, set `retry_of` to the preceding related attempt, and record the actual followup call in `delegated_by` / `parent_call_id` with `spawn_kind=followup_task`. Set `started_at` when sent, with `started/pending`; the existing checker counts this row against N and W even when no new thread or turn is created. Reuse the actual target thread ID, but leave an unobserved resulting turn null. When a result is observed, close as `completed/rejected` with `runtime_verified=false` and a reason that fully attributed activation proof is unavailable; otherwise use the appropriate failed/timed_out/abandoned exclusion. Store the root's source assessment separately from child acceptance. A message-delivery acknowledgement alone is not a completed result. These rows cannot satisfy accepted-evidence or verifier quotas. Do not keep counted activations only in a prose log outside `assignments`.
+
+Change `phase` to `synthesis` before the final check. Run:
 
 ```text
 python <skill-dir>/scripts/check_setup.py --agent-role <selected-role> --ledger-json <ledger.json>
@@ -215,4 +230,4 @@ accepted + rejected <= completed
 started <= N
 ```
 
-Before synthesis, require zero unclassified in-flight assignments. Every accepted attempt needs valid child and parent UUIDs, exact turn UUID, parent call ID, `spawn_kind=spawn_agent`, role, Luna/max metadata, matching safety enforcement, `runtime_verified=true`, and a non-empty `source_family_id` for evidence rows. Accepted synthesis rows sharing a source family collapse to one independent family unless they are an explicit retry of the original attempt. Run the checker with `--verify-ledger-receipts`; it must reopen the exact child turn and the unique parent spawn request, so a declaration alone is not acceptance evidence. Every priority cell must be accepted or have a non-empty gap reason. Rejected rows do not satisfy final quotas. A timed-out or abandoned result is excluded even if it arrives later, unless the root deliberately starts a new counted acceptance attempt.
+Before synthesis, require zero unclassified in-flight assignments. Every accepted attempt needs valid child and parent UUIDs, exact turn UUID, parent call ID, `spawn_kind=spawn_agent`, role, Luna/max metadata, matching safety enforcement, `runtime_verified=true`, and a non-empty `source_family_id` for evidence rows. Accepted synthesis rows may cover different claims from the same source family. Count that family once as independent support; retain each distinct coverage cell and its exact claim locator. A repeated claim or coverage cell is still a duplicate unless it is an explicitly counted retry. A retry never creates independent corroboration. Run the checker with `--verify-ledger-receipts`; it must reopen the exact child turn and the unique parent spawn request, so a declaration alone is not acceptance evidence. Every priority cell must be accepted or have a non-empty gap reason. Rejected rows do not satisfy final quotas. A timed-out or abandoned result is excluded even if it arrives later, unless the root deliberately starts a new counted acceptance attempt.

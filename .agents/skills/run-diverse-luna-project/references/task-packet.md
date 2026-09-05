@@ -15,6 +15,7 @@ Use this checklist for every new assignment. Put all required context in the spa
 - **Acceptance check:** observable conditions that end this assignment.
 - **Validation:** commands or inspections the agent must run.
 - **Return:** requested artifacts, diff summary, evidence, residual risks, and status.
+- **Peers, when needed:** exact active peer IDs/task paths, permitted links, artifact SHA-256, acknowledgement deadline, message/repair budgets, and root escalation path. Read [peer-collaboration.md](peer-collaboration.md). Peer requests outside assigned ownership go to root.
 
 Append these operating rules:
 
@@ -44,7 +45,7 @@ Require the agent to return:
 
 For verifier assignments, return a machine-readable `criterion_results` list keyed by the supplied criterion IDs. Each result contains `status=passed|failed|blocked|not_run`, an exact `evidence_locator`, and `gap_reason` for blocked or not-run work. Prose may explain the packet but never replaces it.
 
-The root appends the exact child thread UUID, turn UUID, role, model, effort, effective sandbox, completion receipt, parent thread UUID, matching parent spawn call ID/non-history route, and accepted/rejected status. The parent call output must contain the child UUID; task-name equality cannot establish the edge. Never relabel a writable effective sandbox as `sandbox_read_only` or “equivalent” because the assignment prohibited edits. Use a fresh `spawn_agent` request for every production-accepted row; follow-up turns are not accepted receipts. Task names, static TOML, opaque message bodies, and agent self-report are not runtime receipts.
+The root appends the exact child thread UUID, turn UUID, role, model, effort, effective sandbox, completion receipt, parent thread UUID, matching parent spawn call ID/non-history route, and accepted/rejected status. The parent call output must contain the child UUID; task-name equality cannot establish the edge. Never relabel a writable effective sandbox as `sandbox_read_only` or “equivalent” because the assignment prohibited edits. Use native continuation for related work. For production-accepted rows, an initial-turn spawn receipt cannot be reused for later turns; keep continuation candidates and root assessment explicit under [v2-runtime.md](v2-runtime.md). Task names, static TOML, opaque message bodies, and agent self-report are not runtime receipts.
 
 ## Assignment quality gate
 

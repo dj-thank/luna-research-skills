@@ -33,6 +33,10 @@ class RouteEvaluationManifestTests(unittest.TestCase):
             self.assertGreaterEqual(len(case["prompt"]), 20)
             self.assertIn(case.get("expected_skill"), ALLOWED_SKILLS)
             self.assertIn(case.get("expected_mode"), ALLOWED_MODES)
+            for mode in case.get("allowed_modes", []):
+                self.assertIn(mode, ALLOWED_MODES)
+            if "allowed_modes" in case:
+                self.assertIn(case["expected_mode"], case["allowed_modes"])
             self.assertIsInstance(case.get("required_controls"), list)
             self.assertTrue(case["required_controls"])
             self.assertEqual(len(case["required_controls"]), len(set(case["required_controls"])))
@@ -43,7 +47,7 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         modes = {case["expected_mode"] for case in self.cases}
         self.assertEqual(modes, ALLOWED_MODES)
 
-    def test_delivery_prompts_route_to_project(self) -> None:
+    def test_explicit_luna_delivery_prompts_route_to_project(self) -> None:
         delivery_ids = {
             "audit-fix-release",
             "api-research-and-components",
@@ -53,7 +57,9 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         }
         by_id = {case["id"]: case for case in self.cases}
         for identifier in delivery_ids:
+            self.assertIn("Luna", by_id[identifier]["prompt"])
             self.assertEqual(by_id[identifier]["expected_skill"], "run-diverse-luna-project")
+        self.assertEqual(by_id["ordinary-audit-fix"]["expected_skill"], "none")
 
     def test_implicit_discovery_and_explicit_delivery_boundary(self) -> None:
         project_yaml = (ROOT / ".agents/skills/run-diverse-luna-project/agents/openai.yaml").read_text(encoding="utf-8")
