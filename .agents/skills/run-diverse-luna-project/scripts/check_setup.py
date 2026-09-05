@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 EXPECTED_MODEL = "gpt-5.6-luna"
 EXPECTED_REASONING_EFFORT = "max"
-CHECKER_CONTRACT_VERSION = "2026-09-05.4"
+CHECKER_CONTRACT_VERSION = "2026-09-05.5"
 MIN_CONCURRENT_THREADS = 2
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
@@ -1064,8 +1064,10 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         errors.append(f"{prefix}.concurrency_cap_C C={cap} exceeds configured cap={configured_cap}")
     elif isinstance(cap, int) and configured_cap is None:
         warnings.append(f"{prefix}.concurrency_cap_C requires live configured-cap proof")
-    if tree.get("max_workflow_depth") != 2:
-        errors.append(f"{prefix}.max_workflow_depth must be 2")
+    max_depth = tree.get("max_workflow_depth")
+    valid_depth_limit = isinstance(max_depth, int) and not isinstance(max_depth, bool) and max_depth > 0
+    if not valid_depth_limit or (isinstance(budget, int) and max_depth > budget):
+        errors.append(f"{prefix}.max_workflow_depth must be a positive integer <= attempt_budget_N")
     rows, row_errors = _resolve_assignment_rows(ledger)
     if row_errors:
         errors.extend(row_errors)
@@ -1110,22 +1112,24 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         if not isinstance(row, dict) or not isinstance(row.get("attempt_id"), str): continue
         aid = row["attempt_id"]; pfx = f"tree attempts[{i}]"
         depth = row.get("depth")
-        if not isinstance(depth, int) or isinstance(depth, bool) or depth < 0 or depth > 2:
-            errors.append(f"{pfx}.depth must be 0..2")
+        if not isinstance(depth, int) or isinstance(depth, bool) or depth < 1 or (valid_depth_limit and depth > max_depth):
+            errors.append(f"{pfx}.depth must be 1..max_workflow_depth")
         parent = row.get("parent_attempt_id")
         if parent is not None:
             if parent not in ids: errors.append(f"{pfx}.parent_attempt_id does not exist")
             elif order[parent] >= order[aid]: errors.append(f"{pfx}.parent must precede child")
             else:
                 children.setdefault(parent, []).append(aid)
-                if isinstance(depth, int) and depth != ids[parent].get("depth", -99) + 1:
+                if isinstance(depth, int) and (not isinstance(ids[parent].get("depth"), int) or depth != ids[parent]["depth"] + 1):
                     errors.append(f"{pfx}.depth must equal parent depth + 1")
+        if parent is None and depth != 1:
+            errors.append(f"{pfx}: top-level attempt depth must be 1; missing parent")
         if parent == aid: errors.append(f"{pfx}: self-cycle")
         # delegated_by must identify the exact parent spawn call, never task_name/path.
         delegated = row.get("delegated_by")
         if not isinstance(delegated, dict): delegated = {}
         edge_parent = delegated.get("parent_attempt_id", parent)
-        if parent is not None and edge_parent != parent: errors.append(f"{pfx}.delegated_by parent mismatch")
+        if edge_parent != parent: errors.append(f"{pfx}.delegated_by parent mismatch")
         for edge_key in ("parent_thread_uuid", "parent_call_id"):
             if not isinstance(delegated.get(edge_key), str) or not delegated[edge_key].strip(): errors.append(f"{pfx}.delegated_by.{edge_key} is required")
         try: uuid.UUID(str(delegated.get("parent_thread_uuid")))
@@ -1181,16 +1185,15 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         role = row.get("role", row.get("kind"))
         kind = row.get("kind")
         if not isinstance(role, str) or not role.strip(): errors.append(f"{pfx}.role is required")
+        if role == "root": errors.append(f"{pfx}: root is not a child attempt role")
         coordinator_roles = {"coordinator", "research_coordinator", "luna_project_coordinator"}
         is_coord = role in coordinator_roles or kind == "coordinator"
-        if is_coord and depth != 1: errors.append(f"{pfx}: coordinator must be depth 1")
         if is_coord:
             if not isinstance(row.get("descendant_budget"), int) or isinstance(row.get("descendant_budget"), bool) or row.get("descendant_budget", -1) < 0: errors.append(f"{pfx}.descendant_budget must be a non-negative integer")
             if not isinstance(row.get("planned_child_attempt_ids"), list): errors.append(f"{pfx}.planned_child_attempt_ids is required")
             if not isinstance(row.get("collected_result_ids"), list): errors.append(f"{pfx}.collected_result_ids is required")
-        leaf_roles = {"research_scout_luna", "leaf", "builder", "luna_builder", "evidence_lane", "reviewer", "luna_reviewer", "verifier", "operator"}
-        if role in leaf_roles and depth not in {1, 2}: errors.append(f"{pfx}: leaf role has invalid depth")
-        if not is_coord and children.get(aid): errors.append(f"{pfx}: non-coordinator may not spawn descendants")
+        if not is_coord and row.get("descendant_budget", 0) != 0:
+            errors.append(f"{pfx}: leaf descendant_budget must be zero")
         if row.get("may_spawn_descendants") is True and not is_coord: errors.append(f"{pfx}: non-coordinator may_spawn_descendants must be false")
         if row.get("retry_of") is not None and row.get("retry_of") not in ids:
             errors.append(f"{pfx}.retry_of must reference an earlier attempt")
@@ -1466,10 +1469,38 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         )
         for t in points:
             active = sum(
-                s <= t and (e is None or t < e) and ids[aid].get("role") != "root"
+                s <= t and (e is None or t < e)
                 for s, e, aid in intervals
             )
             if active > cap: errors.append(f"concurrency cap C={cap} exceeded ({active})")
+    # Credits are reserved once per edge: a child consumes one attempt plus its
+    # entire delegated subtree grant. Summing descendants again would double-count.
+    def reserved_cost(aid: str) -> int:
+        grant = ids[aid].get("descendant_budget", 0)
+        return 1 + (grant if isinstance(grant, int) and not isinstance(grant, bool) and grant >= 0 else 0)
+
+    root_cost = sum(reserved_cost(aid) for aid, row in ids.items() if row.get("parent_attempt_id") is None)
+    if isinstance(budget, int) and root_cost > budget:
+        errors.append(f"{prefix}: top-level subtree grants exceed attempt_budget_N")
+    for aid, row in ids.items():
+        actual_children = children.get(aid, [])
+        is_coord = row.get("role") in {"coordinator", "research_coordinator", "luna_project_coordinator"} or row.get("kind") == "coordinator"
+        grant = row.get("descendant_budget", 0)
+        if actual_children and not is_coord:
+            errors.append(f"attempt {aid}: non-coordinator may not spawn descendants")
+        delegates = bool(actual_children) or (isinstance(grant, int) and grant > 0) or row.get("may_spawn_descendants") is True
+        if delegates and is_coord:
+            if row.get("may_spawn_descendants") is not True:
+                errors.append(f"coordinator {aid}: delegation requires explicit may_spawn_descendants=true")
+            if valid_depth_limit and isinstance(row.get("depth"), int) and row["depth"] >= max_depth:
+                errors.append(f"coordinator {aid}: delegation requires remaining workflow depth")
+        if isinstance(grant, int) and sum(reserved_cost(child) for child in actual_children) > grant:
+            errors.append(f"attempt {aid}: transitive descendant budget exceeded")
+        # An internal attempt cannot masquerade as another top-level root.
+        if row.get("parent_attempt_id") is None:
+            root_thread = row.get("root_parent_thread_uuid")
+            if any(root_thread == (other.get("child_thread_uuid") or other.get("thread_uuid")) for other in ids.values()):
+                errors.append(f"attempt {aid}: false root refers to an in-tree parent thread")
     # Coordinator closure: exact planned children, all terminal and collected, no extras.
     for aid, row in ids.items():
         if row.get("role") not in {"coordinator", "research_coordinator", "luna_project_coordinator"} and row.get("kind") != "coordinator": continue
@@ -3103,6 +3134,24 @@ def validate_ledger_receipts(
         except ValueError as exc:
             errors.append(f"assignments[{index}]: {exc}")
             continue
+        if ledger.get("version") == 2:
+            try:
+                child_meta = load_single_session_meta(rollout)
+                actual_parent_meta = load_single_session_meta(parent_rollout)
+                runtime_depth, runtime_parent, _, _ = _spawn_metadata(child_meta)
+                parent_depth, parent_spawned_parent, _, _ = _spawn_metadata(actual_parent_meta)
+                if runtime_depth != row.get("depth"):
+                    errors.append(f"assignments[{index}]: runtime depth does not match ledger depth")
+                if runtime_parent != parent_id or child_meta.get("parent_thread_id", runtime_parent) != parent_id:
+                    errors.append(f"assignments[{index}]: runtime parent does not match ledger edge")
+                expected_parent_depth = row.get("depth", 0) - 1 if isinstance(row.get("depth"), int) else None
+                if parent_attempt_id is not None:
+                    if not isinstance(parent_depth, int) or isinstance(parent_depth, bool) or parent_depth != expected_parent_depth:
+                        errors.append(f"assignments[{index}]: runtime parent depth does not match ledger edge")
+                elif parent_depth not in (None, 0) or parent_spawned_parent is not None or actual_parent_meta.get("thread_source") == "subagent" or actual_parent_meta.get("parent_thread_id") is not None:
+                    errors.append(f"assignments[{index}]: top-level attempt has a runtime subagent parent")
+            except ValueError as exc:
+                errors.append(f"assignments[{index}]: {exc}")
         # Inspect the actual JSONL, not a claimed ledger flag. Leaves may not
         # spawn. Coordinators may spawn exactly the child edges leased in this
         # ledger and no others.
@@ -3132,9 +3181,10 @@ def validate_ledger_receipts(
         is_coordinator = (
             row.get("role") in coordinator_roles
             or row.get("kind") == "coordinator"
-            or row.get("agent_role") in coordinator_roles
         )
         if is_coordinator:
+            if actual_spawn_call_ids and row.get("may_spawn_descendants") is not True:
+                errors.append(f"assignments[{index}]: actual spawning requires explicit delegation")
             attempt_id = row.get("attempt_id")
             child_rows = [
                 child

@@ -1560,6 +1560,163 @@ class TreeV2Tests(unittest.TestCase):
         self.assertTrue(any("terminal row requires" in error for error in errors))
 
 
+
+class RecursiveTreeTests(unittest.TestCase):
+    _ledger = TreeV2Tests._ledger
+    _valid_rows = TreeV2Tests._valid_rows
+    def recursive(self, depth=4):
+        import copy
+        original = self._valid_rows()
+        coordinators = []
+        for level in range(1, depth):
+            row = copy.deepcopy(original[0])
+            row.update(attempt_id=f"c{level}", depth=level, wave=level,
+                       thread_uuid=str(uuid.uuid4()), agent_role="default",
+                       acceptance_status="rejected", runtime_verified=False,
+                       descendant_budget=depth-level+2)
+            if coordinators:
+                parent = coordinators[-1]
+                row.update(parent_attempt_id=parent["attempt_id"],
+                           parent_thread_uuid=parent["thread_uuid"], parent_call_id=f"call-c{level}")
+                row["delegated_by"] = {"parent_attempt_id": parent["attempt_id"],
+                    "parent_thread_uuid": parent["thread_uuid"], "parent_call_id": f"call-c{level}"}
+                row.pop("root_parent_thread_uuid")
+                row.pop("root_parent_call_id")
+            row["planned_child_attempt_ids"] = [f"c{level+1}"] if level < depth-1 else ["l1", "l2", "l3"]
+            row["collected_result_ids"] = list(row["planned_child_attempt_ids"])
+            coordinators.append(row)
+        leaves = original[1:]
+        for index, row in enumerate(leaves):
+            row.update(parent_attempt_id=coordinators[-1]["attempt_id"], depth=depth, wave=depth+index)
+            row["delegated_by"].update(parent_attempt_id=coordinators[-1]["attempt_id"], parent_thread_uuid=coordinators[-1]["thread_uuid"])
+        return self._ledger(coordinators+leaves, max_workflow_depth=depth,
+                            concurrency_cap_C=depth, wave_width_W=2)
+
+    def check_recursive(self, ledger):
+        return CHECK._validate_tree_ledger(ledger, project=True)[0]
+
+    def test_recursive_depth_three_and_four(self):
+        for depth in (3, 4):
+            with self.subTest(depth=depth):
+                self.assertEqual(self.check_recursive(self.recursive(depth)), [])
+
+    def test_recursive_research_depth_three(self):
+        self.assertEqual(CHECK._validate_tree_ledger(self.recursive(3))[0], [])
+
+    def test_recursive_research_depth_four_with_global_quota_reserve(self):
+        import copy
+        ledger = self.recursive(4)
+        for template_index, aid in ((3, "p2"), (4, "a2")):
+            row = copy.deepcopy(ledger["assignments"][template_index])
+            row.update(attempt_id=aid, wave=len(ledger["assignments"])+1,
+                       coverage_cell=aid, overlap_key=aid)
+            row["delegated_by"]["parent_call_id"] = f"call-{aid}"
+            ledger["assignments"].append(row)
+            ledger["assignments"][2]["planned_child_attempt_ids"].append(aid)
+            ledger["assignments"][2]["collected_result_ids"].append(aid)
+        for row in ledger["assignments"][:3]:
+            row["descendant_budget"] += 2
+        ledger.update(attempt_budget_N=8, verifier_reserve_V=2, concurrency_cap_C=6)
+        self.assertEqual(CHECK._validate_tree_ledger(ledger)[0], [])
+
+    def test_recursive_depth_limit_positive_integer_bounded_by_budget(self):
+        for limit in (0, -1, True, 1.5, "4", 7):
+            ledger = self.recursive()
+            ledger["max_workflow_depth"] = limit
+            self.assertTrue(any("max_workflow_depth" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_too_deep_and_jump(self):
+        ledger = self.recursive()
+        ledger["max_workflow_depth"] = 3
+        self.assertTrue(any("depth" in e for e in self.check_recursive(ledger)))
+        ledger = self.recursive()
+        ledger["assignments"][1]["depth"] = 3
+        self.assertTrue(any("parent depth + 1" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_false_root(self):
+        ledger = self.recursive()
+        row = ledger["assignments"][1]
+        row.update(parent_attempt_id=None, root_parent_thread_uuid=row["parent_thread_uuid"], root_parent_call_id=row["parent_call_id"])
+        self.assertTrue(any("top-level attempt depth" in e for e in self.check_recursive(ledger)))
+        row["depth"] = 1
+        row["delegated_by"].pop("parent_attempt_id")
+        self.assertTrue(any("false root" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_root_role_cannot_hide_concurrency(self):
+        ledger = self.recursive()
+        ledger["assignments"][0]["role"] = "root"
+        ledger["concurrency_cap_C"] = 3
+        errors = self.check_recursive(ledger)
+        self.assertTrue(any("root is not a child attempt role" in e for e in errors))
+        self.assertTrue(any("concurrency cap" in e for e in errors))
+
+    def test_recursive_transitive_budget_inflation(self):
+        ledger = self.recursive()
+        ledger["assignments"][1]["descendant_budget"] += 1
+        self.assertTrue(any("transitive descendant budget" in e for e in self.check_recursive(ledger)))
+        ledger = self.recursive()
+        ledger["assignments"][0]["descendant_budget"] += 1
+        self.assertTrue(any("top-level subtree grants" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_undelegated_coordinator(self):
+        for value in (False, None):
+            ledger = self.recursive()
+            ledger["assignments"][1]["may_spawn_descendants"] = value
+            self.assertTrue(any("explicit may_spawn_descendants" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_leaf_assignment_stays_terminal(self):
+        ledger = self.recursive()
+        ledger["assignments"][1].update(role="builder", kind="builder", agent_role="luna_project_coordinator")
+        self.assertTrue(any("non-coordinator may not spawn" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_premature_collection_at_intermediate_level(self):
+        ledger = self.recursive()
+        row = ledger["assignments"][2]
+        row.update(execution_status="started", acceptance_status="pending")
+        row.pop("finished_at")
+        self.assertTrue(any("child is not terminal" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_direct_child_lists_cannot_skip_level(self):
+        ledger = self.recursive()
+        ledger["assignments"][0]["planned_child_attempt_ids"] = ["l1", "l2", "l3"]
+        self.assertTrue(any("planned child list mismatch" in e for e in self.check_recursive(ledger)))
+
+    def test_recursive_runtime_depth_and_parent_binding(self):
+        ledger = self.recursive()
+        row = ledger["assignments"][3]
+        parent = ledger["assignments"][2]
+        row.update(acceptance_status="accepted", thread_uuid=str(uuid.uuid4()),
+                   runtime_turn=str(uuid.uuid4()), agent_role="default",
+                   parent_thread_uuid=parent["thread_uuid"], parent_call_id="call-1", spawn_kind="spawn_agent")
+        child_records = rollout_records(row["thread_uuid"], row["runtime_turn"], parent_id=parent["thread_uuid"])
+        child_records[0]["payload"]["source"]["subagent"]["thread_spawn"]["depth"] = 4
+        parent_records = rollout_records(parent["thread_uuid"], str(uuid.uuid4()), parent_id=parent["parent_thread_uuid"])
+        parent_records[0]["payload"]["source"]["subagent"]["thread_spawn"]["depth"] = 3
+        parent_records.extend([
+            {"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent", "call_id": "call-1",
+                "arguments": json.dumps({"task_name": "test_assignment", "agent_type": "default", "fork_turns": "none", "message": "bounded leaf"})}},
+            {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "call-1", "output": json.dumps({"agent_id": row["thread_uuid"]})}}])
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            sessions = home / "sessions"
+            sessions.mkdir()
+            cp = sessions / f"rollout-{row['thread_uuid']}.jsonl"
+            pp = sessions / f"rollout-{parent['thread_uuid']}.jsonl"
+            lp = home / "ledger.json"
+            write_json(lp, ledger)
+            write_jsonl(cp, child_records)
+            write_jsonl(pp, parent_records)
+            self.assertEqual(CHECK.validate_ledger_receipts(lp, home)[0], [])
+            child_records[0]["payload"]["source"]["subagent"]["thread_spawn"]["depth"] = 3
+            write_jsonl(cp, child_records)
+            self.assertTrue(any("runtime depth does not match" in e for e in CHECK.validate_ledger_receipts(lp, home)[0]))
+            child_records[0]["payload"]["source"]["subagent"]["thread_spawn"]["depth"] = 4
+            write_jsonl(cp, child_records)
+            parent_records[0]["payload"]["source"]["subagent"]["thread_spawn"]["depth"] = 1
+            write_jsonl(pp, parent_records)
+            self.assertTrue(any("runtime parent depth" in e for e in CHECK.validate_ledger_receipts(lp, home)[0]))
+
+
 class V5FailureInjectionTests(unittest.TestCase):
     def base(self, **kw):
         root_thread = str(uuid.uuid4())
