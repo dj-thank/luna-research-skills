@@ -208,5 +208,44 @@
       "documented_exposed_executed_separate",
       "preserve_caller_model"
     ]
+  },
+  {
+    "id": "recursive-subteams",
+    "prompt": "Use Luna to organize this large project into bounded workstreams; let each coordinating team create further subteams when useful, up to a declared depth of four.",
+    "expected_skill": "run-diverse-luna-project",
+    "expected_mode": "hierarchical",
+    "required_controls": [
+      "declared_recursive_depth",
+      "transitive_subtree_budget",
+      "per_level_capability",
+      "terminal_collection"
+    ]
+  },
+  {
+    "id": "mixed-recursive-research",
+    "prompt": "Use Astra for recursive coordination and Luna for research specialists; compare this topic across independent primary sources and contrary evidence.",
+    "expected_skill": "run-diverse-luna-research",
+    "expected_mode": "hierarchical",
+    "allowed_modes": [
+      "flat",
+      "hierarchical"
+    ],
+    "required_controls": [
+      "explicit_mixed_policy",
+      "luna_terminal_specialists",
+      "runtime_model_provenance",
+      "shared_attempt_budget"
+    ]
+  },
+  {
+    "id": "missing-luna-nesting",
+    "prompt": "Use only Luna for this research. A Luna coordinator reports that no spawn tool is exposed; the parent still has a working direct Luna route.",
+    "expected_skill": "run-diverse-luna-research",
+    "expected_mode": "flat",
+    "required_controls": [
+      "no_silent_model_fallback",
+      "reuse_unstarted_grants",
+      "record_capability_gap"
+    ]
   }
 ]

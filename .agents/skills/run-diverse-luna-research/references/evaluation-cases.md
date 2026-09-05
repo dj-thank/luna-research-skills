@@ -84,4 +84,19 @@ For a live source-access trial use synthetic failure fixtures; do not generate r
 - Later child turn is presented with an initial spawn call: reject fully attributed acceptance, while permitting metadata-only inspection and root-owned candidate assessment.
 - Interrupt leaves partial files or a subprocess: inspect exact ownership before any continuation; interruption alone is not rollback.
 
-Classify every check as documentation, exposed schema, live execution, synthetic validation, or not run. V2 is a native runtime capability; Luna/max, N/C/W/V, two-level depth and receipt gates are this skill's operating policy.
+Classify every check as documentation, exposed schema, live execution, synthetic validation, or not run. V2 is a native runtime capability; Luna/max, N/C/W/V, declared depth and receipt gates are this skill's operating policy.
+
+
+## Recursive delegation cases
+
+- A workstream needs a nested coordinator and specialists at depth 3 or 4: declare D and transitive grants, then accept only matching real parent/depth records.
+- A nested coordinator asks for more subtree credits than its parent owns: reject the allocation before dispatch, even if each direct-child count looks small.
+- A row moves itself to root to evade depth or budget: reject the fake root.
+- A coordinator has a grant but no explicit delegation permission, or reaches D: return the blocked split without spawning.
+- A child finishes while its own child is still working: reject premature collection and keep that branch open.
+- A terminal specialist discovers a useful split: propose it to the coordinating owner; do not silently bypass terminal role instructions.
+- A supported model demonstrates deep native delegation while Luna lacks spawn tools: retain model-specific capability evidence and never advertise a Luna-only runtime pass.
+
+- Explicit Astra coordinator policy with Luna specialists: require the version-2 policy and mixed opt-in, retain Luna/max on terminal rows, and verify actual delegation.
+- An Astra terminal worker relabels itself as coordinator without a real subteam: reject acceptance; coordinator policy is not a general model escape hatch.
+- Luna lacks spawn tools and no mixed policy was authorized: report that lane's limit and continue permitted root work without switching models.

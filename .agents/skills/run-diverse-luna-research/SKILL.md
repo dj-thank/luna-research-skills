@@ -5,11 +5,11 @@ description: "Research current, multi-source questions with bounded Luna evidenc
 
 # Run Diverse Luna Research
 
-Produce a source-backed answer to the user's decision, with uncertainty that matches the evidence. Research scouts return evidence only; the root owns synthesis and authorized changes. Keep the caller's selected model, including GPT-6 Astra, unchanged; the Luna/max policy applies only to this skill's delegated evidence lane. API model capabilities do not establish which tools a Codex task exposes.
+Produce a source-backed answer to the user's decision, with uncertainty that matches the evidence. Research scouts return evidence only; the root owns synthesis and authorized changes. Keep the caller's selected model, including GPT-6 Astra, unchanged; terminal evidence specialists remain Luna/max, and any mixed coordinator policy must be explicit. API model capabilities do not establish which tools a Codex task exposes.
 
 ## Multi Agent V2
 
-When V2 is requested, read [the native runtime contract](references/v2-runtime.md) first. Verify saved enablement, current per-level tools and observed execution separately. Use native continuation for related work, fresh agents for independent audits, and bounded child delegation when actually exposed. Keep the parent model unchanged.
+When V2 is requested, read [the native runtime contract](references/v2-runtime.md) first. Verify saved enablement, current per-level tools and observed execution separately. Use native continuation for related work, fresh agents for independent audits, and recursive delegation within the declared depth and subtree budget when actually exposed. Keep the parent model unchanged.
 
 The installed `multi-agent-v2` skill can own general orchestration; this skill owns only its bounded Luna evidence lane. Neither skill changes the caller's model policy implicitly.
 
@@ -31,13 +31,17 @@ Skill selection does not override the active session's delegation restrictions. 
 
 For conflicting or dependent cells, use [peer evidence clarification](references/peer-evidence.md) after the initial independent packets are recorded. Root authorizes exact peers and limits; scouts may clarify evidence directly, but agreement adds no source independence and unresolved conflicts return to root.
 
-For parallel work, count every started attempt against one global budget, reserve verification, and give each cell a unique question and deadline. The exact completed child turn and parent spawn edge must prove Luna/max. A role name, requested model, or static read-only TOML is insufficient. If the probe fails, stop further dispatch and continue safely at the root.
+For parallel work, count every started attempt against one global budget, reserve verification, and give each cell a unique question and deadline. The exact completed child turn and parent spawn edge must prove the expected model and effort: Luna/max for terminal specialists, and the explicitly selected policy for coordinators. A role name, requested model, or static read-only TOML is insufficient. If the probe fails, stop further dispatch and continue safely at the root.
 
 Keep private/connector/provider evidence at the root unless the execution contract's access requirements can be mechanically satisfied. Public scouts in a writable runtime use a clearly labeled behavioral no-mutation boundary. Keep the parent's chosen model and global configuration unchanged.
 
 Before synthesis, verify conclusion-grade sources and every accepted runtime receipt. Reuse a root-opened source snapshot within its freshness window; reopen when the claim, version, access state, or evidence changes. A scout summary or search snippet alone is not a verified source. Distinguish **coverage** (which questions were answered) from **independence** (which upstream authorities support a claim). Different official sections can answer different questions while counting as one source family. Repeated pages or retries add no independent corroboration. Record gaps and contradictions rather than forcing an unsupported consensus.
 
 For access failures, shared source retrieval, claim sufficiency, and additional waves, follow the execution contract. Lead with the answer, citations, and practical uncertainty. Put detailed accounting in a method artifact when it would obscure the answer. Report only observed evidence gates.
+
+For a workstream that needs its own subteams, read [recursive delegation](references/recursive-delegation.md). Coordinators may delegate to further coordinators; terminal specialists stay within their assigned scope.
+
+Use [model composition](references/model-policy.md) only when the user explicitly authorizes Astra coordinators with Luna specialists. The default remains Luna/max throughout; terminal specialists always remain Luna/max. A mixed result is never reported as a Luna-only run.
 
 ## Maintenance
 

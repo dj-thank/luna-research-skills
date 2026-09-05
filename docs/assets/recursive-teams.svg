@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1040" viewBox="0 0 1440 1040">
+<rect width="1440" height="1040" fill="#0b1020"/>
+<style>text{font-family:"BIZ UDGothic","Noto Sans JP","Yu Gothic",sans-serif}</style>
+<text x="50" y="53" fill="#8ba4e9" font-size="20" font-weight="700" text-anchor="start">LUNA RESEARCH &amp; PROJECT SKILLS</text>
+<text x="50" y="119" fill="#edf1ff" font-size="39" font-weight="700" text-anchor="start">一つの依頼から、チームがチームをつくる</text>
+<text x="50" y="167" fill="#a9b5d2" font-size="24" font-weight="400" text-anchor="start">仕事の構造に合わせて分担・再委任し、根拠と成果を親へ集める。</text>
+<rect x="410" y="215" width="620" height="98" rx="18" fill="#192a50" stroke="#597eff" stroke-width="2"/>
+<text x="720" y="263" fill="#edf1ff" font-size="30" font-weight="700" text-anchor="middle">親エージェント</text>
+<text x="720" y="298" fill="#bacbff" font-size="20" font-weight="400" text-anchor="middle">目的・予算・担当範囲・最終判断</text>
+<path d="M 720 313 L 720 339" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 720 339 L 245 339" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 245 339 L 245 368" fill="none" stroke="#627091" stroke-width="3"/>
+<polygon points="245,368 239.72631907535376,358.3465918192059 250.27368092464624,358.3465918192059" fill="#627091"/>
+<path d="M 720 313 L 720 339" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 720 339 L 720 339" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 720 339 L 720 368" fill="none" stroke="#627091" stroke-width="3"/>
+<polygon points="720,368 714.7263190753538,358.3465918192059 725.2736809246462,358.3465918192059" fill="#627091"/>
+<path d="M 720 313 L 720 339" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 720 339 L 1195 339" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 1195 339 L 1195 368" fill="none" stroke="#627091" stroke-width="3"/>
+<polygon points="1195,368 1189.7263190753538,358.3465918192059 1200.2736809246462,358.3465918192059" fill="#627091"/>
+<rect x="55" y="370" width="380" height="106" rx="18" fill="#172137" stroke="#42567e" stroke-width="2"/>
+<text x="245" y="419" fill="#edf1ff" font-size="29" font-weight="700" text-anchor="middle">調査チーム</text>
+<text x="245" y="454" fill="#aab9d9" font-size="19" font-weight="400" text-anchor="middle">一次情報・実測・反証</text>
+<rect x="530" y="370" width="380" height="106" rx="18" fill="#172137" stroke="#42567e" stroke-width="2"/>
+<text x="720" y="419" fill="#edf1ff" font-size="29" font-weight="700" text-anchor="middle">開発チーム</text>
+<text x="720" y="454" fill="#aab9d9" font-size="19" font-weight="400" text-anchor="middle">設計・実装・統合準備</text>
+<rect x="1005" y="370" width="380" height="106" rx="18" fill="#172137" stroke="#42567e" stroke-width="2"/>
+<text x="1195" y="419" fill="#edf1ff" font-size="29" font-weight="700" text-anchor="middle">検証チーム</text>
+<text x="1195" y="454" fill="#aab9d9" font-size="19" font-weight="400" text-anchor="middle">独立レビュー・受入確認</text>
+<path d="M 245 476 L 245 505" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 245 505 L 145 505" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 145 505 L 145 536" fill="none" stroke="#627091" stroke-width="3"/>
+<polygon points="145,536 139.72631907535376,526.3465918192059 150.27368092464624,526.3465918192059" fill="#627091"/>
+<path d="M 245 476 L 245 505" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 245 505 L 345 505" fill="none" stroke="#627091" stroke-width="3"/>
+<path d="M 345 505 L 345 536" fill="none" stroke="#627091" stroke-width="3"/>
+<polygon points="345,536 339.7263190753538,526.3465918192059 350.2736809246462,526.3465918192059" fill="#627091"/>
+<rect x="60" y="538" width="170" height="78" rx="18" fill="#142d31" stroke="#327b78" stroke-width="2"/>
+<text x="145" y="583" fill="#b4f1df" font-size="21" font-weight="700" text-anchor="middle">公式仕様</text>
+<rect x="260" y="538" width="170" height="78" rx="18" fill="#142d31" stroke="#327b78" stroke-width="2"/>
+<text x="345" y="583" fill="#b4f1df" font-size="21" font-weight="700" text-anchor="middle">データ・反証</text>
+<path d="M 720 476 L 720 505" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 720 505 L 620 505" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 620 505 L 620 536" fill="none" stroke="#977bd9" stroke-width="3"/>
+<polygon points="620,536 614.7263190753538,526.3465918192059 625.2736809246462,526.3465918192059" fill="#977bd9"/>
+<path d="M 720 476 L 720 505" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 720 505 L 820 505" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 820 505 L 820 536" fill="none" stroke="#977bd9" stroke-width="3"/>
+<polygon points="820,536 814.7263190753538,526.3465918192059 825.2736809246462,526.3465918192059" fill="#977bd9"/>
+<rect x="535" y="538" width="170" height="78" rx="18" fill="#2c2146" stroke="#977bd9" stroke-width="2"/>
+<text x="620" y="584" fill="#e1d2ff" font-size="22" font-weight="700" text-anchor="middle">API調整役</text>
+<rect x="735" y="538" width="170" height="78" rx="18" fill="#2c2146" stroke="#977bd9" stroke-width="2"/>
+<text x="820" y="584" fill="#e1d2ff" font-size="22" font-weight="700" text-anchor="middle">画面調整役</text>
+<path d="M 620 616 L 620 658" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 620 658 L 565 658" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 565 658 L 565 700" fill="none" stroke="#977bd9" stroke-width="3"/>
+<polygon points="565,700 559.7263190753538,690.3465918192059 570.2736809246462,690.3465918192059" fill="#977bd9"/>
+<path d="M 620 616 L 620 658" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 620 658 L 695 658" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 695 658 L 695 700" fill="none" stroke="#977bd9" stroke-width="3"/>
+<polygon points="695,700 689.7263190753538,690.3465918192059 700.2736809246462,690.3465918192059" fill="#977bd9"/>
+<path d="M 820 616 L 820 658" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 820 658 L 855 658" fill="none" stroke="#977bd9" stroke-width="3"/>
+<path d="M 855 658 L 855 700" fill="none" stroke="#977bd9" stroke-width="3"/>
+<polygon points="855,700 849.7263190753538,690.3465918192059 860.2736809246462,690.3465918192059" fill="#977bd9"/>
+<rect x="505" y="702" width="120" height="76" rx="18" fill="#142d31" stroke="#327b78" stroke-width="2"/>
+<text x="565" y="746" fill="#b4f1df" font-size="18" font-weight="700" text-anchor="middle">保存処理</text>
+<rect x="635" y="702" width="120" height="76" rx="18" fill="#142d31" stroke="#327b78" stroke-width="2"/>
+<text x="695" y="746" fill="#b4f1df" font-size="18" font-weight="700" text-anchor="middle">APIテスト</text>
+<rect x="795" y="702" width="120" height="76" rx="18" fill="#142d31" stroke="#327b78" stroke-width="2"/>
+<text x="855" y="746" fill="#b4f1df" font-size="18" font-weight="700" text-anchor="middle">検索画面</text>
+<path d="M 1195 476 L 1195 536" fill="none" stroke="#e5b767" stroke-width="3"/>
+<polygon points="1195,536 1189.7263190753538,526.3465918192059 1200.2736809246462,526.3465918192059" fill="#e5b767"/>
+<rect x="1045" y="538" width="300" height="78" rx="18" fill="#342a1b" stroke="#aa8247" stroke-width="2"/>
+<text x="1195" y="583" fill="#ffda9c" font-size="21" font-weight="700" text-anchor="middle">反証・境界・再現確認</text>
+<path d="M 1045 646 L 975 646" fill="none" stroke="#d6a3ce" stroke-width="3" stroke-dasharray="6 5"/>
+<path d="M 975 646 L 975 577" fill="none" stroke="#d6a3ce" stroke-width="3" stroke-dasharray="6 5"/>
+<path d="M 975 577 L 915 577" fill="none" stroke="#d6a3ce" stroke-width="3" stroke-dasharray="6 5"/>
+<polygon points="915,577 924.6534081807941,571.7263190753538 924.6534081807941,582.2736809246462" fill="#d6a3ce"/>
+<text x="1060" y="667" fill="#e6bbdc" font-size="19" font-weight="400" text-anchor="start">指摘 → 修正 → 再確認</text>
+<text x="65" y="718" fill="#e1d2ff" font-size="22" font-weight="700" text-anchor="start">再委任の例</text>
+<text x="65" y="757" fill="#a9b5d2" font-size="19" font-weight="400" text-anchor="start">開発担当がAPIと画面へ分け、</text>
+<text x="65" y="793" fill="#a9b5d2" font-size="19" font-weight="400" text-anchor="start">API担当がさらに保存処理と</text>
+<text x="65" y="829" fill="#a9b5d2" font-size="19" font-weight="400" text-anchor="start">テストの担当を組み立てる。</text>
+<text x="1010" y="770" fill="#c5d0e8" font-size="20" font-weight="700" text-anchor="start">階層は案件ごとに決定</text>
+<text x="1010" y="808" fill="#a9b5d2" font-size="19" font-weight="400" text-anchor="start">全体で一つの予算を共有</text>
+<text x="1010" y="845" fill="#a9b5d2" font-size="19" font-weight="400" text-anchor="start">各段で起動能力を確認</text>
+<rect x="55" y="896" width="1330" height="96" rx="18" fill="#18283d" stroke="#4c789c" stroke-width="2"/>
+<text x="720" y="941" fill="#edf1ff" font-size="28" font-weight="700" text-anchor="middle">根拠を照合し、差分を統合して、一つの回答・成果物へ</text>
+<text x="720" y="976" fill="#a9b5d2" font-size="18" font-weight="400" text-anchor="middle">実行可能なツール・モデル・権限と、宣言した深さ・子孫予算の範囲で動作</text>
+</svg>

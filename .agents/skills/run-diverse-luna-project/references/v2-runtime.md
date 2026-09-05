@@ -30,8 +30,9 @@ Before dispatch, inspect three separate layers:
 
 Use `check_setup.py --require-v2` when this run promises V2: it checks saved enablement
 and, when given a runtime receipt, its V2 metadata. It does not prove child tool exposure;
-a bounded useful child must demonstrate that separately. The checker still verifies Luna/max
-only for the Luna lane. General V2 does not require Luna or a fixed reasoning effort.
+a bounded useful child must demonstrate that separately. The checker verifies Luna/max
+for terminal specialists and the explicitly authorized [coordinator policy](model-policy.md)
+for coordinators. General V2 does not require Luna or a fixed reasoning effort.
 
 ## Native tool semantics on the current V2 surface
 
@@ -56,13 +57,14 @@ user-owned task operation, not a substitute for internal delegation.
 - **Flat:** independent leaves; root dispatches ready cells before waiting and collects all.
 - **Hierarchy:** coordinator partitions a bounded workstream, dispatches only its
   leased children, and collects their results. Root handles integration across workstreams.
-  Consider hierarchy with six or more ready cells, but do not force it or spawn filler.
+  Use more coordinating levels when a bounded subproblem needs its own team. Read
+  [recursive delegation](recursive-delegation.md); D is declared per run, not fixed to two.
 - **Peer collaboration:** root permits exact directed links for interfaces and findings;
   use the peer contract. Sharing conclusions makes subsequent evidence dependent.
 
 A coordinator packet includes global N/C/W/V, exact descendant credits and planned IDs,
-permitted roles, disjoint ownership, deadlines, return contract, and no-grandchildren
-for leaves. The root's budget includes descendants and resumptions; coordinators cannot
+permitted roles, disjoint ownership, deadlines, return contract, declared depth limit
+and a transitive subtree grant. Terminal assignments have no descendant grant. The root's budget includes descendants and resumptions; coordinators cannot
 mint credits. Track **threads created**, **activation/steering requests**, **completed
 turns**, and **accepted results** separately. Messaging does not create a thread.
 
@@ -118,6 +120,6 @@ After one unanswered retry or the agreed repair limit, escalate the evidence and
 to root. At closure every started agent/turn has a terminal disposition, every mandatory
 criterion has a status, and the resulting artifact passes its real acceptance check.
 
-Budgets, two-level hierarchy, exact receipt policy and evidence gate names are local
+Budgets, declared workflow depth, exact receipt policy and evidence gate names are local
 workflow controls. They are not universal OpenAI platform requirements. Report a feature
 as documented, exposed, executed, or unverified rather than collapsing these categories.
