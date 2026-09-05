@@ -2,7 +2,7 @@
 
 ## Hierarchy and budget contract
 
-The root chooses `mode=flat|hierarchical`. Hierarchical depth is fixed to `root=0 -> coordinator=1 -> leaf=2`; leaves have `may_spawn_descendants=false`. A coordinator can dispatch only its exact `descendant_budget` loan from root. All roles, probes, retries, and verifiers decrement the same global `attempt_budget_N`; capacity `concurrency_cap_C` and total per-wave starts `wave_width_W` are independent controls, with `W <= min(C,N)`. Reserve `verifier_reserve_V=max(1,ceil(.15*N))`, and never spend it on optional fanout.
+The root chooses `mode=flat|hierarchical`. Root is depth 0; direct children are depth 1 and each later child is `parent.depth + 1`, bounded by declared `max_workflow_depth <= N`. Coordinators may create subcoordinators under [the recursive grant contract](recursive-delegation.md). Terminal assignments have `may_spawn_descendants=false` and zero grant. A coordinator can spend only its transitive `descendant_budget` loan from its parent. All roles, probes, retries, and verifiers decrement the same global `attempt_budget_N`; capacity `concurrency_cap_C` and total per-wave starts `wave_width_W` are independent controls, with `W <= min(C,N)`. Reserve `verifier_reserve_V=max(1,ceil(.15*N))`, and never spend it on optional fanout.
 
 Every attempt row must contain: `tree_id`, `attempt_budget_N`, `concurrency_cap_C`, `wave_width_W`, `max_workflow_depth`, `attempt_id`, `parent_attempt_id`, `delegated_by`, `depth`, `wave`, `planned_at`, `started_at`, `finished_at`, `retry_of`, `descendant_budget`, `planned_child_attempt_ids`, `collected_result_ids`, and `may_spawn_descendants`. Include `ttl`, `epoch`, `retry_owner`, `dedup_key`, and `cancel_reason` when applicable. Parent-edge provenance is required: exact parent thread, call ID, selected route, and completed child turn. Static names/TOMLs are metadata only.
 
@@ -13,7 +13,7 @@ Every attempt row must contain: `tree_id`, `attempt_budget_N`, `concurrency_cap_
 | `tree_id`, `run_id` | UUID identities | both required; never human labels |
 | `attempt_budget_N`, `concurrency_cap_C`, `wave_width_W`, `max_workflow_depth`, `verifier_reserve_V` | global controls | canonical names; require `W<=C`, `W<=N`, and `V=max(1,ceil(.15*N))` |
 | `attempt_id`, `parent_attempt_id`, `delegated_by` | edge identity | `delegated_by` object carries exact parent thread/call UUIDs |
-| `role`, `kind`, `depth`, `wave` | routing | coordinator depth 1; leaves depth 2 and no descendants |
+| `role`, `kind`, `depth`, `wave` | routing | coordinators at any permitted level; children are parent.depth+1; terminal specialists have no descendants |
 | `planned_at`, `started_at`, `finished_at`, `ttl_seconds`, `epoch` | lifecycle | planned rows have null start/finish |
 | `retry_of`, `retry_owner`, `dedup_key`, `cancel_reason` | recovery | every retry is a new counted attempt |
 | `planned_child_attempt_ids`, `collected_result_ids`, `may_spawn_descendants` | fanout/fan-in | leaf `may_spawn_descendants=false` |
@@ -92,7 +92,7 @@ The root appends this after the scout completes:
 
 - assignment ID, task path, child thread UUID, parent UUID, depth, and selected role;
 - exact accepted completed turn ID;
-- effective model and reasoning effort;
+- effective model and reasoning effort, matched to the terminal Luna/max or explicit coordinator policy;
 - effective sandbox or permission mode;
 - safety enforcement: `sandbox_read_only`, `prompt_only`, or `unknown`;
 - outcome: `accepted`, `rejected`, `failed`, `timed_out`, or `abandoned`;
@@ -230,4 +230,4 @@ accepted + rejected <= completed
 started <= N
 ```
 
-Before synthesis, require zero unclassified in-flight assignments. Every accepted attempt needs valid child and parent UUIDs, exact turn UUID, parent call ID, `spawn_kind=spawn_agent`, role, Luna/max metadata, matching safety enforcement, `runtime_verified=true`, and a non-empty `source_family_id` for evidence rows. Accepted synthesis rows may cover different claims from the same source family. Count that family once as independent support; retain each distinct coverage cell and its exact claim locator. A repeated claim or coverage cell is still a duplicate unless it is an explicitly counted retry. A retry never creates independent corroboration. Run the checker with `--verify-ledger-receipts`; it must reopen the exact child turn and the unique parent spawn request, so a declaration alone is not acceptance evidence. Every priority cell must be accepted or have a non-empty gap reason. Rejected rows do not satisfy final quotas. A timed-out or abandoned result is excluded even if it arrives later, unless the root deliberately starts a new counted acceptance attempt.
+Before synthesis, require zero unclassified in-flight assignments. Every accepted attempt needs valid child and parent UUIDs, exact turn UUID, parent call ID, `spawn_kind=spawn_agent`, role, metadata matching the expected model policy, matching safety enforcement, `runtime_verified=true`, and a non-empty `source_family_id` for evidence rows. Accepted synthesis rows may cover different claims from the same source family. Count that family once as independent support; retain each distinct coverage cell and its exact claim locator. A repeated claim or coverage cell is still a duplicate unless it is an explicitly counted retry. A retry never creates independent corroboration. Run the checker with `--verify-ledger-receipts`; it must reopen the exact child turn and the unique parent spawn request, so a declaration alone is not acceptance evidence. Every priority cell must be accepted or have a non-empty gap reason. Rejected rows do not satisfy final quotas. A timed-out or abandoned result is excluded even if it arrives later, unless the root deliberately starts a new counted acceptance attempt.

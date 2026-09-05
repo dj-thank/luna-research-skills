@@ -1658,6 +1658,28 @@ class RecursiveTreeTests(unittest.TestCase):
         ledger["assignments"][0]["descendant_budget"] += 1
         self.assertTrue(any("top-level subtree grants" in e for e in self.check_recursive(ledger)))
 
+    def test_returned_unused_grant_allows_root_flat_fallback(self):
+        rows = self._valid_rows()
+        coordinator = rows[0]
+        root_id = coordinator["root_parent_thread_uuid"]
+        coordinator.update(execution_status="failed", acceptance_status="excluded",
+                           runtime_verified=False, planned_child_attempt_ids=[], collected_result_ids=[])
+        for index, row in enumerate(rows[1:], 1):
+            call = f"root-flat-{index}"
+            row.update(parent_attempt_id=None, depth=1, wave=index+1,
+                       root_parent_thread_uuid=root_id, root_parent_call_id=call,
+                       delegated_by={"parent_thread_uuid":root_id,"parent_call_id":call},
+                       execution_status="planned", acceptance_status="pending", started_at=None, finished_at=None)
+        ledger = self._ledger(rows)
+        self.assertTrue(any("top-level subtree grants" in e for e in CHECK._validate_tree_ledger(ledger)[0]))
+        coordinator.update(descendant_budget=0, cancel_reason="No children started; root recorded return of 3 unused credits")
+        self.assertEqual(CHECK._validate_tree_ledger(ledger)[0], [])
+
+    def test_returned_grant_cannot_erase_committed_descendants(self):
+        ledger = self.recursive(3)
+        ledger["assignments"][0]["descendant_budget"] = 0
+        self.assertTrue(any("transitive descendant budget" in e for e in self.check_recursive(ledger)))
+
     def test_recursive_undelegated_coordinator(self):
         for value in (False, None):
             ledger = self.recursive()

@@ -155,7 +155,12 @@ def build(root: Path, output: Path) -> dict[str, Path]:
     for name, _, _, data in snapshot:
         if name.startswith(".agents/skills/"):
             plugin_entries.append(("skills/" + name[len(".agents/skills/"):], data))
-        elif name in {"LICENSE", "README.md", "SECURITY.md"}:
+        elif name == "README.md":
+            # Repository and plugin skill roots differ; keep rendered local links usable.
+            plugin_entries.append((name, data.replace(b"](.agents/skills/", b"](skills/")))
+        elif name.startswith("docs/") or name in {
+            "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md", "tools/MIGRATION.md"
+        }:
             plugin_entries.append((name, data))
     plugin_archive = output / plugin_name
     write_archive(plugin_archive, plugin_entries)

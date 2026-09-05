@@ -13,6 +13,35 @@ from build_release import build
 
 
 class ReleaseBuilderTests(unittest.TestCase):
+    def test_plugin_keeps_readme_diagram_and_local_document_links(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "repo"
+            root.mkdir()
+            (root / "VERSION").write_text("2.0.0\n", encoding="utf-8")
+            readme = "![Teams](docs/assets/teams.png)\n[Skill](.agents/skills/demo/SKILL.md)\n[Migration](tools/MIGRATION.md)\n[Development](CONTRIBUTING.md)\n"
+            (root / "README.md").write_text(readme, encoding="utf-8")
+            files = {
+                ".agents/skills/demo/SKILL.md": b"skill",
+                "docs/assets/teams.png": b"\x89PNG\r\n\x1a\nfixture",
+                "docs/evaluation.md": b"bounded evaluation",
+                "tools/MIGRATION.md": b"migration procedure",
+                "CONTRIBUTING.md": b"development procedure",
+                "CHANGELOG.md": b"changes",
+                ".codex/agents/demo.toml": b"custom agent intentionally excluded",
+            }
+            for name, data in files.items():
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
+            outputs = build(root, Path(temp) / "out")
+            with zipfile.ZipFile(outputs["plugin"]) as plugin:
+                self.assertEqual(plugin.read("docs/assets/teams.png"), files["docs/assets/teams.png"])
+                for name in ("docs/evaluation.md", "tools/MIGRATION.md", "CONTRIBUTING.md", "CHANGELOG.md"):
+                    self.assertIn(name, plugin.namelist())
+                self.assertIn("[Skill](skills/demo/SKILL.md)", plugin.read("README.md").decode("utf-8"))
+                self.assertNotIn(".codex/agents/demo.toml", plugin.namelist())
+            self.assertEqual((root / "README.md").read_text(encoding="utf-8"), readme)
+
     def test_reproducible_archive_and_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "repo"

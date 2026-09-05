@@ -26,7 +26,7 @@ All evaluator files were either read-only inputs or isolated test outputs. No pr
 
 ## Verification and gaps
 
-- Both packaged checker suites: 126 tests each. Their checker and test sources are byte-identical.
+- Initial worker-path revision: 126 tests per packaged checker. The later recursive revision below extends this coverage. Checker and test sources remain byte-identical between the skills.
 - Repository/tool tests, metadata/link validation and migration checks were run; GitHub required checks bind to the PR's exact head.
 - Source ZIP, plugin ZIP, SBOM and checksums were built twice and compared byte-for-byte.
 - The worker ledger bug was reproduced before repair: `--allow-generic-worker` passed setup but was dropped before runtime/provenance verification. Regression tests cover the full CLI route and its negative controls.
@@ -36,3 +36,48 @@ All evaluator files were either read-only inputs or isolated test outputs. No pr
 - Implicit discovery, full two-level hierarchy, live continuation activation attribution, cross-account availability, production research throughput and end-to-end token/latency improvement remain unmeasured. The maintenance checks do not imply those outcomes.
 
 Reproduce the local static and fixture gates using `CONTRIBUTING.md`. The raw requests in `tools/evaluation_cases.json` and the skill's `references/evaluation-cases.md` are the maintained starting points for further behavioral evaluation.
+
+## Recursive revision after the README correction
+
+The user asked to restore the README's concrete multi-team story and make delegation
+flexible beyond root/coordinator/leaf. Baseline: `6d19dd199d0c2c7b154ec6b6a3a084c85b8e41df`.
+Checker `2026-09-05.6` uses a per-run depth limit, transitive grants and an explicit
+mixed-coordinator policy. It does not change the default model policy or grant tools
+to a model that lacks them.
+
+Observed execution:
+
+- A fresh default Luna/max coordinator reported no collaboration namespace and
+  returned its two unstarted descendant grants. No alternate model was substituted.
+- A separate native trial preserved the parent's selected Astra/medium setting and
+  completed depth 1 coordinator -> depth 2 coordinator -> depth 3 terminal reviewer.
+  Root reopened all three completed turns and their actual parent spawn edges.
+  The task was a bounded nonsensitive budget fixture, not a production research run.
+- This establishes that tested native Astra chain. It does not establish recursive
+  Luna execution. An actual Astra-coordinator/Luna-terminal mixed chain has not been
+  executed in this revision; the explicit mixed model policy is covered by CLI fixtures.
+
+Behavioral and code checks:
+
+- A fresh reviewer evaluated an oversubscribed subtree grant, missing Luna spawn
+  tools with a working root route, and explicit Astra/Luna composition. It rejected
+  the over-allocation, kept the Luna-only request flat, and required policy plus
+  runtime/parent/depth/collection checks for mixed acceptance. These were decisions,
+  not live scenario execution.
+- Recursive fixtures cover depth 3/4, transitive budget inflation, missing delegation,
+  false roots, depth jumps, premature collection and actual/declarative depth mismatch.
+- Mixed CLI fixtures cover permitted coordination, missing opt-in, terminal-model
+  escape attempts, unknown policy, conflicting policy placement and full-history routes.
+- Root's grant-return regression preserves the failed coordinator's spent attempt,
+  revises only its unused grant, and reassigns never-started slots before flattening.
+  Reducing a grant below existing descendant commitments remains invalid.
+- The independent review found that collection wording exceeded the checker's
+  guarantee. Documentation now distinguishes ledger set/order validation from the
+  root's inspection of actual received messages and artifacts.
+- Plugin packaging retains the README diagram and supporting documents and maps
+  its local skill links to the plugin layout. The source README is unchanged by build.
+
+The recursive revision has 151 tests per checker and 29 repository/tool tests.
+These counts include synthetic cases and are not independent real-world outcomes.
+The diagram describes an example work graph; per-level capabilities, model choice,
+budget and authority still determine what can execute.

@@ -103,7 +103,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help=(
             "Explicitly opt in to the built-in worker role; requires a fresh "
-            "route with explicit model=gpt-5.6-luna and reasoning_effort=max."
+            "route with explicit model/effort matching the selected role policy "
+            "(Luna/max for terminal specialists)."
         ),
     )
     parser.add_argument(
@@ -298,7 +299,7 @@ def validate_role_policy(
             errors.append("generic worker mode must not pretend a custom TOML definition exists")
         warnings.append(
             "generic worker mode is explicitly enabled; runtime and parent provenance "
-            "must prove exact Luna/max fields"
+            "must prove the exact selected model/effort"
         )
         return errors, warnings
     if role_name == "worker" and not allow_generic_worker:
