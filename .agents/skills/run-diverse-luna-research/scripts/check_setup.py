@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 EXPECTED_MODEL = "gpt-5.6-luna"
 EXPECTED_REASONING_EFFORT = "max"
-CHECKER_CONTRACT_VERSION = "2026-09-05.5"
+CHECKER_CONTRACT_VERSION = "2026-09-05.6"
 MIN_CONCURRENT_THREADS = 2
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
@@ -105,6 +105,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "Explicitly opt in to the built-in worker role; requires a fresh "
             "route with explicit model=gpt-5.6-luna and reasoning_effort=max."
         ),
+    )
+    parser.add_argument(
+        "--allow-mixed-coordinators", action="store_true",
+        help="Explicitly allow the v2 ledger coordinator_model_policy for logical coordinators only; leaves remain Luna/max.",
     )
     parser.add_argument(
         "--spawn-schema-json",
@@ -917,7 +921,52 @@ def _access_errors(
     return errors
 
 
-def _accepted_runtime_errors(prefix: str, row: dict[str, Any]) -> list[str]:
+def _coordinator_policy(ledger: dict[str, Any]) -> tuple[tuple[str, str], list[str]]:
+    """Validate an explicit, bounded model policy, never infer one from row claims."""
+    default = (EXPECTED_MODEL, EXPECTED_REASONING_EFFORT)
+    tree = ledger.get("tree")
+    if isinstance(tree, dict) and "coordinator_model_policy" in tree:
+        return default, ["coordinator_model_policy must be declared only at ledger top level"]
+    rows, _ = _resolve_assignment_rows(ledger)
+    if any(isinstance(row, dict) and "coordinator_model_policy" in row for row in rows):
+        return default, ["coordinator_model_policy must be declared only at ledger top level"]
+    if "coordinator_model_policy" not in ledger:
+        return default, []
+    policy = ledger["coordinator_model_policy"]
+    supported = {
+        "gpt-6-astra": {"low", "medium", "high", "xhigh", "max", "ultra"},
+        EXPECTED_MODEL: {EXPECTED_REASONING_EFFORT},
+    }
+    if ledger.get("version") != 2:
+        return default, ["coordinator_model_policy requires ledger version 2"]
+    if not isinstance(policy, dict) or set(policy) != {"model", "reasoning_effort"}:
+        return default, ["coordinator_model_policy requires exactly model and reasoning_effort"]
+    model, effort = policy.get("model"), policy.get("reasoning_effort")
+    if not isinstance(model, str) or model not in supported or not isinstance(effort, str) or effort not in supported[model]:
+        return default, ["coordinator_model_policy has unknown model or unsupported reasoning_effort"]
+    return (model, effort), []
+
+
+def _logical_coordinator(row: dict[str, Any]) -> bool:
+    roles = {"coordinator", "research_coordinator", "luna_project_coordinator"}
+    return row.get("role", row.get("kind")) in roles and row.get("kind") in (None, "coordinator")
+
+
+def _row_runtime_policy(ledger: dict[str, Any], row: dict[str, Any], allow_mixed_coordinators: bool) -> tuple[str, str, list[str]]:
+    policy, errors = _coordinator_policy(ledger)
+    if not _logical_coordinator(row):
+        return EXPECTED_MODEL, EXPECTED_REASONING_EFFORT, errors
+    if policy != (EXPECTED_MODEL, EXPECTED_REASONING_EFFORT):
+        if not allow_mixed_coordinators:
+            errors.append("non-Luna coordinator acceptance requires --allow-mixed-coordinators")
+        if row.get("may_spawn_descendants") is not True:
+            errors.append("mixed coordinator acceptance requires explicit may_spawn_descendants=true")
+        if not isinstance(row.get("planned_child_attempt_ids"), list) or not row["planned_child_attempt_ids"]:
+            errors.append("mixed coordinator acceptance requires delegated child assignments")
+    return *policy, errors
+
+
+def _accepted_runtime_errors(prefix: str, row: dict[str, Any], expected_model: str = EXPECTED_MODEL, expected_effort: str = EXPECTED_REASONING_EFFORT) -> list[str]:
     errors: list[str] = []
     if row.get("runtime_verified") is not True or not _canonical_uuid(row.get("thread_uuid")):
         errors.append(
@@ -926,14 +975,14 @@ def _accepted_runtime_errors(prefix: str, row: dict[str, Any]) -> list[str]:
     for key in ("thread_uuid", "runtime_turn", "parent_thread_uuid"):
         if not _canonical_uuid(row.get(key)):
             errors.append(f"{prefix}: accepted result requires a {key} UUID")
-    if row.get("runtime_model") != EXPECTED_MODEL:
+    if row.get("runtime_model") != expected_model:
         errors.append(
-            f"{prefix}: accepted runtime_model must be {EXPECTED_MODEL!r}"
+            f"{prefix}: accepted runtime_model must be {expected_model!r}"
         )
-    if row.get("runtime_effort") != EXPECTED_REASONING_EFFORT:
+    if row.get("runtime_effort") != expected_effort:
         errors.append(
             f"{prefix}: accepted runtime_effort must be "
-            f"{EXPECTED_REASONING_EFFORT!r}"
+            f"{expected_effort!r}"
         )
     if not isinstance(row.get("agent_role"), str) or not row["agent_role"].strip():
         errors.append(f"{prefix}: accepted result requires agent_role")
@@ -1008,7 +1057,7 @@ def _resolve_assignment_rows(ledger: dict[str, Any]) -> tuple[list[Any], list[st
     return rows, []
 
 
-def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, configured_cap: int | None = None) -> tuple[list[str], list[str]]:
+def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, configured_cap: int | None = None, allow_mixed_coordinators: bool = False) -> tuple[list[str], list[str]]:
     """Validate the v2 machine-readable root/coordinator/leaf tree contract.
 
     The v2 format intentionally keeps the row list compatible with v1 (``assignments``)
@@ -1020,6 +1069,9 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
     prefix = "project ledger" if project else "research ledger"
     tree = ledger.get("tree") if isinstance(ledger.get("tree"), dict) else ledger
     phase = tree.get("phase", ledger.get("phase"))
+    errors.extend(_coordinator_policy(ledger)[1])
+    if tree is not ledger and "coordinator_model_policy" in tree:
+        errors.append("coordinator_model_policy must be declared only at ledger top level")
     if tree is not ledger:
         for key in ("phase", "closure_status"):
             if key in tree and key in ledger and tree.get(key) != ledger.get(key):
@@ -1111,6 +1163,10 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
     for i, row in enumerate(rows):
         if not isinstance(row, dict) or not isinstance(row.get("attempt_id"), str): continue
         aid = row["attempt_id"]; pfx = f"tree attempts[{i}]"
+        if "coordinator_model_policy" in row:
+            errors.append(f"{pfx}: coordinator_model_policy must be declared only at ledger top level")
+        if (row.get("role") in {"coordinator", "research_coordinator", "luna_project_coordinator"} or row.get("kind") == "coordinator") and not _logical_coordinator(row):
+            errors.append(f"{pfx}: coordinator role conflicts with terminal assignment kind")
         depth = row.get("depth")
         if not isinstance(depth, int) or isinstance(depth, bool) or depth < 1 or (valid_depth_limit and depth > max_depth):
             errors.append(f"{pfx}.depth must be 1..max_workflow_depth")
@@ -1219,7 +1275,9 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         acceptance = row.get("acceptance_status")
         if status in allowed_accept and acceptance not in allowed_accept[status]: errors.append(f"{pfx}: invalid state transition {status}->{acceptance}")
         if acceptance == "accepted":
-            errors.extend(_accepted_runtime_errors(pfx, row))
+            expected_model, expected_effort, policy_errors = _row_runtime_policy(ledger, row, allow_mixed_coordinators)
+            errors.extend(f"{pfx}: {error}" for error in policy_errors)
+            errors.extend(_accepted_runtime_errors(pfx, row, expected_model, expected_effort))
             if project and kind == "verifier":
                 errors.extend(_verifier_result_errors(pfx, row))
         if status in {"timed_out", "abandoned"} and acceptance == "accepted": errors.append(f"{pfx}: late completion after timeout cannot be accepted")
@@ -1915,7 +1973,7 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
 
 
 def validate_research_ledger(
-    path: Path, configured_cap: int | None = None
+    path: Path, configured_cap: int | None = None, allow_mixed_coordinators: bool = False
 ) -> tuple[list[str], list[str]]:
     try:
         with path.open("r", encoding="utf-8") as handle:
@@ -1932,8 +1990,9 @@ def validate_research_ledger(
         errors.append("research ledger.ledger_type must be 'research' when present")
     if ledger.get("version") == 2:
         return _validate_tree_ledger(
-            ledger, project=False, configured_cap=configured_cap
+            ledger, project=False, configured_cap=configured_cap, allow_mixed_coordinators=allow_mixed_coordinators
         )
+    errors.extend(_coordinator_policy(ledger)[1])
     if ledger.get("version") != 1:
         errors.append(f"ledger.version must be 1, got {ledger.get('version')!r}")
     phase = ledger.get("phase")
@@ -2199,7 +2258,7 @@ def _validate_project_gates(ledger: dict[str, Any]) -> list[str]:
     return errors
 
 
-def validate_project_ledger(path: Path, configured_cap: int | None = None) -> tuple[list[str], list[str]]:
+def validate_project_ledger(path: Path, configured_cap: int | None = None, allow_mixed_coordinators: bool = False) -> tuple[list[str], list[str]]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             ledger = json.load(handle)
@@ -2214,10 +2273,11 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None) -> tu
         errors.append("project ledger.ledger_type must be 'project'")
     if ledger.get("version") == 2:
         tree_errors, tree_warnings = _validate_tree_ledger(
-            ledger, project=True, configured_cap=configured_cap
+            ledger, project=True, configured_cap=configured_cap, allow_mixed_coordinators=allow_mixed_coordinators
         )
         tree_errors.extend(_validate_project_v2_contract(ledger))
         return [*errors, *tree_errors], tree_warnings
+    errors.extend(_coordinator_policy(ledger)[1])
     if ledger.get("version") != 1:
         errors.append(f"project ledger.version must be 1, got {ledger.get('version')!r}")
     phase = ledger.get("phase")
@@ -2486,7 +2546,7 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None) -> tu
     return errors, warnings
 
 
-def validate_assignment_ledger(path: Path, configured_cap: int | None = None) -> tuple[list[str], list[str]]:
+def validate_assignment_ledger(path: Path, configured_cap: int | None = None, allow_mixed_coordinators: bool = False) -> tuple[list[str], list[str]]:
     try:
         with path.open("r", encoding="utf-8") as handle:
             ledger = json.load(handle)
@@ -2495,8 +2555,8 @@ def validate_assignment_ledger(path: Path, configured_cap: int | None = None) ->
     if not isinstance(ledger, dict):
         return ["assignment ledger must be a JSON object"], []
     if ledger.get("ledger_type", "research") == "project":
-        return validate_project_ledger(path, configured_cap=configured_cap)
-    return validate_research_ledger(path, configured_cap=configured_cap)
+        return validate_project_ledger(path, configured_cap=configured_cap, allow_mixed_coordinators=allow_mixed_coordinators)
+    return validate_research_ledger(path, configured_cap=configured_cap, allow_mixed_coordinators=allow_mixed_coordinators)
 
 
 def validate_runtime_rollout(
@@ -2507,6 +2567,8 @@ def validate_runtime_rollout(
     allow_generic_worker: bool = False,
     require_initial_turn: bool = False,
     require_v2: bool = False,
+    expected_model: str = EXPECTED_MODEL,
+    expected_effort: str = EXPECTED_REASONING_EFFORT,
 ) -> tuple[list[str], list[str]]:
     latest_context: tuple[int, dict[str, Any]] | None = None
     first_context_line: int | None = None
@@ -2674,12 +2736,12 @@ def validate_runtime_rollout(
 
     model = selected_context.get("model")
     effort = selected_context.get("effort")
-    if model != EXPECTED_MODEL:
-        errors.append(f"runtime model must be {EXPECTED_MODEL!r}, got {model!r}")
-    if effort != EXPECTED_REASONING_EFFORT:
+    if model != expected_model:
+        errors.append(f"runtime model must be {expected_model!r}, got {model!r}")
+    if effort != expected_effort:
         errors.append(
             "runtime reasoning effort must be "
-            f"{EXPECTED_REASONING_EFFORT!r}, got {effort!r}"
+            f"{expected_effort!r}, got {effort!r}"
         )
 
     sandbox = _sandbox_name(selected_context)
@@ -2925,6 +2987,8 @@ def validate_spawn_provenance(
     role_name: str,
     expected_call_id: str | None = None,
     allow_generic_worker: bool = False,
+    expected_model: str = EXPECTED_MODEL,
+    expected_effort: str = EXPECTED_REASONING_EFFORT,
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -3023,23 +3087,23 @@ def validate_spawn_provenance(
     if role_name == "worker" and not allow_generic_worker:
         errors.append("generic worker provenance requires --allow-generic-worker")
     if role_name == "worker" and allow_generic_worker:
-        if explicit_model != EXPECTED_MODEL:
+        if explicit_model != expected_model:
             errors.append(
                 "generic worker spawn request must explicitly set model="
-                f"{EXPECTED_MODEL!r}"
+                f"{expected_model!r}"
             )
-        if explicit_effort != EXPECTED_REASONING_EFFORT:
+        if explicit_effort != expected_effort:
             errors.append(
                 "generic worker spawn request must explicitly set reasoning_effort="
-                f"{EXPECTED_REASONING_EFFORT!r}"
+                f"{expected_effort!r}"
             )
-    if explicit_model is not None and explicit_model != EXPECTED_MODEL:
+    if explicit_model is not None and explicit_model != expected_model:
         errors.append(
-            f"spawn request model conflicts with Luna policy: {explicit_model!r}"
+            f"spawn request model conflicts with expected policy {expected_model!r}: {explicit_model!r}"
         )
-    if explicit_effort is not None and explicit_effort != EXPECTED_REASONING_EFFORT:
+    if explicit_effort is not None and explicit_effort != expected_effort:
         errors.append(
-            "spawn request reasoning_effort conflicts with max policy: "
+            f"spawn request reasoning_effort conflicts with expected policy {expected_effort!r}: "
             f"{explicit_effort!r}"
         )
 
@@ -3062,6 +3126,7 @@ def validate_ledger_receipts(
     codex_home: Path,
     require_v2: bool = False,
     allow_generic_worker: bool = False,
+    allow_mixed_coordinators: bool = False,
 ) -> tuple[list[str], list[str]]:
     try:
         with path.open("r", encoding="utf-8") as handle:
@@ -3083,6 +3148,10 @@ def validate_ledger_receipts(
     }
     for index, row in enumerate(assignments):
         if not isinstance(row, dict) or row.get("acceptance_status") != "accepted":
+            continue
+        expected_model, expected_effort, policy_errors = _row_runtime_policy(ledger, row, allow_mixed_coordinators)
+        if policy_errors:
+            errors.extend(f"assignments[{index}]: {value}" for value in policy_errors)
             continue
         thread_id = row.get("thread_uuid")
         turn_id = row.get("runtime_turn")
@@ -3183,6 +3252,8 @@ def validate_ledger_receipts(
             or row.get("kind") == "coordinator"
         )
         if is_coordinator:
+            if expected_model != EXPECTED_MODEL and not actual_spawn_call_ids:
+                errors.append(f"assignments[{index}]: mixed coordinator has no actual delegated spawn")
             if actual_spawn_call_ids and row.get("may_spawn_descendants") is not True:
                 errors.append(f"assignments[{index}]: actual spawning requires explicit delegation")
             attempt_id = row.get("attempt_id")
@@ -3192,6 +3263,8 @@ def validate_ledger_receipts(
                 if isinstance(child, dict)
                 and child.get("parent_attempt_id") == attempt_id
             ]
+            if expected_model != EXPECTED_MODEL and set(row.get("planned_child_attempt_ids", [])) != {child.get("attempt_id") for child in child_rows}:
+                errors.append(f"assignments[{index}]: mixed coordinator planned children do not match delegated rows")
             expected_spawn_call_ids = {
                 child.get("delegated_by", {}).get("parent_call_id")
                 for child in child_rows
@@ -3228,6 +3301,7 @@ def validate_ledger_receipts(
             allow_generic_worker=allow_generic_worker,
             require_initial_turn=True,
             require_v2=require_v2,
+            expected_model=expected_model, expected_effort=expected_effort,
         )
         errors.extend(f"assignments[{index}]: {value}" for value in receipt_errors)
         warnings.extend(f"assignments[{index}]: {value}" for value in receipt_warnings)
@@ -3237,6 +3311,7 @@ def validate_ledger_receipts(
             role,
             parent_call_id,
             allow_generic_worker=allow_generic_worker,
+            expected_model=expected_model, expected_effort=expected_effort,
         )
         errors.extend(
             f"assignments[{index}]: {value}" for value in provenance_errors
@@ -3297,7 +3372,8 @@ def main(argv: list[str] | None = None) -> int:
             if isinstance(raw_cap, int) and not isinstance(raw_cap, bool):
                 configured_cap = raw_cap
         ledger_errors, ledger_warnings = validate_assignment_ledger(
-            args.ledger_json.expanduser().resolve(), configured_cap=configured_cap
+            args.ledger_json.expanduser().resolve(), configured_cap=configured_cap,
+            allow_mixed_coordinators=args.allow_mixed_coordinators
         )
         errors.extend(ledger_errors)
         warnings.extend(ledger_warnings)
@@ -3306,6 +3382,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.ledger_json.expanduser().resolve(), codex_home,
                 require_v2=args.require_v2,
                 allow_generic_worker=args.allow_generic_worker,
+                allow_mixed_coordinators=args.allow_mixed_coordinators,
             )
             errors.extend(receipt_errors)
             warnings.extend(receipt_warnings)
@@ -3376,7 +3453,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        "READY: skill-local Luna/max routing policy passed the available checks."
+        "READY: selected routing policies passed the available checks; terminal workers remain Luna/max."
     )
     print(
         "REQUIRED: select one complete live non-history route; do not combine "

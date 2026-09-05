@@ -1717,6 +1717,145 @@ class RecursiveTreeTests(unittest.TestCase):
             self.assertTrue(any("runtime parent depth" in e for e in CHECK.validate_ledger_receipts(lp, home)[0]))
 
 
+
+class MixedCoordinatorCLITests(unittest.TestCase):
+    def run_case(self, *, mixed=True, worker=True, policy_model="gpt-6-astra",
+                 policy_effort="max", coordinator_model="gpt-6-astra",
+                 actual_coordinator_model=None, leaf_model="gpt-5.6-luna",
+                 actual_leaf_model=None, pin=True, nested=False, conflicting_kind=False,
+                 coordinator_effort="max", actual_effort=None, spawn_effort=None, fork="none"):
+        import contextlib
+        import io
+        rows = TreeV2Tests()._valid_rows()
+        coord = rows[0]
+        coord.update(agent_role="worker", runtime_model=coordinator_model, runtime_effort=coordinator_effort)
+        root_id = coord["parent_thread_uuid"]
+        for index, row in enumerate(rows[1:], 1):
+            row.update(thread_uuid=str(uuid.uuid4()), runtime_turn=str(uuid.uuid4()),
+                       parent_thread_uuid=coord["thread_uuid"], parent_call_id=f"call-{index}",
+                       agent_role="worker", spawn_kind="spawn_agent", runtime_model=leaf_model,
+                       runtime_effort="max")
+        rows[1].update(acceptance_status="accepted", runtime_verified=True, safety_enforcement="prompt_only")
+        if conflicting_kind:
+            coord["kind"] = "evidence_lane"
+        ledger = TreeV2Tests()._ledger(rows)
+        policy = {"model": policy_model, "reasoning_effort": policy_effort}
+        if nested:
+            ledger["tree"] = {"coordinator_model_policy": policy}
+        else:
+            ledger["coordinator_model_policy"] = policy
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp) / "home"
+            sessions = home / "sessions"
+            sessions.mkdir(parents=True)
+            workspace = Path(temp) / "workspace"
+            workspace.mkdir()
+            (home / "config.toml").write_text("[agents]\nenabled=true\nmax_concurrent_threads_per_session=4\n", encoding="utf-8")
+            def spawn(child, call, model):
+                arguments = {"task_name": "test_assignment", "message": "bounded assignment",
+                             "agent_type": "worker", "fork_turns": fork,
+                             "reasoning_effort": (spawn_effort or coordinator_effort) if child == coord["thread_uuid"] else "max"}
+                if pin:
+                    arguments["model"] = model
+                return [
+                    {"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent",
+                        "call_id": call, "arguments": json.dumps(arguments)}},
+                    {"type": "response_item", "payload": {"type": "function_call_output", "call_id": call,
+                        "output": json.dumps({"agent_id": child})}}]
+            root = [{"type": "session_meta", "payload": {"id": root_id}}]
+            root.extend(spawn(coord["thread_uuid"], "root-call", coordinator_model))
+            write_jsonl(sessions / f"rollout-{root_id}.jsonl", root)
+            records = rollout_records(coord["thread_uuid"], coord["runtime_turn"], role="worker", parent_id=root_id)
+            records[1]["payload"]["model"] = actual_coordinator_model or coordinator_model
+            records[1]["payload"]["effort"] = actual_effort or coordinator_effort
+            completion = records.pop()
+            for row in rows[1:]:
+                records.extend(spawn(row["thread_uuid"], row["parent_call_id"], leaf_model))
+            records.append(completion)
+            write_jsonl(sessions / f"rollout-{coord['thread_uuid']}.jsonl", records)
+            leaf = rows[1]
+            records = rollout_records(leaf["thread_uuid"], leaf["runtime_turn"], role="worker", parent_id=coord["thread_uuid"])
+            records[0]["payload"]["source"]["subagent"]["thread_spawn"]["depth"] = 2
+            records[1]["payload"]["model"] = actual_leaf_model or leaf_model
+            write_jsonl(sessions / f"rollout-{leaf['thread_uuid']}.jsonl", records)
+            path = Path(temp) / "ledger.json"
+            write_json(path, ledger)
+            argv = ["--codex-home", str(home), "--workspace", str(workspace), "--agent-role", "worker",
+                    "--ledger-json", str(path), "--verify-ledger-receipts"]
+            if mixed:
+                argv.append("--allow-mixed-coordinators")
+            if worker:
+                argv.append("--allow-generic-worker")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code = CHECK.main(argv)
+            return code, output.getvalue()
+
+    def test_mixed_coordinator_to_luna_leaf_cli(self):
+        code, output = self.run_case()
+        self.assertEqual(code, 0, output)
+        self.assertIn("accepted runtime receipts passed revalidation", output)
+        self.assertIn("model=gpt-6-astra", output)
+        self.assertIn("model=gpt-5.6-luna", output)
+
+    def test_mixed_coordinator_refused_by_default(self):
+        code, output = self.run_case(mixed=False)
+        self.assertNotEqual(code, 0)
+        self.assertIn("--allow-mixed-coordinators", output)
+
+    def test_mixed_worker_still_requires_both_flags_and_explicit_pins(self):
+        for kwargs, expected in (({"worker": False}, "allow-generic-worker"), ({"pin": False}, "must explicitly set model")):
+            code, output = self.run_case(**kwargs)
+            self.assertNotEqual(code, 0)
+            self.assertIn(expected, output)
+
+    def test_mixed_policy_never_relaxes_leaf_model(self):
+        for kwargs in ({"leaf_model": "gpt-6-astra"}, {"actual_leaf_model": "gpt-6-astra"}):
+            code, output = self.run_case(**kwargs)
+            self.assertNotEqual(code, 0)
+            self.assertIn("must be 'gpt-5.6-luna'", output)
+
+    def test_mixed_policy_runtime_mismatch(self):
+        code, output = self.run_case(actual_coordinator_model="gpt-5.6-luna")
+        self.assertNotEqual(code, 0)
+        self.assertIn("runtime model must be 'gpt-6-astra'", output)
+
+    def test_mixed_exact_effort_and_fresh_context_still_required(self):
+        code, output = self.run_case(policy_effort="high", coordinator_effort="high")
+        self.assertEqual(code, 0, output)
+        for kwargs, expected in (
+            ({"policy_effort": "high", "coordinator_effort": "high", "actual_effort": "max"}, "runtime reasoning effort"),
+            ({"spawn_effort": "high"}, "reasoning_effort"),
+            ({"fork": "all"}, "fork_turns")):
+            code, output = self.run_case(**kwargs)
+            self.assertNotEqual(code, 0)
+            self.assertIn(expected, output)
+
+    def test_mixed_unknown_policy_and_nested_alias_rejected(self):
+        for kwargs in ({"policy_model": "unknown"}, {"policy_effort": "none"}, {"nested": True}):
+            code, output = self.run_case(**kwargs)
+            self.assertNotEqual(code, 0)
+            self.assertIn("coordinator_model_policy", output)
+
+    def test_mixed_coordinator_cannot_disguise_terminal_kind(self):
+        code, output = self.run_case(conflicting_kind=True)
+        self.assertNotEqual(code, 0)
+        self.assertIn("coordinator role conflicts", output)
+
+    def test_mixed_planning_can_describe_policy_without_opt_in(self):
+        ledger = RecursiveTreeTests().recursive(3)
+        ledger["coordinator_model_policy"] = {"model": "gpt-6-astra", "reasoning_effort": "high"}
+        self.assertEqual(CHECK._validate_tree_ledger(ledger)[0], [])
+
+    def test_mixed_exact_policy_keys_and_row_alias_rejected(self):
+        ledger = RecursiveTreeTests().recursive(3)
+        ledger["coordinator_model_policy"] = {"model": "gpt-6-astra", "reasoning_effort": "max", "fallback": True}
+        self.assertTrue(any("exactly" in e for e in CHECK._validate_tree_ledger(ledger)[0]))
+        ledger.pop("coordinator_model_policy")
+        ledger["assignments"][1]["coordinator_model_policy"] = {"model": "gpt-6-astra", "reasoning_effort": "max"}
+        self.assertTrue(any("top level" in e for e in CHECK._validate_tree_ledger(ledger)[0]))
+
+
 class V5FailureInjectionTests(unittest.TestCase):
     def base(self, **kw):
         root_thread = str(uuid.uuid4())
