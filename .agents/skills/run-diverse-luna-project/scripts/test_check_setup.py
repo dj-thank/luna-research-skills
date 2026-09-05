@@ -1066,6 +1066,68 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(receipt_errors, [])
 
 
+class WorkerLedgerIntegrationTests(unittest.TestCase):
+    def _run(self, *, opt_in=True, explicit_model="gpt-5.6-luna"):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp) / "codex-home"
+            sessions = home / "sessions" / "test"
+            sessions.mkdir(parents=True)
+            workspace = Path(temp) / "workspace"
+            workspace.mkdir()
+            (home / "config.toml").write_text(
+                "[agents]\nenabled = true\nmax_concurrent_threads_per_session = 4\n",
+                encoding="utf-8")
+            child, parent, turn = (str(uuid.uuid4()) for _ in range(3))
+            write_jsonl(sessions / f"rollout-{child}.jsonl",
+                        rollout_records(child, turn, role="worker", parent_id=parent))
+            arguments = {"task_name":"test_assignment", "message":"public source cell",
+                         "agent_type":"worker", "fork_turns":"none",
+                         "reasoning_effort":"max"}
+            if explicit_model is not None:
+                arguments["model"] = explicit_model
+            write_jsonl(sessions / f"rollout-{parent}.jsonl", [
+                {"type":"session_meta", "payload":{"id":parent}},
+                {"type":"response_item", "payload":{"type":"function_call", "name":"spawn_agent",
+                 "call_id":"call-test", "arguments":json.dumps(arguments)}},
+                {"type":"response_item", "payload":{"type":"function_call_output", "call_id":"call-test",
+                 "output":json.dumps({"agent_id":child})}},
+            ])
+            row = assignment("R-01", "primary", status="completed", acceptance="accepted",
+                             runtime_verified=True, thread_uuid=child)
+            row.update(runtime_turn=turn, parent_thread_uuid=parent, agent_role="worker")
+            ledger = {"version":1, "phase":"synthesis", "N":3,
+                      "overall_deadline":"2026-08-16T12:00:00+09:00", "assignments":[row,
+                assignment("R-02", "adversarial", status="failed", acceptance="excluded", gap_reason="No source"),
+                assignment("R-03", "measurement_gap", status="failed", acceptance="excluded", gap_reason="No data")]}
+            ledger_path=Path(temp)/"ledger.json"
+            write_json(ledger_path,ledger)
+            argv=["--codex-home",str(home),"--workspace",str(workspace),"--agent-role","worker",
+                  "--ledger-json",str(ledger_path),"--verify-ledger-receipts"]
+            if opt_in:argv.append("--allow-generic-worker")
+            output=io.StringIO()
+            with contextlib.redirect_stdout(output):
+                code=CHECK.main(argv)
+            return code,output.getvalue()
+
+    def test_worker_opt_in_reaches_final_ledger_verification(self):
+        code,output=self._run()
+        self.assertEqual(code,0,output)
+        self.assertIn("accepted runtime receipts passed revalidation",output)
+        self.assertNotIn("NEXT: verify a completed probe",output)
+
+    def test_worker_final_verification_requires_opt_in(self):
+        code,output=self._run(opt_in=False)
+        self.assertNotEqual(code,0)
+        self.assertIn("allow-generic-worker",output)
+
+    def test_worker_final_verification_still_requires_explicit_model(self):
+        code,output=self._run(explicit_model=None)
+        self.assertNotEqual(code,0)
+        self.assertIn("must explicitly set model",output)
+
+
 class ProjectLedgerTests(unittest.TestCase):
     def test_project_planning_ledger_passes(self) -> None:
         ledger = {

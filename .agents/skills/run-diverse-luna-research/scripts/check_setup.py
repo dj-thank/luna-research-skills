@@ -16,7 +16,7 @@ from typing import Any, Iterable
 
 EXPECTED_MODEL = "gpt-5.6-luna"
 EXPECTED_REASONING_EFFORT = "max"
-CHECKER_CONTRACT_VERSION = "2026-09-05.3"
+CHECKER_CONTRACT_VERSION = "2026-09-05.4"
 MIN_CONCURRENT_THREADS = 2
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
@@ -3030,6 +3030,7 @@ def validate_ledger_receipts(
     path: Path,
     codex_home: Path,
     require_v2: bool = False,
+    allow_generic_worker: bool = False,
 ) -> tuple[list[str], list[str]]:
     try:
         with path.open("r", encoding="utf-8") as handle:
@@ -3174,6 +3175,7 @@ def validate_ledger_receipts(
             role,
             row.get("access_mode") == "sandbox_read_only",
             turn_id,
+            allow_generic_worker=allow_generic_worker,
             require_initial_turn=True,
             require_v2=require_v2,
         )
@@ -3184,6 +3186,7 @@ def validate_ledger_receipts(
             rollout,
             role,
             parent_call_id,
+            allow_generic_worker=allow_generic_worker,
         )
         errors.extend(
             f"assignments[{index}]: {value}" for value in provenance_errors
@@ -3250,7 +3253,9 @@ def main(argv: list[str] | None = None) -> int:
         warnings.extend(ledger_warnings)
         if args.verify_ledger_receipts and not ledger_errors:
             receipt_errors, receipt_warnings = validate_ledger_receipts(
-                args.ledger_json.expanduser().resolve(), codex_home, require_v2=args.require_v2
+                args.ledger_json.expanduser().resolve(), codex_home,
+                require_v2=args.require_v2,
+                allow_generic_worker=args.allow_generic_worker,
             )
             errors.extend(receipt_errors)
             warnings.extend(receipt_warnings)
@@ -3331,7 +3336,9 @@ def main(argv: list[str] | None = None) -> int:
         "NOTE: task names, nicknames, prompts, and static configuration are not "
         "completed runtime evidence."
     )
-    if runtime_path is None:
+    if args.verify_ledger_receipts:
+        print("VERIFIED: supplied ledger and its accepted runtime receipts passed revalidation.")
+    elif runtime_path is None:
         print(
             "NEXT: verify a completed probe with --runtime-thread "
             "<child-thread-uuid>; add --require-read-only only for non-external "
