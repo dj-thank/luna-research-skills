@@ -8,6 +8,8 @@ Keep one UTF-8 JSON ledger for every project run. It is the machine-readable bou
 
 ## Required top-level fields
 
+For peer-assisted runs, add the optional `collaboration` record defined in [peer-collaboration.md](peer-collaboration.md). Complete closure must resolve or explicitly defer every tracked issue. The checker checks the record; root reopens messages and verifies the final artifact hash. Runs without peer interaction retain the existing format.
+
 - `ledger_type`: exactly `project`.
 - `version`: `2`.
 - `phase`: `planning`, `integration`, or `closure`.
