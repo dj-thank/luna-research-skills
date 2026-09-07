@@ -13,7 +13,7 @@ cd luna-research-skills
 
 ## ユーザースコープへ新規導入する
 
-Python 3.11以上を使い、まず変更を伴わないplanを確認します。macOS、Linux、Windowsで同じコマンドを使えます。
+Python 3.11以上を使い、リポジトリまたは展開したsource/plugin ZIPのルートで、まず変更を伴わないplanを確認します。macOS、Linux、Windowsで同じコマンドを使えます。
 
 ```sh
 python tools/install_luna_skills.py
@@ -44,7 +44,7 @@ python tools/install_luna_skills.py --verify --json
 
 - 既定動作はdry-runで、`--apply`がなければディスクを変更しません。
 - 同名の配置先が存在する場合は、ファイル内容にかかわらず上書きしません。
-- sourceとtargetのsymlink、junction、reparse point、非regular file、サイズ上限超過、大小文字だけが異なるpath collisionを拒否します。
+- sourceとtargetの任意symlink、junction、reparse point、非regular file、サイズ上限超過、大小文字だけが異なるpath collisionを拒否します。macOS標準のroot-owned `/etc`・`/tmp`・`/var` aliasだけは、既知の `/private/...` 実体と一致する場合に限り許可します。
 - source bytesを検査時にsnapshotし、各ファイルを新規作成専用で書き込みます。
 - `SKILL.md`は全supporting fileの後に書き込み、途中状態がSkillとして見える時間を最小化します。
 - 途中で失敗した場合、導入器自身が作成し、かつ内容が変わっていないpackageだけを巻き戻します。検出した別プロセスの追加・変更は削除せず、手動確認が必要なpathとして報告します。
@@ -52,7 +52,7 @@ python tools/install_luna_skills.py --verify --json
 
 ## Windowsで移行・詳細検査を行う
 
-PowerShell 7の既存ツールは、旧配置からの移行、journal、staging hash、partial-failure試験を含むWindows向けの詳細経路です。最初にdiscoveryとdry-runを実行します。
+PowerShell 7の既存ツールは、旧配置からの移行、journal、staging hash、partial-failure試験を含むWindows向けの詳細経路です。この経路はGitHubリポジトリまたはsource ZIPから実行し、最初にdiscoveryとdry-runを実行します。
 
 ```powershell
 pwsh -NoProfile -File tools/Test-LunaSkillDiscovery.ps1 -SkillRoot .agents/skills
@@ -73,7 +73,7 @@ pwsh -NoProfile -File tools/Install-LunaSkillsUserScope.ps1 `
 
 Codex cloudでは、このGitHubリポジトリと利用するbranchを環境へ接続し、リポジトリ内の `.agents/skills` を使います。Web調査には環境側のネットワーク設定が必要です。
 
-Releaseのplugin ZIPには2つのSkillが含まれますが、`.codex/agents`のカスタム役割は含まれません。Release assetは同じ版の `SHA256SUMS` と照合してから導入してください。mainは開発中の最新版、Releaseは公開時点を固定したsnapshotです。
+Releaseのplugin ZIPには2つのSkillとPython導入器が含まれますが、`.codex/agents`のカスタム役割とPowerShell移行ツールは含まれません。展開したpluginルートでも導入器が `skills/` を自動検出します。Release assetは同じ版の `SHA256SUMS` と照合してから導入してください。mainは開発中の最新版、Releaseは公開時点を固定したsnapshotです。
 
 ## 更新とトラブルシューティング
 

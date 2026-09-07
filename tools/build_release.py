@@ -111,6 +111,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
         snapshot.append((name, path, source, canonical_release_bytes(name, source)))
     stem = f"luna-skill-v{ver}"
     archive = output / f"{stem}.zip"
+
     def write_archive(path: Path, entries: list[tuple[str, bytes]]) -> None:
         if len(entries) != len({name for name, _ in entries}):
             raise ValueError(f"duplicate archive entry in {path.name}")
@@ -121,6 +122,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
                 info.create_system = 3
                 info.external_attr = 0o100644 << 16
                 zf.writestr(info, data)
+
     write_archive(archive, [(name, data) for name, _, _, data in snapshot])
     plugin_name = f"luna-hierarchical-skills-{ver}-plugin.zip"
     plugin_entries: list[tuple[str, bytes]] = []
@@ -159,7 +161,12 @@ def build(root: Path, output: Path) -> dict[str, Path]:
             # Repository and plugin skill roots differ; keep rendered local links usable.
             plugin_entries.append((name, data.replace(b"](.agents/skills/", b"](skills/")))
         elif name.startswith("docs/") or name in {
-            "LICENSE", "SECURITY.md", "CONTRIBUTING.md", "CHANGELOG.md", "tools/MIGRATION.md"
+            "CHANGELOG.md",
+            "CONTRIBUTING.md",
+            "LICENSE",
+            "SECURITY.md",
+            "tools/MIGRATION.md",
+            "tools/install_luna_skills.py",
         }:
             plugin_entries.append((name, data))
     plugin_archive = output / plugin_name

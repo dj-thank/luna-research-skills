@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -21,10 +22,17 @@ class ReleaseBuilderTests(unittest.TestCase):
             readme = "![Teams](docs/assets/teams.png)\n[Skill](.agents/skills/demo/SKILL.md)\n[Migration](tools/MIGRATION.md)\n[Development](CONTRIBUTING.md)\n"
             (root / "README.md").write_text(readme, encoding="utf-8")
             files = {
-                ".agents/skills/demo/SKILL.md": b"skill",
+                ".agents/skills/demo/SKILL.md": (
+                    b"---\nname: demo\n"
+                    b'description: "Install the demo skill."\n'
+                    b"---\n\nDemo instructions.\n"
+                ),
                 "docs/assets/teams.png": b"\x89PNG\r\n\x1a\nfixture",
                 "docs/evaluation.md": b"bounded evaluation",
                 "tools/MIGRATION.md": b"migration procedure",
+                "tools/install_luna_skills.py": (
+                    Path(__file__).with_name("install_luna_skills.py").read_bytes()
+                ),
                 "CONTRIBUTING.md": b"development procedure",
                 "CHANGELOG.md": b"changes",
                 ".codex/agents/demo.toml": b"custom agent intentionally excluded",
@@ -36,10 +44,51 @@ class ReleaseBuilderTests(unittest.TestCase):
             outputs = build(root, Path(temp) / "out")
             with zipfile.ZipFile(outputs["plugin"]) as plugin:
                 self.assertEqual(plugin.read("docs/assets/teams.png"), files["docs/assets/teams.png"])
-                for name in ("docs/evaluation.md", "tools/MIGRATION.md", "CONTRIBUTING.md", "CHANGELOG.md"):
+                for name in (
+                    "docs/evaluation.md",
+                    "tools/MIGRATION.md",
+                    "tools/install_luna_skills.py",
+                    "CONTRIBUTING.md",
+                    "CHANGELOG.md",
+                ):
                     self.assertIn(name, plugin.namelist())
+                self.assertEqual(
+                    plugin.read("tools/install_luna_skills.py"),
+                    files["tools/install_luna_skills.py"],
+                )
                 self.assertIn("[Skill](skills/demo/SKILL.md)", plugin.read("README.md").decode("utf-8"))
                 self.assertNotIn(".codex/agents/demo.toml", plugin.namelist())
+                extracted = Path(temp) / "extracted-plugin"
+                plugin.extractall(extracted)
+
+            target = Path(temp) / "profile" / ".agents" / "skills"
+            command = [
+                sys.executable,
+                str(extracted / "tools" / "install_luna_skills.py"),
+                "--target-root",
+                str(target),
+                "--apply",
+                "--json",
+            ]
+            installed = subprocess.run(
+                command,
+                cwd=extracted,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            self.assertEqual(json.loads(installed.stdout)["status"], "INSTALLED")
+            verified = subprocess.run(
+                command[:4] + ["--verify", "--json"],
+                cwd=extracted,
+                check=True,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+            )
+            self.assertEqual(json.loads(verified.stdout)["status"], "VERIFIED")
+            self.assertTrue((target / "demo" / "SKILL.md").is_file())
             self.assertEqual((root / "README.md").read_text(encoding="utf-8"), readme)
 
     def test_reproducible_archive_and_inventory(self) -> None:

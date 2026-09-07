@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Sequence
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_SOURCE = REPOSITORY_ROOT / ".agents" / "skills"
 DEFAULT_TARGET_ROOT = Path.home() / ".agents" / "skills"
 MAX_SKILLS = 64
 MAX_SOURCE_ROOT_ENTRIES = 256
@@ -22,6 +21,11 @@ MAX_FILE_BYTES = 16 * 1024 * 1024
 MAX_BYTES_PER_SKILL = 128 * 1024 * 1024
 MAX_TOTAL_SOURCE_BYTES = 256 * 1024 * 1024
 WINDOWS_REPARSE_POINT = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400)
+DARWIN_SYSTEM_ALIASES = {
+    Path("/etc"): Path("/private/etc"),
+    Path("/tmp"): Path("/private/tmp"),
+    Path("/var"): Path("/private/var"),
+}
 IGNORED_DIRECTORY_NAMES = {"__pycache__"}
 IGNORED_FILE_SUFFIXES = {".pyc", ".pyo"}
 SKILL_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
@@ -33,6 +37,20 @@ FRONTMATTER = re.compile(
 
 class InstallError(RuntimeError):
     """A predictable validation or installation failure."""
+
+
+def default_source(root: Path = REPOSITORY_ROOT) -> Path:
+    """Select repository layout first, then the installable plugin layout."""
+    repository_source = root / ".agents" / "skills"
+    plugin_source = root / "skills"
+    if os.path.lexists(repository_source):
+        return repository_source
+    if os.path.lexists(plugin_source):
+        return plugin_source
+    return repository_source
+
+
+DEFAULT_SOURCE = default_source()
 
 
 @dataclass(frozen=True)
@@ -81,6 +99,19 @@ def _identity(details: os.stat_result) -> tuple[int | None, int | None]:
     return (getattr(details, "st_dev", None), getattr(details, "st_ino", None))
 
 
+def _is_allowed_platform_alias(path: Path, details: os.stat_result) -> bool:
+    """Allow only macOS's root-owned /etc, /tmp, and /var aliases."""
+    expected = DARWIN_SYSTEM_ALIASES.get(path)
+    if sys.platform != "darwin" or expected is None:
+        return False
+    if not stat.S_ISLNK(details.st_mode) or getattr(details, "st_uid", 0) != 0:
+        return False
+    try:
+        return path.resolve(strict=True) == expected and expected.is_dir()
+    except OSError:
+        return False
+
+
 def _assert_existing_path_chain_is_direct(path: Path, *, label: str) -> None:
     absolute = _absolute(path)
     chain: list[Path] = []
@@ -96,6 +127,8 @@ def _assert_existing_path_chain_is_direct(path: Path, *, label: str) -> None:
             continue
         details = os.lstat(candidate)
         if _is_reparse_or_symlink(candidate, st=details):
+            if _is_allowed_platform_alias(candidate, details):
+                continue
             raise InstallError(
                 f"{label} contains a symlink, junction, or reparse point: {candidate}"
             )
@@ -114,8 +147,9 @@ def _assert_directory(path: Path, *, label: str) -> None:
 
 
 def _is_within(candidate: Path, parent: Path) -> bool:
-    candidate_norm = os.path.normcase(os.path.normpath(os.fspath(_absolute(candidate))))
-    parent_norm = os.path.normcase(os.path.normpath(os.fspath(_absolute(parent))))
+    # Compare canonical locations as well as validating each visible path component.
+    candidate_norm = os.path.normcase(os.path.realpath(_absolute(candidate)))
+    parent_norm = os.path.normcase(os.path.realpath(_absolute(parent)))
     try:
         return os.path.commonpath([candidate_norm, parent_norm]) == parent_norm
     except ValueError:

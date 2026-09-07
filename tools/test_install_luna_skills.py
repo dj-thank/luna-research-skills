@@ -39,6 +39,18 @@ class LunaSkillInstallerTests(unittest.TestCase):
         )
         return package
 
+    def test_default_source_supports_repository_and_plugin_layouts(self) -> None:
+        repository = self.root / "repository"
+        plugin = self.root / "plugin"
+        (repository / ".agents/skills").mkdir(parents=True)
+        (repository / "skills").mkdir()
+        (plugin / "skills").mkdir(parents=True)
+
+        self.assertEqual(
+            installer.default_source(repository), repository / ".agents/skills"
+        )
+        self.assertEqual(installer.default_source(plugin), plugin / "skills")
+
     def test_plan_is_non_mutating(self) -> None:
         self.make_skill("alpha")
         plan = installer.build_plan(self.source, self.target)
