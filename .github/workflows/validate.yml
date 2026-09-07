@@ -40,11 +40,20 @@ jobs:
           PYTHONUTF8: '1'
           PYTHONDONTWRITEBYTECODE: '1'
         run: python -m unittest discover -s tools -p 'test_*.py'
-      - name: Validate repository and compile Python
+      - name: Smoke-test cross-platform user-scope installer
+        env:
+          PYTHONUTF8: '1'
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python tools/install_luna_skills.py --target-root "${{ runner.temp }}/luna-user/.agents/skills" --json
+          python tools/install_luna_skills.py --target-root "${{ runner.temp }}/luna-user/.agents/skills" --apply --json
+          python tools/install_luna_skills.py --target-root "${{ runner.temp }}/luna-user/.agents/skills" --verify --json
+      - name: Validate repository, release metadata, and Python syntax
         env:
           PYTHONUTF8: '1'
         run: |
           python tools/validate_repository.py
+          python tools/release_metadata.py
           python -m compileall -q .agents tools
 
   migration-safety-pwsh:

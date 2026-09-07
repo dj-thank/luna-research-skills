@@ -4,9 +4,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- macOS・Linux・Windowsで同じ操作を使える、標準ライブラリだけのuser-scope導入器 `tools/install_luna_skills.py` を追加。既定はdry-runで、`--apply`、`--verify`、`--json`、既存package拒否、bounded snapshot、symlink/reparse拒否、`SKILL.md`-last publication、未変更pathだけのrollbackを備える。
+- 導入器について、正常導入、byte検証、既存destination、大小文字collision、source/target symlink、partial write、途中失敗、同時destination作成、rollback中の追加artifact保全を検査するクロスプラットフォーム回帰テストを追加。
+- `VERSION`、CHANGELOGのrelease heading、version compare reference、`Unreleased`比較元を照合する `tools/release_metadata.py` とfailure testsを追加。
+- リポジトリスコープ、user scope、Windows移行、Cloud/plugin、更新時の安全境界をまとめた `docs/INSTALLATION.md` を追加。
+
 ### Changed
 
 - READMEに「一つの依頼からチームを編成する」全体像、再帰的な分担図、調査・開発の具体例を追加。pluginにも図と関連文書を収録し、スキルへの相対リンクを配布先の配置へ合わせた。
+- READMEの導入手順をOS共通のplan/apply/verifyへ拡張し、日付依存のRelease説明を、mainと固定ReleaseをCHANGELOGで比較する安定した説明へ変更。SECURITYとCONTRIBUTINGも2つの導入経路へ同期した。
+- CIとrelease gateへrelease metadata検査を追加し、VERSION更新時のCHANGELOG参照ずれをfail-closedで検出する。
 - 固定の深さ2制限を、案件ごとの `max_workflow_depth` と全子孫を含む予算へ変更。調整役から下位の調整役へ再委任でき、深さ3・4、親子関係、未使用予算の返却、回収順を検証する。
 - 明示選択式の `coordinator_model_policy` と `--allow-mixed-coordinators` を追加。Astra調整役とLuna/max専門担当を区別して検証し、従来のLuna構成を既定として維持する。
 
@@ -16,6 +25,10 @@
 
 - 現行の `gpt-5.6-luna` / `max` 受入方針へSkill、checker、custom-agent定義、README、SECURITY、CONTRIBUTINGを同期した。親spawn出力に含まれる子UUIDとexact completed receiptを必須のruntime provenanceとし、task名だけでは受理しない。
 - Research/projectのルーティングを明示的なLuna実装依頼と証拠専用調査に分離し、source-family重複排除、typed verifier criterion、evidence-laneのsource/access境界をcheckerとpacket契約へ追加した。
+
+### Fixed
+
+- `VERSION`が`2.0.6`である一方、CHANGELOGの`Unreleased` linkが`v2.0.5`を比較元にしていたずれと、`2.0.6` compare referenceの欠落を修正。
 
 ## [2.0.6] - 2026-08-17
 
@@ -135,7 +148,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.5...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.6...HEAD
+[2.0.6]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.3...v2.0.4
 [2.0.3]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.2...v2.0.3
