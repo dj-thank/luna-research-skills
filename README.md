@@ -138,26 +138,34 @@ cd luna-research-skills
 
 このフォルダーをCodexのプロジェクトとして開き、新しいタスクで上の依頼例を使ってください。`.agents/skills`にResearchとProjectがあり、`.codex/agents`には任意のカスタム役割を収録しています。役割の利用可否は現在の実行環境で確認します。[公式のスキル読み込み仕様](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)
 
-最新の変更はmainに入ります。[Releases](https://github.com/dj-thank/luna-research-skills/releases)は公開時点の固定版です。2026年9月5日時点の最新Release `v2.0.6`には、mainの9月の改善はまだ含まれていません。
+最新の変更はmainに入ります。[Releases](https://github.com/dj-thank/luna-research-skills/releases)は公開時点を固定した版です。導入前に[変更履歴](CHANGELOG.md)でmainと利用するReleaseの差分を確認してください。
 
-### ほかのプロジェクトでも使う（Windows）
+### ほかのプロジェクトでも使う（macOS / Linux / Windows）
 
-PowerShell 7でリポジトリのルートから、現在の配置と追加内容を確認します。
+公式のユーザースコープ `$HOME/.agents/skills` へ新規導入する場合、まず変更を伴わないplanを確認します。
+
+```sh
+python tools/install_luna_skills.py
+```
+
+内容を確認してから導入し、sourceと配置先のbytesが一致することを検証します。
+
+```sh
+python tools/install_luna_skills.py --apply
+python tools/install_luna_skills.py --verify
+```
+
+この導入器は同名Skillを上書きせず、親モデル・`.codex/agents`・Codexのグローバル設定も変更しません。`SKILL.md`を最後に書き込み、途中状態がSkillとして見える時間を最小化します。失敗時は導入器自身が作成した未変更packageだけを巻き戻します。
+
+Windowsで旧配置から移行する場合や、journal付きの詳細な移行検査が必要な場合は、PowerShell 7の既存ツールを使います。
 
 ```powershell
 pwsh -NoProfile -File tools/Test-LunaSkillDiscovery.ps1 -SkillRoot .agents/skills
 pwsh -NoProfile -File tools/Install-LunaSkillsUserScope.ps1 -Source .agents/skills
-```
-
-内容を確認したら、`-Apply`で導入します。
-
-```powershell
 pwsh -NoProfile -File tools/Install-LunaSkillsUserScope.ps1 -Source .agents/skills -Apply
 ```
 
-配置先は `$HOME/.agents/skills` です。このインストーラーは新規導入用で、既存の同名スキルを上書きしません。更新・旧配置からの移行は[移行手順](tools/MIGRATION.md)に従って、差分とバックアップを確認してください。親モデルやエージェントのグローバル設定は変更しません。
-
-導入後は新しいタスクで確認し、変更が表示されなければCodexを再起動してください。
+更新・旧配置からの移行・安全境界・`--json`による自動化は[導入と更新の詳細](docs/INSTALLATION.md)を参照してください。導入後は新しいタスクで確認し、変更が表示されなければCodexを再起動します。
 
 ### Codex cloud・pluginで使う
 
@@ -165,7 +173,7 @@ CloudではこのGitHubリポジトリと使いたいbranchを環境へ接続し
 
 カスタム役割が公開されない環境では、モデル・推論強度・独立文脈を明示できる `worker` 経路を検証して利用します。どの構成でも、公開されていないツールやモデルをあるものとして進めません。
 
-Releaseのplugin ZIPはスキルを収録し、カスタムエージェント定義は含みません。配布ファイルは同じ版の `SHA256SUMS` と照合してから導入してください。
+Releaseのplugin ZIPはスキルとOS共通のPython導入器を収録し、カスタムエージェント定義とPowerShell移行ツールは含みません。展開後も同じplan/apply/verifyコマンドを使えます。配布ファイルは同じ版の `SHA256SUMS` と照合してから導入してください。
 
 ## 全体をどう管理するか
 
@@ -191,6 +199,7 @@ CIではPython 3.11〜3.13 × Windows/macOS/Linux、PowerShellの移行テスト
 | 資料 | 内容 |
 |---|---|
 | [Research](.agents/skills/run-diverse-luna-research/SKILL.md) / [Project](.agents/skills/run-diverse-luna-project/SKILL.md) | スキル本体 |
+| [導入と更新](docs/INSTALLATION.md) | OS共通の新規導入、Windows移行、安全境界、検証 |
 | [開発・検証手順](CONTRIBUTING.md) | 変更時の確認と配布物の生成 |
 | [評価記録](docs/research-evaluation-2026-09-05.md) | 実行したこと、合成検証、未測定の範囲 |
 | [変更履歴](CHANGELOG.md) | バージョンごとの差分 |
