@@ -2,6 +2,8 @@
 
 ## First 60 seconds
 
+These setup and dispatch steps belong to the root or an authorized coordinator. An assigned terminal scout checks its question, source/access boundary, scope, and deadline, then gathers evidence. It does not wait for its own completed-turn receipt; the root adds that after completion under [the packet contract](research-packet.md). If assignment or access authority is actually missing or incompatible, report that specific gap before touching the affected source.
+
 1. Confirm the requested deliverable is evidence and synthesis only. For mixed delivery, keep this skill as a bounded evidence lane. Let `run-diverse-luna-project` own delivery only when the user explicitly requested Luna implementation; otherwise return evidence to the caller's current workflow.
 2. Write non-overlapping primary, adversarial, and measurement cells; choose flat mode for a few cells and recursive teams when subproblems benefit from their own coordinators.
 3. Fix one tree-wide `N`, `C`, `W`, verifier reserve `V`, deadlines, source planes, and access modes before dispatch.
@@ -16,7 +18,7 @@ This skill supports `flat` and recursive `hierarchical` work. Root declares `max
 
 Every coordinator, leaf, probe, retry, and verifier consumes the same attempt budget `N`. Capacity `C` and wave width `W` are separate: `C <= live/config cap`; `W` is the total number of attempts started in one numbered wave and must satisfy `W <= min(C,N)`. Ordinary/non-reserve starts across the whole tree must also fit `N-V`; reserve rows may share a wave but optional fanout cannot consume them. Choose `N=4-8` for focused work, `8-16` for standard deep research, or `16-32` for broad/high-stakes research; `N=32-64` is exceptional and requires measured headroom and genuinely unique cells. A useful broad wave is `W=8-16`; use `W=17-32` only after independence, marginal yield, and runtime headroom are demonstrated. These are workflow policies, not platform guarantees; a configured `C=40` is only a ceiling. Reserve `V=max(1,ceil(.15*N))` attempts for verifier/contradiction work; coordinator fanout is typically 2-4 and each coordinator normally owns 4-8 leaves.
 
-All child packets and ledgers use the hierarchy contract in `references/research-packet.md`, including `tree_id`, `attempt_budget_N`, `concurrency_cap_C`, `max_workflow_depth`, `attempt_id`, `parent_attempt_id`, `delegated_by`, `depth`, `wave`, timestamps, `retry_of`, `descendant_budget`, `planned_child_attempt_ids`, `collected_result_ids`, and `may_spawn_descendants`. A name or static TOML is not a runtime receipt: require exact completed-turn metadata and parent-edge provenance from the live spawn call. Runtime `danger-full-access` means writable; do not call it read-only.
+All child packets and ledgers use the hierarchy contract in `references/research-packet.md`, including `tree_id`, `attempt_budget_N`, `concurrency_cap_C`, `max_workflow_depth`, `attempt_id`, `parent_attempt_id`, `delegated_by`, `depth`, `wave`, timestamps, `retry_of`, `descendant_budget`, `planned_child_attempt_ids`, `collected_result_ids`, and `may_spawn_descendants`. A name or static TOML is not a runtime receipt: the root requires exact completed-turn metadata and parent-edge provenance when accepting a completed result. Runtime `danger-full-access` means writable; do not call it read-only.
 
 Research is always `EVIDENCE_LANE_ONLY`, including when nested in a project. Builders, reviewers, and evidence leaves have disjoint files/worktrees; reviewers/verifiers are fresh and independent. Keep `LOCAL_PASS -> DEVICE_PASS -> PROVIDER_PASS -> PUBLIC_PASS -> HUMAN_GO` separate. Record source plane, freshness, exact locator/hash, unknowns, and gate non-claims. Use the adaptive collection rule below to close optional work; record mandatory gaps explicitly. Every timeout/cancel has TTL, epoch, retry owner, dedup key, and explicit exclusion.
 
@@ -108,7 +110,7 @@ Completion criterion: all priority cells and quotas are feasible within `N`, and
 
 ## 4. Prove the route with the first useful scout
 
-Reserve one unit from `N` and spawn the highest-priority cell through the selected fresh-context route. Give it the research contract, exactly one cell, and [the packet contract](research-packet.md). Instruct it to spawn no descendants.
+Validate the planning ledger and the cell's assignment/access boundary before dispatch, using the existing `--ledger-json` planning check below; no completed-turn receipt exists yet. Reserve one unit from `N` and spawn the highest-priority cell through the selected fresh-context route. Give it the research contract, exactly one cell, and [the packet contract](research-packet.md). Instruct it to spawn no descendants.
 
 Use this assignment shape:
 
@@ -120,7 +122,7 @@ Plane and access mode: <one plane; sandbox_read_only or prompt_only_public>
 Scope, exclusions, freshness: <contract subset>
 Source universe and independence rule: <specific authorities, classes, domains, or datasets>
 Deadline and stop condition: <bounded values>
-Return the research-packet contract with redacted canonical URLs and precise locators.
+Return the evidence and self-check sections of the research-packet contract with redacted canonical URLs and precise locators. Root fills completed-turn and parent-call provenance after you finish; leave unobserved receipt fields unset.
 Complete only this cell and spawn no descendants.
 ```
 

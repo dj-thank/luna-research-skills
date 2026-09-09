@@ -4,6 +4,7 @@ Use this checklist for every new assignment. Put all required context in the spa
 
 ## Assignment packet
 
+- **Attempt ID:** the root-reserved ledger assignment ID; include it in the spawn message. Root adds completed-turn and parent-call provenance after the result returns.
 - **Project outcome:** the overall result this workstream supports.
 - **Assignment kind:** builder, evidence lane, reviewer, verifier, or operator.
 - **Bounded objective:** one deliverable, decision, question, or verification boundary.
@@ -35,6 +36,8 @@ For a `$run-diverse-luna-research` sub-budget, replace file ownership with `EVID
 ## Return packet
 
 Require the agent to return:
+
+The assigned agent returns its work and observed checks first. Root appends completed-turn and parent-call provenance after completion, before accepting the result. Leave unobserved receipt fields unset; a future completion receipt is not a prerequisite for starting an authorized assignment. Missing assignment or access authority still blocks the affected work.
 
 1. Status: completed, partial, failed, or blocked.
 2. Outcome and artifact paths or evidence locators.
