@@ -4,7 +4,7 @@
 
 The root chooses `mode=flat|hierarchical`. Root is depth 0; direct children are depth 1 and each later child is `parent.depth + 1`, bounded by declared `max_workflow_depth <= N`. Coordinators may create subcoordinators under [the recursive grant contract](recursive-delegation.md). Terminal assignments have `may_spawn_descendants=false` and zero grant. A coordinator can spend only its transitive `descendant_budget` loan from its parent. All roles, probes, retries, and verifiers decrement the same global `attempt_budget_N`; capacity `concurrency_cap_C` and total per-wave starts `wave_width_W` are independent controls, with `W <= min(C,N)`. Reserve `verifier_reserve_V=max(1,ceil(.15*N))`, and never spend it on optional fanout.
 
-Every attempt row must contain: `tree_id`, `attempt_budget_N`, `concurrency_cap_C`, `wave_width_W`, `max_workflow_depth`, `attempt_id`, `parent_attempt_id`, `delegated_by`, `depth`, `wave`, `planned_at`, `started_at`, `finished_at`, `retry_of`, `descendant_budget`, `planned_child_attempt_ids`, `collected_result_ids`, and `may_spawn_descendants`. Include `ttl`, `epoch`, `retry_owner`, `dedup_key`, and `cancel_reason` when applicable. Parent-edge provenance is required: exact parent thread, call ID, selected route, and completed child turn. Static names/TOMLs are metadata only.
+Every attempt row must contain: `tree_id`, `attempt_budget_N`, `concurrency_cap_C`, `wave_width_W`, `max_workflow_depth`, `attempt_id`, `parent_attempt_id`, `delegated_by`, `depth`, `wave`, `planned_at`, `started_at`, `finished_at`, `retry_of`, `descendant_budget`, `planned_child_attempt_ids`, `collected_result_ids`, and `may_spawn_descendants`. Include `ttl`, `epoch`, `retry_owner`, `dedup_key`, and `cancel_reason` when applicable. The root binds parent-edge provenance on acceptance: exact parent thread, call ID, selected route, and completed child turn. Before dispatch, reserve the assignment and validate its scope, access, budget, and deadline; leave not-yet-observed runtime fields null. Static names/TOMLs are metadata only.
 
 ### Canonical JSON field table
 
@@ -19,7 +19,7 @@ Every attempt row must contain: `tree_id`, `attempt_budget_N`, `concurrency_cap_
 | `planned_child_attempt_ids`, `collected_result_ids`, `may_spawn_descendants` | fanout/fan-in | leaf `may_spawn_descendants=false` |
 | `child_thread_uuid`, `thread_uuid`, `runtime_turn`, `parent_thread_uuid`, `parent_call_id` | runtime receipt | exact completed turn and parent edge required on acceptance |
 
-Return one compact packet for one assigned coverage cell. Limit a scout packet to 12 evidence items and about 1,000 words. The scout supplies evidence; the root appends the runtime receipt and decides what is accepted.
+Return one compact packet for one assigned coverage cell. Limit a scout packet to 12 evidence items and about 1,000 words. The scout supplies evidence; the root appends the runtime receipt and decides what is accepted. A scout must not block authorized evidence collection merely because its own completed-turn or parent-call receipt is absent. Missing or incompatible assignment/access authority remains a reason to stop the affected source lane; report the exact missing field rather than treating a future root receipt as authorization.
 
 ## 1. Assignment identity
 

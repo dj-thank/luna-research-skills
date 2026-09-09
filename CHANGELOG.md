@@ -4,6 +4,13 @@
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-10
+
+### Fixed
+
+- 調査担当が自分の完了後にしか取得できない実行記録を着手条件にして止まる問題を修正。着手前の権限・範囲確認と、完了後に親が行う実行記録の照合を分け、未観測の記録を補作しない手順へ同期した。
+- 実装担当の依頼に予約済みAttempt IDを含め、成果の返却後に親が実行記録を補う責任を明示した。
+
 ### Added
 
 - macOS・Linux・Windowsで同じ操作を使える、標準ライブラリだけのuser-scope導入器 `tools/install_luna_skills.py` を追加。repositoryの `.agents/skills` とpluginの `skills` を自動判定し、既定はdry-runで、`--apply`、`--verify`、`--json`、既存package拒否、bounded snapshot、任意symlink/reparse拒否、`SKILL.md`-last publication、未変更pathだけのrollbackを備える。
@@ -150,7 +157,8 @@
 
 - bounded hierarchy、assignment budget、descendant allowance、root verificationを明確化。
 
-[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.6...HEAD
+[Unreleased]: https://github.com/dj-thank/luna-research-skills/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.6...v2.1.0
 [2.0.6]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.5...v2.0.6
 [2.0.5]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.4...v2.0.5
 [2.0.4]: https://github.com/dj-thank/luna-research-skills/compare/v2.0.3...v2.0.4
