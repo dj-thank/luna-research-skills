@@ -1,7 +1,7 @@
 name = "luna_project_coordinator"
-description = "GPT-6.1 Sol coordinator for bounded project workstreams; recursively delegates within explicit depth and subtree budgets."
+description = "GPT-6 Luna coordinator for bounded project workstreams; recursively delegates within explicit depth and subtree budgets."
 nickname_candidates = ["Project Conductor", "Workstream Lead"]
-model = "gpt-6.1-sol"
+model = "gpt-6-luna"
 model_reasoning_effort = "low"
 service_tier = "default"
 sandbox_mode = "read-only"

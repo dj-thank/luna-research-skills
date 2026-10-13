@@ -54,7 +54,7 @@ def rollout_records(
             "type": "turn_context",
             "payload": {
                 "turn_id": turn_id,
-                "model": "gpt-6.1-sol",
+                "model": "gpt-6-luna",
                 "effort": "low",
                 "sandbox_policy": {"type": sandbox},
             },
@@ -110,7 +110,7 @@ def assignment(
         "thread_uuid": thread_uuid,
         "runtime_turn": str(uuid.uuid4()) if accepted else None,
         "agent_role": "default" if accepted else None,
-        "runtime_model": "gpt-6.1-sol" if accepted else None,
+        "runtime_model": "gpt-6-luna" if accepted else None,
         "runtime_effort": "low" if accepted else None,
         "parent_thread_uuid": str(uuid.uuid4()) if accepted else None,
         "parent_call_id": "call-test" if accepted else None,
@@ -148,7 +148,7 @@ def project_assignment(
         "thread_uuid": str(uuid.uuid4()) if accepted else None,
         "runtime_turn": str(uuid.uuid4()) if accepted else None,
         "agent_role": "default" if accepted else None,
-        "runtime_model": "gpt-6.1-sol" if accepted else None,
+        "runtime_model": "gpt-6-luna" if accepted else None,
         "runtime_effort": "low" if accepted else None,
         "parent_thread_uuid": str(uuid.uuid4()) if accepted else None,
         "parent_call_id": "call-test" if accepted else None,
@@ -324,9 +324,55 @@ class SpawnSchemaTests(unittest.TestCase):
         self.assertTrue(errors)
 
 
+class SpecialistProfileTests(unittest.TestCase):
+    def test_default_and_explicit_profiles_are_parseable(self):
+        self.assertEqual(CHECK.parse_args([]).specialist_model, "gpt-6-luna")
+        self.assertEqual(CHECK.parse_args(["--specialist-model", "gpt-6.1-sol"]).specialist_model, "gpt-6.1-sol")
+
+    def test_unknown_specialist_profile_is_rejected(self):
+        with self.assertRaises(SystemExit):
+            CHECK.parse_args(["--specialist-model", "unknown-model"])
+
+    def test_cli_selected_profile_binds_both_rollout_and_parent_edge(self):
+        import subprocess
+        import sys
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            home, workspace = root / "home", root / "workspace"
+            home.mkdir()
+            workspace.mkdir()
+            (home / "config.toml").write_text("[agents]\nenabled=true\nmax_concurrent_threads_per_session=6\n", encoding="utf-8")
+            parent_id, child_id, turn_id = str(uuid.uuid4()), str(uuid.uuid4()), str(uuid.uuid4())
+            child = rollout_records(child_id, turn_id, parent_id=parent_id)
+            child_path, parent_path = root / "child.jsonl", root / "parent.jsonl"
+            pins = {"task_name": "test_assignment", "message": "bounded test", "agent_type": "default", "fork_turns": "none", "model": "gpt-6.1-sol", "reasoning_effort": "low"}
+            parent = [
+                {"type": "session_meta", "payload": {"id": parent_id}},
+                {"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent", "call_id": "profile-call", "arguments": json.dumps(pins)}},
+                {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "profile-call", "output": json.dumps({"agent_id": child_id})}},
+            ]
+            command = [sys.executable, str(SCRIPT_PATH), "--codex-home", str(home), "--workspace", str(workspace), "--agent-role", "default", "--allow-generic-worker", "--runtime-rollout", str(child_path), "--runtime-turn", turn_id, "--parent-rollout", str(parent_path), "--require-spawn-provenance"]
+            child[1]["payload"]["model"] = "gpt-6.1-sol"
+            write_jsonl(child_path, child)
+            write_jsonl(parent_path, parent)
+            self.assertNotEqual(subprocess.run(command, capture_output=True).returncode, 0)
+            explicit = command + ["--specialist-model", "gpt-6.1-sol"]
+            result = subprocess.run(explicit, capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            child[1]["payload"]["model"] = "gpt-6-luna"
+            write_jsonl(child_path, child)
+            self.assertNotEqual(subprocess.run(explicit, capture_output=True).returncode, 0)
+            child[1]["payload"]["model"] = "gpt-6.1-sol"
+            write_jsonl(child_path, child)
+            pins["model"] = "gpt-6-luna"
+            parent[1]["payload"]["arguments"] = json.dumps(pins)
+            write_jsonl(parent_path, parent)
+            self.assertNotEqual(subprocess.run(explicit, capture_output=True).returncode, 0)
+
+
 class RuntimeReceiptTests(unittest.TestCase):
     def test_current_standard_rejects_old_model_and_max_effort(self):
-        for model, effort in (("gpt-5.6-luna", "max"), ("gpt-6.1-sol", "max"), ("gpt-6.1-sol", "high")):
+        for model, effort in (("gpt-5.6-luna", "max"), ("gpt-6-luna", "max"), ("gpt-6-luna", "high")):
             with self.subTest(model=model, effort=effort), tempfile.TemporaryDirectory() as temp:
                 records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
                 records[1]["payload"].update(model=model, effort=effort)
@@ -355,21 +401,25 @@ class RuntimeReceiptTests(unittest.TestCase):
                         f"[agents]\nmax_concurrent_threads_per_session={cap}\n",
                         encoding="utf-8",
                     )
-                    for generic in (False, True):
-                        errors, _ = CHECK.validate_workspace_config_overrides(
-                            workspace, home, "default", generic
-                        )
-                        if cap == 6:
-                            self.assertEqual(errors, [])
-                        else:
-                            self.assertTrue(any("max_concurrent_threads_per_session" in error for error in errors))
+                    # Isolate this boundary case from the user's real ancestor config.
+                    config_path = workspace / ".codex/config.toml"
+                    loader = CHECK.load_toml
+                    with patch.object(CHECK, "load_toml", side_effect=lambda path: loader(path) if path == config_path else {}):
+                        for generic in (False, True):
+                            errors, _ = CHECK.validate_workspace_config_overrides(
+                                workspace, home, "default", generic
+                            )
+                            if cap == 6:
+                                self.assertEqual(errors, [])
+                            else:
+                                self.assertTrue(any("max_concurrent_threads_per_session" in error for error in errors))
 
     def test_generic_default_pins_without_global_defaults_and_rejects_missing_pin(self):
         errors, _ = CHECK.validate_role_policy({}, [], "default", True)
         self.assertEqual(errors, [])
         child = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         meta = child[0]["payload"]
-        arguments = {"task_name": "test_assignment", "message": "bounded task", "agent_type": "default", "fork_turns": "none", "model": "gpt-6.1-sol", "reasoning_effort": "low"}
+        arguments = {"task_name": "test_assignment", "message": "bounded task", "agent_type": "default", "fork_turns": "none", "model": "gpt-6-luna", "reasoning_effort": "low"}
         with tempfile.TemporaryDirectory() as temp:
             cp, pp = Path(temp) / "child.jsonl", Path(temp) / "parent.jsonl"
             write_jsonl(cp, child)
@@ -392,7 +442,7 @@ class RuntimeReceiptTests(unittest.TestCase):
             "thread_uuid": uuid.uuid4(),
             "runtime_turn": str(uuid.uuid4()),
             "parent_thread_uuid": str(uuid.uuid4()),
-            "runtime_model": "gpt-6.1-sol",
+            "runtime_model": "gpt-6-luna",
             "runtime_effort": "low",
             "agent_role": "default",
             "spawn_kind": "spawn_agent",
@@ -431,7 +481,7 @@ class RuntimeReceiptTests(unittest.TestCase):
                     "type": "turn_context",
                     "payload": {
                         "turn_id": str(uuid.uuid4()),
-                        "model": "gpt-6.1-sol",
+                        "model": "gpt-6-luna",
                         "effort": "low",
                         "sandbox_policy": {"type": "read-only"},
                     },
@@ -1128,7 +1178,7 @@ class LedgerTests(unittest.TestCase):
 
 
 class WorkerLedgerIntegrationTests(unittest.TestCase):
-    def _run(self, *, opt_in=True, explicit_model="gpt-6.1-sol"):
+    def _run(self, *, opt_in=True, explicit_model="gpt-6-luna"):
         import contextlib
         import io
         with tempfile.TemporaryDirectory() as temp:
@@ -1368,7 +1418,7 @@ class TreeV2Tests(unittest.TestCase):
              "collected_result_ids": ["l1", "l2", "l3"], "execution_status": "completed",
              "acceptance_status": "accepted", "runtime_verified": True, "thread_uuid": coordinator_thread, "runtime_turn": str(uuid.uuid4()), "collection_receipt": "receipt:c",
              "parent_thread_uuid": root_parent, "parent_call_id": "root-call", "agent_role": "coordinator",
-             "runtime_model": "gpt-6.1-sol", "runtime_effort": "low", "spawn_kind": "spawn_agent", "safety_enforcement": "prompt_only",
+             "runtime_model": "gpt-6-luna", "runtime_effort": "low", "spawn_kind": "spawn_agent", "safety_enforcement": "prompt_only",
              "started_at": "2026-01-01T00:00:00Z", "finished_at": "2026-01-01T00:04:00Z"},
             {"attempt_id": "l1", "parent_attempt_id": "c", "depth": 2, "wave": 2,
              "delegated_by": {"parent_attempt_id": "c", "parent_thread_uuid": coordinator_thread, "parent_call_id": "call-1"},
@@ -1579,7 +1629,7 @@ class TreeV2Tests(unittest.TestCase):
                 "parent_thread_uuid": rows[0]["thread_uuid"],
                 "parent_call_id": f"call-{row['attempt_id']}",
                 "agent_role": "research_scout_luna",
-                "runtime_model": "gpt-6.1-sol",
+                "runtime_model": "gpt-6-luna",
                 "runtime_effort": "low",
                 "spawn_kind": "spawn_agent",
                 "safety_enforcement": "prompt_only",
@@ -1960,7 +2010,7 @@ class RecursiveTreeTests(unittest.TestCase):
 class MixedCoordinatorCLITests(unittest.TestCase):
     def run_case(self, *, mixed=True, worker=True, policy_model="gpt-6-astra",
                  policy_effort="max", coordinator_model="gpt-6-astra",
-                 actual_coordinator_model=None, leaf_model="gpt-6.1-sol",
+                 actual_coordinator_model=None, leaf_model="gpt-6-luna",
                  actual_leaf_model=None, pin=True, nested=False, conflicting_kind=False,
                  coordinator_effort="max", actual_effort=None, spawn_effort=None, fork="none"):
         import contextlib
@@ -2035,7 +2085,7 @@ class MixedCoordinatorCLITests(unittest.TestCase):
         self.assertEqual(code, 0, output)
         self.assertIn("accepted runtime receipts passed revalidation", output)
         self.assertIn("model=gpt-6-astra", output)
-        self.assertIn("model=gpt-6.1-sol", output)
+        self.assertIn("model=gpt-6-luna", output)
 
     def test_mixed_coordinator_refused_by_default(self):
         code, output = self.run_case(mixed=False)
@@ -2052,10 +2102,10 @@ class MixedCoordinatorCLITests(unittest.TestCase):
         for kwargs in ({"leaf_model": "gpt-6-astra"}, {"actual_leaf_model": "gpt-6-astra"}):
             code, output = self.run_case(**kwargs)
             self.assertNotEqual(code, 0)
-            self.assertIn("must be 'gpt-6.1-sol'", output)
+            self.assertIn("must be 'gpt-6-luna'", output)
 
     def test_mixed_policy_runtime_mismatch(self):
-        code, output = self.run_case(actual_coordinator_model="gpt-6.1-sol")
+        code, output = self.run_case(actual_coordinator_model="gpt-6-luna")
         self.assertNotEqual(code, 0)
         self.assertIn("runtime model must be 'gpt-6-astra'", output)
 
@@ -2592,7 +2642,7 @@ class V2ActivationTests(unittest.TestCase):
         if with_v2:
             records[0]["payload"]["multi_agent_version"] = "v2"
         records += [
-            {"type": "turn_context", "payload": {"turn_id": self.followup, "model": "gpt-6.1-sol", "effort": "low", "sandbox_policy": {"type": "read-only"}}},
+            {"type": "turn_context", "payload": {"turn_id": self.followup, "model": "gpt-6-luna", "effort": "low", "sandbox_policy": {"type": "read-only"}}},
             {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": self.followup}}]
         return records
 

@@ -42,7 +42,7 @@ Every row requires:
 
 For an evidence lane, also include `source_plane`, `access_mode`, and `safety_enforcement`. `prompt_only_public` is valid only for `public_web`. `connector_private` and `provider` remain `root_only` while external tool permissions cannot be mechanically proven. A root-only row closes without child runtime metadata as `not_dispatched/excluded`, with a terminal timestamp and explicit gap. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
-Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-6.1-sol`, `runtime_effort=low`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
+Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-6-luna`, `runtime_effort=low`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
 
 The exact parent `spawn_agent` call output must contain the child thread UUID. A matching task name is diagnostic only and cannot bind provenance.
 

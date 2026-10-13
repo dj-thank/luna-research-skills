@@ -57,7 +57,7 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         }
         by_id = {case["id"]: case for case in self.cases}
         for identifier in delivery_ids:
-            self.assertIn("Sol", by_id[identifier]["prompt"])
+            self.assertIn("Luna", by_id[identifier]["prompt"])
             self.assertEqual(by_id[identifier]["expected_skill"], "run-diverse-luna-project")
         self.assertEqual(by_id["ordinary-audit-fix"]["expected_skill"], "none")
 
@@ -84,7 +84,7 @@ class RouteEvaluationManifestTests(unittest.TestCase):
             "independent_verifier",
             "root_integration",
             "no_unnecessary_fanout",
-            "explicit_sol_low_fresh_route",
+            "explicit_luna_low_fresh_route",
             "monotonic_attempt_budget",
             "followup_counts_as_attempt",
             "default_budget_six_maximum_twelve",

@@ -1,4 +1,4 @@
-# Sol workstream packet
+# Luna workstream packet
 
 Use this checklist for every new assignment. Put all required context in the spawn message because `fork_turns="none"` and the transitional `fork_context=false` route supply no conversation history.
 
