@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+- README の導入を観点別の調査に合わせ、未知の分野で調査観点を見つける手順と、必要時に同じ予算内で再委任する図・依頼例を追加。
+
 - Apply the six-child concurrency cap to workspace config overrides, with boundary regression tests in both skills.
 - Add repository and cross-platform user-scope update steps, including comparison, backup, and readback.
 
