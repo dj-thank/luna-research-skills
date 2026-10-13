@@ -35,6 +35,8 @@ jobs:
         run: |
           python .agents/skills/run-diverse-luna-research/scripts/test_check_setup.py
           python .agents/skills/run-diverse-luna-project/scripts/test_check_setup.py
+          python .agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py
+          python .agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py
       - name: Run repository, release, and route-manifest tests
         env:
           PYTHONUTF8: '1'

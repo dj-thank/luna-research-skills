@@ -6,9 +6,9 @@ Run these as raw prompts in fresh tasks after any routing, checker, or contract 
 | Raw task shape | Required behavior |
 |---|---|
 | Read-only, source-heavy policy audit with no artifacts | Route to the research sibling, not the project workflow |
-| Use Luna to audit a codebase, fix findings, run tests, and prepare a release | Select project; reserve verifier; use a bounded research lane only for current external facts |
+| Use Sol to audit a codebase, fix findings, run tests, and prepare a release | Select project; reserve verifier; use a bounded research lane only for current external facts |
 | One narrow refactor in one file with known tests | Do not invoke this broad project workflow |
-| Use Luna to research several current APIs and implement two disjoint components | Project at root; evidence-only research sub-budget; single root integration |
+| Use Sol to research several current APIs and implement two disjoint components | Project at root; evidence-only research sub-budget; single root integration |
 | Provider deployment or public publication is mentioned | Keep external writer root-serialized; require authority and separate PROVIDER/PUBLIC/HUMAN gates |
 | Two builders would edit the same path | Merge or serialize them; project ledger rejects overlapping accepted ownership |
 | A child reports completion but has no exact parent call or used full history | Reject the child receipt and stop dependent integration |
@@ -35,13 +35,13 @@ Give each fresh evaluator one raw request and the candidate skill location, plus
 Include these adjacent requests when changing entry gates:
 
 - “この一つの設定項目の意味を公式ページで確認して。”
-- “Luna のスキルの説明文を短く直して。”
-- “Luna で二つの独立コンポーネントを実装して、検証までして。”
+- “Sol のスキルの説明文を短く直して。”
+- “Sol で二つの独立コンポーネントを実装して、検証までして。”
 - “複数の案を比較し、良い案を実際に実装して。”
 
 Record case ID, raw prompt, baseline/candidate digest, observed route, files read, actual commands and writes, result, and concrete failure evidence. Evaluate outcome, process, safety and efficiency separately. Code unit tests and metadata validation do not establish implicit selection; explicitly supplying the skill tests following it, not discovering it. Record unexecuted dimensions as not run. Retain regressions as new raw cases.
 
-Official basis: [Agent Skills](https://developers.openai.com/codex/skills) and [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills), reviewed 2026-09-05. These recommend scoped descriptions, progressive disclosure and trace/artifact-based evaluations. Luna/max pins, quotas, provenance receipts and gate names are local workflow policy, not official Codex requirements.
+Official basis: [Agent Skills](https://developers.openai.com/codex/skills) and [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills), reviewed 2026-09-05. These recommend scoped descriptions, progressive disclosure and trace/artifact-based evaluations. Sol/low pins, quotas, provenance receipts and gate names are local workflow policy, not official Codex requirements.
 
 ## V2 native lifecycle cases
 
@@ -52,7 +52,7 @@ Official basis: [Agent Skills](https://developers.openai.com/codex/skills) and [
 - Later child turn is presented with an initial spawn call: reject fully attributed acceptance, while permitting metadata-only inspection and root-owned candidate assessment.
 - Interrupt leaves partial files or a subprocess: inspect exact ownership before any continuation; interruption alone is not rollback.
 
-Classify every check as documentation, exposed schema, live execution, synthetic validation, or not run. V2 is a native runtime capability; Luna/max, N/C/W/V, declared depth and receipt gates are this skill's operating policy.
+Classify every check as documentation, exposed schema, live execution, synthetic validation, or not run. V2 is a native runtime capability; Sol/low, N/C/W/V, declared depth and receipt gates are this skill's operating policy.
 
 
 ## Recursive delegation cases
@@ -63,8 +63,8 @@ Classify every check as documentation, exposed schema, live execution, synthetic
 - A coordinator has a grant but no explicit delegation permission, or reaches D: return the blocked split without spawning.
 - A child finishes while its own child is still working: reject premature collection and keep that branch open.
 - A terminal specialist discovers a useful split: propose it to the coordinating owner; do not silently bypass terminal role instructions.
-- A supported model demonstrates deep native delegation while Luna lacks spawn tools: retain model-specific capability evidence and never advertise a Luna-only runtime pass.
+- A supported model demonstrates deep native delegation while Sol lacks spawn tools: retain model-specific capability evidence and never advertise a Sol-only runtime pass.
 
-- Explicit Astra coordinator policy with Luna specialists: require the version-2 policy and mixed opt-in, retain Luna/max on terminal rows, and verify actual delegation.
+- Explicit Astra coordinator policy with Sol specialists: require the version-2 policy and mixed opt-in, retain Sol/low on terminal rows, and verify actual delegation.
 - An Astra terminal worker relabels itself as coordinator without a real subteam: reject acceptance; coordinator policy is not a general model escape hatch.
-- Luna lacks spawn tools and no mixed policy was authorized: report that lane's limit and continue permitted root work without switching models.
+- Sol lacks spawn tools and no mixed policy was authorized: report that lane's limit and continue permitted root work without switching models.

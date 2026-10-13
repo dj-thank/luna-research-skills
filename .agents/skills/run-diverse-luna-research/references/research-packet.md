@@ -6,13 +6,15 @@ The root chooses `mode=flat|hierarchical`. Root is depth 0; direct children are 
 
 Every attempt row must contain: `tree_id`, `attempt_budget_N`, `concurrency_cap_C`, `wave_width_W`, `max_workflow_depth`, `attempt_id`, `parent_attempt_id`, `delegated_by`, `depth`, `wave`, `planned_at`, `started_at`, `finished_at`, `retry_of`, `descendant_budget`, `planned_child_attempt_ids`, `collected_result_ids`, and `may_spawn_descendants`. Include `ttl`, `epoch`, `retry_owner`, `dedup_key`, and `cancel_reason` when applicable. The root binds parent-edge provenance on acceptance: exact parent thread, call ID, selected route, and completed child turn. Before dispatch, reserve the assignment and validate its scope, access, budget, and deadline; leave not-yet-observed runtime fields null. Static names/TOMLs are metadata only.
 
+Checker contract `2026-10-13.1` separates planning from observed dispatch provenance (ledger schema remains v2). For `planned/pending` and `not_dispatched/excluded`, keep `delegated_by` as an object; its logical `parent_attempt_id`, when supplied, must match the row (legacy v2 omission unambiguously inherits the row parent); leave an unobserved `parent_call_id` null, and leave `root_parent_call_id` null on top-level rows. The known root parent thread UUID is still required and must match `delegated_by.parent_thread_uuid`. A nested future parent thread may be null only while its parent has no observed thread UUID; once known, it must match. Never invent `pending:*` call IDs; the checker rejects that explicit placeholder prefix. Any non-null call ID requires a valid paired parent thread UUID, even during planning. Non-null edge values must be valid, consistent, and unique; no other call-ID naming format is imposed, and runtime receipt verification establishes genuineness. Every `started`, `completed`, `failed`, `timed_out`, or `abandoned` row requires the exact nonempty observed parent thread UUID and call ID, including rejected/excluded dispatches. Accepted results additionally require the existing completed-turn and verified parent-call receipts; null planning fields do not establish runtime acceptance.
+
 ### Canonical JSON field table
 
 | Field | Meaning | Canonical rule |
 |---|---|---|
 | `tree_id`, `run_id` | UUID identities | both required; never human labels |
 | `attempt_budget_N`, `concurrency_cap_C`, `wave_width_W`, `max_workflow_depth`, `verifier_reserve_V` | global controls | canonical names; require `W<=C`, `W<=N`, and `V=max(1,ceil(.15*N))` |
-| `attempt_id`, `parent_attempt_id`, `delegated_by` | edge identity | `delegated_by` object carries exact parent thread/call UUIDs |
+| `attempt_id`, `parent_attempt_id`, `delegated_by` | edge identity | `delegated_by` carries the logical parent; observed parent thread UUID and call ID bind dispatch, with null future fields allowed only as described above |
 | `role`, `kind`, `depth`, `wave` | routing | coordinators at any permitted level; children are parent.depth+1; terminal specialists have no descendants |
 | `planned_at`, `started_at`, `finished_at`, `ttl_seconds`, `epoch` | lifecycle | planned rows have null start/finish |
 | `retry_of`, `retry_owner`, `dedup_key`, `cancel_reason` | recovery | every retry is a new counted attempt |
@@ -92,7 +94,7 @@ The root appends this after the scout completes:
 
 - assignment ID, task path, child thread UUID, parent UUID, depth, and selected role;
 - exact accepted completed turn ID;
-- effective model and reasoning effort, matched to the terminal Luna/max or explicit coordinator policy;
+- effective model and reasoning effort, matched to the terminal Sol/low or explicit coordinator policy;
 - effective sandbox or permission mode;
 - safety enforcement: `sandbox_read_only`, `prompt_only`, or `unknown`;
 - outcome: `accepted`, `rejected`, `failed`, `timed_out`, or `abandoned`;
@@ -140,9 +142,9 @@ Keep the machine-readable ledger as UTF-8 JSON with this shape:
     {
       "attempt_id": "R-01",
       "parent_attempt_id": null,
-      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010", "parent_call_id": "call-root-r01"},
+      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010", "parent_call_id": null},
       "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010",
-      "root_parent_call_id": "call-root-r01",
+      "root_parent_call_id": null,
       "depth": 1,
       "wave": 1,
       "planned_at": "2026-08-16T11:00:00+09:00",
@@ -169,7 +171,7 @@ Keep the machine-readable ledger as UTF-8 JSON with this shape:
       "deadline": "2026-08-16T11:20:00+09:00",
       "execution_status": "planned",
       "acceptance_status": "pending",
-      "role": "research_scout_luna",
+      "role": "worker",
       "kind": "evidence_lane",
       "child_thread_uuid": null,
       "thread_uuid": null,
@@ -187,9 +189,9 @@ Keep the machine-readable ledger as UTF-8 JSON with this shape:
     {
       "attempt_id": "R-02",
       "parent_attempt_id": null,
-      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010", "parent_call_id": "call-root-r02"},
+      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010", "parent_call_id": null},
       "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010",
-      "root_parent_call_id": "call-root-r02",
+      "root_parent_call_id": null,
       "depth": 1,
       "wave": 1,
       "planned_at": "2026-08-16T11:00:00+09:00", "started_at": null, "finished_at": null,
@@ -201,9 +203,9 @@ Keep the machine-readable ledger as UTF-8 JSON with this shape:
     {
       "attempt_id": "R-03",
       "parent_attempt_id": null,
-      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010", "parent_call_id": "call-root-r03"},
+      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010", "parent_call_id": null},
       "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440010",
-      "root_parent_call_id": "call-root-r03",
+      "root_parent_call_id": null,
       "depth": 1, "wave": 1, "planned_at": "2026-08-16T11:00:00+09:00", "started_at": null, "finished_at": null, "retry_of": null, "descendant_budget": 0, "planned_child_attempt_ids": [], "collected_result_ids": [], "may_spawn_descendants": false, "ttl_seconds": 1800, "epoch": 1, "retry_owner": "root", "dedup_key": "measurement-gap", "cancel_reason": null,
       "coverage_cell": "measurement gap", "priority": false, "quota_label": "measurement_gap", "source_plane": "public_web", "access_mode": "prompt_only_public", "source_universe": "original data", "exclusion_rule": "exclude commentary", "overlap_key": "measurement-gap", "deadline": "2026-08-16T11:20:00+09:00", "execution_status": "planned", "acceptance_status": "pending", "role": "reviewer", "kind": "verifier", "child_thread_uuid": null, "thread_uuid": null, "runtime_turn": null, "agent_role": null, "runtime_model": null, "runtime_effort": null, "parent_thread_uuid": null, "parent_call_id": null, "spawn_kind": null, "safety_enforcement": "unknown", "runtime_verified": false, "gap_reason": null
     }

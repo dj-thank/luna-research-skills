@@ -1,7 +1,7 @@
 interface:
-  display_name: "Run Diverse Luna Project"
-  short_description: "Luna implementation when explicitly requested"
-  default_prompt: "Use $run-diverse-luna-project to implement this broad project with bounded, runtime-verified Luna workstreams while keeping integration and external gates at the root."
+  display_name: "Run Diverse Sol Project"
+  short_description: "Sol implementation when explicitly requested"
+  default_prompt: "Use $run-diverse-luna-project to implement this broad project with bounded, runtime-verified Sol workstreams while keeping integration and external gates at the root."
 
 policy:
   allow_implicit_invocation: true

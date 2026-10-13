@@ -54,8 +54,8 @@ def rollout_records(
             "type": "turn_context",
             "payload": {
                 "turn_id": turn_id,
-                "model": "gpt-5.6-luna",
-                "effort": "max",
+                "model": "gpt-6.1-sol",
+                "effort": "low",
                 "sandbox_policy": {"type": sandbox},
             },
         },
@@ -110,8 +110,8 @@ def assignment(
         "thread_uuid": thread_uuid,
         "runtime_turn": str(uuid.uuid4()) if accepted else None,
         "agent_role": "default" if accepted else None,
-        "runtime_model": "gpt-5.6-luna" if accepted else None,
-        "runtime_effort": "max" if accepted else None,
+        "runtime_model": "gpt-6.1-sol" if accepted else None,
+        "runtime_effort": "low" if accepted else None,
         "parent_thread_uuid": str(uuid.uuid4()) if accepted else None,
         "parent_call_id": "call-test" if accepted else None,
         "spawn_kind": "spawn_agent" if accepted else None,
@@ -148,8 +148,8 @@ def project_assignment(
         "thread_uuid": str(uuid.uuid4()) if accepted else None,
         "runtime_turn": str(uuid.uuid4()) if accepted else None,
         "agent_role": "default" if accepted else None,
-        "runtime_model": "gpt-5.6-luna" if accepted else None,
-        "runtime_effort": "max" if accepted else None,
+        "runtime_model": "gpt-6.1-sol" if accepted else None,
+        "runtime_effort": "low" if accepted else None,
         "parent_thread_uuid": str(uuid.uuid4()) if accepted else None,
         "parent_call_id": "call-test" if accepted else None,
         "spawn_kind": "spawn_agent" if accepted else None,
@@ -325,14 +325,75 @@ class SpawnSchemaTests(unittest.TestCase):
 
 
 class RuntimeReceiptTests(unittest.TestCase):
+    def test_current_standard_rejects_old_model_and_max_effort(self):
+        for model, effort in (("gpt-5.6-luna", "max"), ("gpt-6.1-sol", "max"), ("gpt-6.1-sol", "high")):
+            with self.subTest(model=model, effort=effort), tempfile.TemporaryDirectory() as temp:
+                records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
+                records[1]["payload"].update(model=model, effort=effort)
+                path = Path(temp) / "rollout.jsonl"
+                write_jsonl(path, records)
+                errors, _ = CHECK.validate_runtime_rollout(path, "default", require_read_only=True)
+                self.assertTrue(errors)
+
+    def test_explicit_generic_default_does_not_require_changing_workspace_defaults(self):
+        with tempfile.TemporaryDirectory() as temp:
+            workspace, home = Path(temp) / "workspace", Path(temp) / "home"
+            (workspace / ".codex").mkdir(parents=True)
+            (workspace / ".codex/config.toml").write_text('[agents]\ndefault_subagent_model="gpt-5.6-luna"\ndefault_subagent_reasoning_effort="max"\n', encoding="utf-8")
+            errors, _ = CHECK.validate_workspace_config_overrides(workspace, home, "default", True)
+            self.assertEqual(errors, [])
+            errors, _ = CHECK.validate_workspace_config_overrides(workspace, home, "default")
+            self.assertTrue(errors)
+
+    def test_workspace_concurrency_override_obeys_upper_cap(self):
+        with tempfile.TemporaryDirectory() as temp:
+            workspace, home = Path(temp) / "workspace", Path(temp) / "home"
+            (workspace / ".codex").mkdir(parents=True)
+            for cap in (6, 7, 40):
+                with self.subTest(cap=cap):
+                    (workspace / ".codex/config.toml").write_text(
+                        f"[agents]\nmax_concurrent_threads_per_session={cap}\n",
+                        encoding="utf-8",
+                    )
+                    for generic in (False, True):
+                        errors, _ = CHECK.validate_workspace_config_overrides(
+                            workspace, home, "default", generic
+                        )
+                        if cap == 6:
+                            self.assertEqual(errors, [])
+                        else:
+                            self.assertTrue(any("max_concurrent_threads_per_session" in error for error in errors))
+
+    def test_generic_default_pins_without_global_defaults_and_rejects_missing_pin(self):
+        errors, _ = CHECK.validate_role_policy({}, [], "default", True)
+        self.assertEqual(errors, [])
+        child = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
+        meta = child[0]["payload"]
+        arguments = {"task_name": "test_assignment", "message": "bounded task", "agent_type": "default", "fork_turns": "none", "model": "gpt-6.1-sol", "reasoning_effort": "low"}
+        with tempfile.TemporaryDirectory() as temp:
+            cp, pp = Path(temp) / "child.jsonl", Path(temp) / "parent.jsonl"
+            write_jsonl(cp, child)
+            for missing in (None, "model", "reasoning_effort"):
+                pins = dict(arguments)
+                if missing: pins.pop(missing)
+                parent = [
+                    {"type": "session_meta", "payload": {"id": meta["parent_thread_id"]}},
+                    {"type": "response_item", "payload": {"type": "function_call", "name": "spawn_agent", "call_id": "call-test", "arguments": json.dumps(pins)}},
+                    {"type": "response_item", "payload": {"type": "function_call_output", "call_id": "call-test", "output": json.dumps({"agent_id": meta["id"]})}},
+                ]
+                write_jsonl(pp, parent)
+                errors, _ = CHECK.validate_spawn_provenance(pp, cp, "default", allow_generic_worker=True)
+                if missing: self.assertTrue(any("must explicitly set" in e for e in errors))
+                else: self.assertEqual(errors, [])
+
     def test_accepted_runtime_metadata_rejects_truthy_non_boolean_and_non_string_uuid(self) -> None:
         row = {
             "runtime_verified": 1,
             "thread_uuid": uuid.uuid4(),
             "runtime_turn": str(uuid.uuid4()),
             "parent_thread_uuid": str(uuid.uuid4()),
-            "runtime_model": "gpt-5.6-luna",
-            "runtime_effort": "max",
+            "runtime_model": "gpt-6.1-sol",
+            "runtime_effort": "low",
             "agent_role": "default",
             "spawn_kind": "spawn_agent",
             "parent_call_id": "call-1",
@@ -370,8 +431,8 @@ class RuntimeReceiptTests(unittest.TestCase):
                     "type": "turn_context",
                     "payload": {
                         "turn_id": str(uuid.uuid4()),
-                        "model": "gpt-5.6-luna",
-                        "effort": "max",
+                        "model": "gpt-6.1-sol",
+                        "effort": "low",
                         "sandbox_policy": {"type": "read-only"},
                     },
                 }
@@ -394,7 +455,7 @@ class RuntimeReceiptTests(unittest.TestCase):
                         "payload": {
                             "turn_id": second_turn,
                             "model": "gpt-5.6-terra",
-                            "effort": "max",
+                            "effort": "low",
                             "sandbox_policy": {"type": "read-only"},
                         },
                     },
@@ -1067,7 +1128,7 @@ class LedgerTests(unittest.TestCase):
 
 
 class WorkerLedgerIntegrationTests(unittest.TestCase):
-    def _run(self, *, opt_in=True, explicit_model="gpt-5.6-luna"):
+    def _run(self, *, opt_in=True, explicit_model="gpt-6.1-sol"):
         import contextlib
         import io
         with tempfile.TemporaryDirectory() as temp:
@@ -1084,7 +1145,7 @@ class WorkerLedgerIntegrationTests(unittest.TestCase):
                         rollout_records(child, turn, role="worker", parent_id=parent))
             arguments = {"task_name":"test_assignment", "message":"public source cell",
                          "agent_type":"worker", "fork_turns":"none",
-                         "reasoning_effort":"max"}
+                         "reasoning_effort":"low"}
             if explicit_model is not None:
                 arguments["model"] = explicit_model
             write_jsonl(sessions / f"rollout-{parent}.jsonl", [
@@ -1129,6 +1190,29 @@ class WorkerLedgerIntegrationTests(unittest.TestCase):
 
 
 class ProjectLedgerTests(unittest.TestCase):
+    def test_v1_generic_builder_and_verifier_planning_passes(self):
+        ledger = {
+            "ledger_type": "project", "version": 1, "phase": "planning",
+            "closure_status": "open", "root_integration_status": "not_started",
+            "root_integration_receipt": None, "N": 2, "verifier_reserve": 1,
+            "overall_deadline": "2026-08-16T12:00:00+09:00", "target_gate": "LOCAL_PASS",
+            "verified_gates": [], "gate_receipts": {}, "external_authority": False,
+            "assignments": [project_assignment("P-01", "builder", ownership=["src/a.py"]), project_assignment("P-02", "verifier")],
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "project-ledger.json"
+            for role in ("worker", "default"):
+                with self.subTest(role=role):
+                    for row in ledger["assignments"]: row["agent_role"] = role
+                    write_json(path, ledger)
+                    errors, _ = CHECK.validate_project_ledger(path)
+                    self.assertEqual(errors, [])
+            # Legacy kind-specific roles remain constrained to compatible kinds.
+            ledger["assignments"][1]["agent_role"] = "luna_builder"
+            write_json(path, ledger)
+            errors, _ = CHECK.validate_project_ledger(path)
+            self.assertTrue(any("incompatible with kind 'verifier'" in e for e in errors))
+
     def test_project_planning_ledger_passes(self) -> None:
         ledger = {
             "ledger_type": "project",
@@ -1284,7 +1368,7 @@ class TreeV2Tests(unittest.TestCase):
              "collected_result_ids": ["l1", "l2", "l3"], "execution_status": "completed",
              "acceptance_status": "accepted", "runtime_verified": True, "thread_uuid": coordinator_thread, "runtime_turn": str(uuid.uuid4()), "collection_receipt": "receipt:c",
              "parent_thread_uuid": root_parent, "parent_call_id": "root-call", "agent_role": "coordinator",
-             "runtime_model": "gpt-5.6-luna", "runtime_effort": "max", "spawn_kind": "spawn_agent", "safety_enforcement": "prompt_only",
+             "runtime_model": "gpt-6.1-sol", "runtime_effort": "low", "spawn_kind": "spawn_agent", "safety_enforcement": "prompt_only",
              "started_at": "2026-01-01T00:00:00Z", "finished_at": "2026-01-01T00:04:00Z"},
             {"attempt_id": "l1", "parent_attempt_id": "c", "depth": 2, "wave": 2,
              "delegated_by": {"parent_attempt_id": "c", "parent_thread_uuid": coordinator_thread, "parent_call_id": "call-1"},
@@ -1315,6 +1399,139 @@ class TreeV2Tests(unittest.TestCase):
     def test_tree_v2_valid(self):
         errors, _ = CHECK._validate_tree_ledger(self._ledger(self._valid_rows()))
         self.assertEqual(errors, [])
+
+    def _unstarted_rows(self):
+        rows = self._valid_rows()
+        for row in rows:
+            row.update(execution_status="planned", acceptance_status="pending",
+                       started_at=None, finished_at=None, runtime_verified=False,
+                       thread_uuid=None, runtime_turn=None, parent_thread_uuid=None,
+                       parent_call_id=None, collected_result_ids=[])
+            row["delegated_by"]["parent_call_id"] = None
+            if row["parent_attempt_id"] is None:
+                row["root_parent_call_id"] = None
+            else:
+                row["delegated_by"]["parent_thread_uuid"] = None
+        return rows
+
+    def test_planning_future_nested_edges_are_null(self):
+        for project in (False, True):
+            with self.subTest(project=project):
+                errors, _ = CHECK._validate_tree_ledger(
+                    self._ledger(self._unstarted_rows()), project=project)
+                self.assertEqual(errors, [])
+
+    def test_planning_does_not_allow_invalid_or_missing_edge_structure(self):
+        for field, value in (("parent_call_id", ""), ("parent_call_id", 42),
+                             ("parent_thread_uuid", "not-a-uuid")):
+            with self.subTest(field=field, value=value):
+                rows = self._unstarted_rows()
+                rows[1]["delegated_by"][field] = value
+                errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+                self.assertTrue(any(f"delegated_by.{field}" in e for e in errors))
+        rows = self._unstarted_rows()
+        rows[1].pop("delegated_by")
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("delegated_by must be an object" in e for e in errors))
+        rows = self._unstarted_rows()
+        rows[0]["delegated_by"]["parent_thread_uuid"] = None
+        rows[0]["root_parent_thread_uuid"] = None
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("root_parent_thread_uuid must be UUID" in e for e in errors))
+
+    def test_root_only_not_dispatched_has_no_spawn_call(self):
+        rows = self._unstarted_rows()
+        row = rows[1]
+        root_thread = str(uuid.uuid4())
+        row.update(parent_attempt_id=None, depth=1, source_plane="provider",
+                   access_mode="root_only", execution_status="not_dispatched",
+                   acceptance_status="excluded", finished_at="2026-01-01T00:04:00Z",
+                   root_parent_thread_uuid=root_thread, root_parent_call_id=None,
+                   gap_reason="Provider source remains with root")
+        row["delegated_by"] = {"parent_attempt_id": None,
+                               "parent_thread_uuid": root_thread, "parent_call_id": None}
+        rows[0].update(descendant_budget=2, planned_child_attempt_ids=["l2", "l3"])
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertEqual(errors, [])
+
+    def test_nested_not_dispatched_keeps_future_parent_thread_null(self):
+        rows = self._unstarted_rows()
+        rows[1].update(source_plane="provider", access_mode="root_only",
+                       execution_status="not_dispatched", acceptance_status="excluded",
+                       finished_at="2026-01-01T00:04:00Z",
+                       gap_reason="Provider source remains with root")
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertEqual(errors, [])
+
+    def test_planning_rejects_explicit_pending_call_placeholders(self):
+        for state in ("planned", "not_dispatched", "started", "completed"):
+            with self.subTest(state=state):
+                rows = self._unstarted_rows() if state == "planned" else self._valid_rows()
+                row = rows[0]
+                if state == "not_dispatched":
+                    row.update(execution_status=state, acceptance_status="excluded")
+                elif state == "started":
+                    row.update(execution_status=state, acceptance_status="pending", finished_at=None)
+                row["delegated_by"]["parent_call_id"] = "pending:r1"
+                row["root_parent_call_id"] = "pending:r1"
+                errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+                self.assertTrue(any("pending: placeholder" in e for e in errors))
+
+    def test_planning_nonnull_call_requires_parent_uuid(self):
+        rows = self._unstarted_rows()
+        rows[1]["delegated_by"]["parent_call_id"] = "call-known"
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("delegated_by.parent_thread_uuid must be UUID" in e for e in errors))
+
+    def test_legacy_edge_parent_default_is_unambiguous_and_mismatch_rejected(self):
+        rows = self._unstarted_rows()
+        rows[1]["delegated_by"].pop("parent_attempt_id")
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertEqual(errors, [])
+        rows[1]["delegated_by"]["parent_attempt_id"] = "different-parent"
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("delegated_by parent mismatch" in e for e in errors))
+
+    def test_dispatched_states_require_exact_edge(self):
+        for state in ("started", "completed", "failed", "timed_out", "abandoned"):
+            for field in ("parent_thread_uuid", "parent_call_id"):
+                with self.subTest(state=state, field=field):
+                    rows = self._valid_rows()
+                    row = rows[1]
+                    row.update(execution_status=state,
+                               acceptance_status="pending" if state == "started" else
+                               "rejected" if state == "completed" else "excluded")
+                    if state == "started":
+                        row["finished_at"] = None
+                    row["delegated_by"][field] = None
+                    errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+                    self.assertTrue(any(f"delegated_by.{field}" in e for e in errors))
+
+    def test_planning_known_parent_and_root_edges_still_match(self):
+        rows = self._unstarted_rows()
+        rows[0]["root_parent_call_id"] = "invented-root-call"
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("root parent edge must match" in e for e in errors))
+        rows = self._valid_rows()
+        rows[1].update(execution_status="planned", acceptance_status="pending",
+                       started_at=None, finished_at=None)
+        rows[1]["delegated_by"]["parent_thread_uuid"] = str(uuid.uuid4())
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("parent thread UUID mismatch" in e for e in errors))
+        rows[1]["delegated_by"]["parent_thread_uuid"] = None
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("parent thread UUID mismatch" in e for e in errors))
+        rows = self._valid_rows()
+        rows[0]["root_parent_call_id"] = None
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("root_parent_call_id is required" in e for e in errors))
+
+    def test_real_edge_uniqueness_survives_null_planning_edges(self):
+        rows = self._unstarted_rows()
+        rows[1]["delegated_by"].update(parent_thread_uuid=str(uuid.uuid4()), parent_call_id="real-call")
+        rows[2]["delegated_by"].update(rows[1]["delegated_by"])
+        errors, _ = CHECK._validate_tree_ledger(self._ledger(rows))
+        self.assertTrue(any("delegated edge already belongs" in e for e in errors))
 
     def test_tree_v2_requires_explicit_acceptance_status(self):
         rows = self._valid_rows()
@@ -1362,8 +1579,8 @@ class TreeV2Tests(unittest.TestCase):
                 "parent_thread_uuid": rows[0]["thread_uuid"],
                 "parent_call_id": f"call-{row['attempt_id']}",
                 "agent_role": "research_scout_luna",
-                "runtime_model": "gpt-5.6-luna",
-                "runtime_effort": "max",
+                "runtime_model": "gpt-6.1-sol",
+                "runtime_effort": "low",
                 "spawn_kind": "spawn_agent",
                 "safety_enforcement": "prompt_only",
                 "source_family_id": "same-upstream",
@@ -1743,7 +1960,7 @@ class RecursiveTreeTests(unittest.TestCase):
 class MixedCoordinatorCLITests(unittest.TestCase):
     def run_case(self, *, mixed=True, worker=True, policy_model="gpt-6-astra",
                  policy_effort="max", coordinator_model="gpt-6-astra",
-                 actual_coordinator_model=None, leaf_model="gpt-5.6-luna",
+                 actual_coordinator_model=None, leaf_model="gpt-6.1-sol",
                  actual_leaf_model=None, pin=True, nested=False, conflicting_kind=False,
                  coordinator_effort="max", actual_effort=None, spawn_effort=None, fork="none"):
         import contextlib
@@ -1756,7 +1973,7 @@ class MixedCoordinatorCLITests(unittest.TestCase):
             row.update(thread_uuid=str(uuid.uuid4()), runtime_turn=str(uuid.uuid4()),
                        parent_thread_uuid=coord["thread_uuid"], parent_call_id=f"call-{index}",
                        agent_role="worker", spawn_kind="spawn_agent", runtime_model=leaf_model,
-                       runtime_effort="max")
+                       runtime_effort="low")
         rows[1].update(acceptance_status="accepted", runtime_verified=True, safety_enforcement="prompt_only")
         if conflicting_kind:
             coord["kind"] = "evidence_lane"
@@ -1776,7 +1993,7 @@ class MixedCoordinatorCLITests(unittest.TestCase):
             def spawn(child, call, model):
                 arguments = {"task_name": "test_assignment", "message": "bounded assignment",
                              "agent_type": "worker", "fork_turns": fork,
-                             "reasoning_effort": (spawn_effort or coordinator_effort) if child == coord["thread_uuid"] else "max"}
+                             "reasoning_effort": (spawn_effort or coordinator_effort) if child == coord["thread_uuid"] else "low"}
                 if pin:
                     arguments["model"] = model
                 return [
@@ -1818,7 +2035,7 @@ class MixedCoordinatorCLITests(unittest.TestCase):
         self.assertEqual(code, 0, output)
         self.assertIn("accepted runtime receipts passed revalidation", output)
         self.assertIn("model=gpt-6-astra", output)
-        self.assertIn("model=gpt-5.6-luna", output)
+        self.assertIn("model=gpt-6.1-sol", output)
 
     def test_mixed_coordinator_refused_by_default(self):
         code, output = self.run_case(mixed=False)
@@ -1835,10 +2052,10 @@ class MixedCoordinatorCLITests(unittest.TestCase):
         for kwargs in ({"leaf_model": "gpt-6-astra"}, {"actual_leaf_model": "gpt-6-astra"}):
             code, output = self.run_case(**kwargs)
             self.assertNotEqual(code, 0)
-            self.assertIn("must be 'gpt-5.6-luna'", output)
+            self.assertIn("must be 'gpt-6.1-sol'", output)
 
     def test_mixed_policy_runtime_mismatch(self):
-        code, output = self.run_case(actual_coordinator_model="gpt-5.6-luna")
+        code, output = self.run_case(actual_coordinator_model="gpt-6.1-sol")
         self.assertNotEqual(code, 0)
         self.assertIn("runtime model must be 'gpt-6-astra'", output)
 
@@ -1899,6 +2116,15 @@ class V5FailureInjectionTests(unittest.TestCase):
         ledger_kw = {k: kw.pop(k) for k in list(kw) if k in {"phase", "closure_status", "verifier_reserve_V", "concurrency_cap_C", "wave_width_W", "attempt_budget_N"}}
         row.update(kw); value = {"version":2,"tree_id":str(uuid.uuid4()),"run_id":str(uuid.uuid4()),"attempt_budget_N":4,"concurrency_cap_C":2,"wave_width_W":2,"max_workflow_depth":2,"verifier_reserve_V":1,"phase":"planning","closure_status":"open","overall_deadline":"2026-01-01T01:00:00Z","assignments":rows}; value.update(ledger_kw); return value
     def check(self, ledger): return CHECK._validate_tree_ledger(ledger)
+    def test_local_dispatch_limits_reject_legacy_expansion(self):
+        for overrides in ({"attempt_budget_N": 32}, {"concurrency_cap_C": 40}, {"wave_width_W": 8}):
+            with self.subTest(overrides=overrides):
+                errors, _ = self.check(self.base(**overrides))
+                self.assertTrue(any("local" in error or "through 12" in error for error in errors))
+        ledger = self.base(attempt_budget_N=64)
+        ledger["exceptional_budget"] = True
+        self.assertTrue(any("through 12" in error for error in self.check(ledger)[0]))
+
     def test_nonaccepted_followup_is_a_counted_assignment(self):
         import copy
         ledger = self.base()
@@ -2366,7 +2592,7 @@ class V2ActivationTests(unittest.TestCase):
         if with_v2:
             records[0]["payload"]["multi_agent_version"] = "v2"
         records += [
-            {"type": "turn_context", "payload": {"turn_id": self.followup, "model": "gpt-5.6-luna", "effort": "max", "sandbox_policy": {"type": "read-only"}}},
+            {"type": "turn_context", "payload": {"turn_id": self.followup, "model": "gpt-6.1-sol", "effort": "low", "sandbox_policy": {"type": "read-only"}}},
             {"type": "event_msg", "payload": {"type": "task_complete", "turn_id": self.followup}}]
         return records
 

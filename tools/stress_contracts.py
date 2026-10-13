@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parent.parent
 CHECKER_TESTS = (
     ROOT / ".agents/skills/run-diverse-luna-research/scripts/test_check_setup.py",
     ROOT / ".agents/skills/run-diverse-luna-project/scripts/test_check_setup.py",
+    ROOT / ".agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py",
+    ROOT / ".agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py",
 )
 UNITTEST_COUNT = re.compile(r"Ran\s+(\d+)\s+tests?\b")
 

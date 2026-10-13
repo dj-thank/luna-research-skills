@@ -19,6 +19,8 @@ $env:PYTHONUTF8 = '1'
 $env:PYTHONDONTWRITEBYTECODE = '1'
 python .agents/skills/run-diverse-luna-research/scripts/test_check_setup.py
 python .agents/skills/run-diverse-luna-project/scripts/test_check_setup.py
+python .agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py
+python .agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/validate_repository.py
 python tools/release_metadata.py
@@ -31,6 +33,6 @@ Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behav
 
 Also run the bundled Skill Creator `quick_validate.py` against both Skill directories, validate the generated plugin manifest/archive, rebuild release assets twice and compare their SHA-256, and run `git diff --check`. Keep `release-check`, Python caches, runtime rollouts, discovery reports containing machine paths, and migration journals out of commits.
 
-Routing or description changes require fresh, task-local forward evaluation against both `references/evaluation-cases.md` files. Record expected versus observed Skill selection, route, N/C/W/V, exact completed Luna/max receipts, parent spawn output containing the child UUID, ownership collisions, latency, and false completion claims. A static case manifest or checker unit test complements but does not replace live runtime evidence.
+Routing or description changes require fresh, task-local forward evaluation against both `references/evaluation-cases.md` files. Record expected versus observed Skill selection, route, N/C/W/V, exact completed Sol/low receipts, parent spawn output containing the child UUID, ownership collisions, latency, and false completion claims. A static case manifest or checker unit test complements but does not replace live runtime evidence.
 
 The [2026-09-05 maintenance evaluation](docs/research-evaluation-2026-09-05.md) separates observed routing, synthetic fixtures, live public-source execution and untested dimensions. Keep private raw runtime receipts outside public commits.

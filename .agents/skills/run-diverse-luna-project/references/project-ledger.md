@@ -14,7 +14,7 @@ For peer-assisted runs, add the optional `collaboration` record defined in [peer
 - `version`: `2`.
 - `phase`: `planning`, `integration`, or `closure`.
 - `closure_status`: `open`, then `complete` or `blocked` only in closure.
-- `N`: fixed positive assignment-attempt budget chosen by root; practical project bands are 4-8, 8-16, and 16-32. Do not treat any numeric band as a platform guarantee; validate against live/config capacity.
+- `N`: one objective-wide attempt budget; default 6, maximum 12. Count spawn, failed start, coordinator, verifier, retry and followup calls. Wider subjects and continuation do not raise this ceiling; the parent completes required remaining work.
 - `verifier_reserve_V`: exactly `max(1,ceil(.15*N))`; optional work cannot spend it.
 - `overall_deadline`: timezone-aware ISO-8601 timestamp.
 - `root_integration_status`: `not_started`, `in_progress`, `completed`, or `blocked`.
@@ -42,7 +42,7 @@ Every row requires:
 
 For an evidence lane, also include `source_plane`, `access_mode`, and `safety_enforcement`. `prompt_only_public` is valid only for `public_web`. `connector_private` and `provider` remain `root_only` while external tool permissions cannot be mechanically proven. A root-only row closes without child runtime metadata as `not_dispatched/excluded`, with a terminal timestamp and explicit gap. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
-Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-5.6-luna`, `runtime_effort=max`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
+Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-6.1-sol`, `runtime_effort=low`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
 
 The exact parent `spawn_agent` call output must contain the child thread UUID. A matching task name is diagnostic only and cannot bind provenance.
 

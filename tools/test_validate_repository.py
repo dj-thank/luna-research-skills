@@ -35,6 +35,8 @@ class RepositoryValidatorTests(unittest.TestCase):
             scripts.mkdir()
             (scripts / "check_setup.py").write_text("# checker\n", encoding="utf-8")
             (scripts / "test_check_setup.py").write_text("# tests\n", encoding="utf-8")
+            (scripts / "check_dispatch_budget.py").write_text("# budget\n", encoding="utf-8")
+            (scripts / "test_dispatch_budget.py").write_text("# budget tests\n", encoding="utf-8")
         (root / ".codex" / "agents").mkdir(parents=True)
         for index in range(5):
             (root / ".codex" / "agents" / f"{index}.toml").write_text(
@@ -59,6 +61,22 @@ class RepositoryValidatorTests(unittest.TestCase):
 
     def test_good_repo_passes(self):
         self.assertEqual(validator.validate_repository(self.fixture()), [])
+
+    def test_dispatch_contract_files_are_required(self):
+        for name in ("check_dispatch_budget.py", "test_dispatch_budget.py"):
+            with self.subTest(filename=name):
+                root = self.fixture()
+                (root / ".agents/skills/run-diverse-luna-research/scripts" / name).unlink()
+                codes = {error["code"] for error in validator.validate_repository(root)}
+                self.assertIn("skill_contract_file", codes)
+
+    def test_dispatch_contract_copies_must_match(self):
+        for name in ("check_dispatch_budget.py", "test_dispatch_budget.py"):
+            with self.subTest(filename=name):
+                root = self.fixture()
+                (root / ".agents/skills/run-diverse-luna-project/scripts" / name).write_text("changed\n", encoding="utf-8")
+                codes = {error["code"] for error in validator.validate_repository(root)}
+                self.assertIn("checker_parity", codes)
 
     def test_malformed_toml_is_structured(self):
         root = self.fixture()

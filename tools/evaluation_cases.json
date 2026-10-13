@@ -48,9 +48,9 @@
   },
   {
     "id": "audit-fix-release",
-    "prompt": "Use Luna to audit this codebase, fix the findings, run tests, and prepare a release.",
+    "prompt": "Use Sol to audit this codebase, fix the findings, run tests, and prepare a release.",
     "expected_skill": "run-diverse-luna-project",
-    "expected_mode": "hierarchical",
+    "expected_mode": "flat",
     "required_controls": [
       "disjoint_ownership",
       "research_lane_only",
@@ -60,7 +60,7 @@
   },
   {
     "id": "api-research-and-components",
-    "prompt": "Use Luna to research several current APIs and implement two disjoint components.",
+    "prompt": "Use Sol to research several current APIs and implement two disjoint components.",
     "expected_skill": "run-diverse-luna-project",
     "expected_mode": "flat",
     "required_controls": [
@@ -80,7 +80,7 @@
   },
   {
     "id": "provider-deployment",
-    "prompt": "Use Luna to implement the service and deploy it to the production provider.",
+    "prompt": "Use Sol to implement the service and deploy it to the production provider.",
     "expected_skill": "run-diverse-luna-project",
     "expected_mode": "flat",
     "required_controls": [
@@ -91,9 +91,9 @@
   },
   {
     "id": "nationwide-catalog",
-    "prompt": "Use Luna to research official regional routes, build a nationwide catalog, validate it, and generate publishable artifacts.",
+    "prompt": "Use Sol to research official regional routes, build a nationwide catalog, validate it, and generate publishable artifacts.",
     "expected_skill": "run-diverse-luna-project",
-    "expected_mode": "hierarchical",
+    "expected_mode": "flat",
     "required_controls": [
       "bounded_research_lanes",
       "deduplication",
@@ -114,9 +114,9 @@
   },
   {
     "id": "multi-artifact-release",
-    "prompt": "Use Luna to update code, docs, migration tooling, CI, and release assets, then independently review them.",
+    "prompt": "Use Sol to update code, docs, migration tooling, CI, and release assets, then independently review them.",
     "expected_skill": "run-diverse-luna-project",
-    "expected_mode": "hierarchical",
+    "expected_mode": "flat",
     "required_controls": [
       "disjoint_ownership",
       "dependency_order",
@@ -146,7 +146,7 @@
   },
   {
     "id": "research-skill-wording",
-    "prompt": "Shorten the Luna research skill description without changing its meaning.",
+    "prompt": "Shorten the Sol research skill description without changing its meaning.",
     "expected_skill": "none",
     "expected_mode": "single_root",
     "required_controls": [
@@ -211,7 +211,7 @@
   },
   {
     "id": "recursive-subteams",
-    "prompt": "Use Luna to organize this large project into bounded workstreams; let each coordinating team create further subteams when useful, up to a declared depth of four.",
+    "prompt": "Use Sol to organize this large project into bounded workstreams; let each coordinating team create further subteams when useful, up to a declared depth of four.",
     "expected_skill": "run-diverse-luna-project",
     "expected_mode": "hierarchical",
     "required_controls": [
@@ -223,7 +223,7 @@
   },
   {
     "id": "mixed-recursive-research",
-    "prompt": "Use Astra for recursive coordination and Luna for research specialists; compare this topic across independent primary sources and contrary evidence.",
+    "prompt": "Use Astra for recursive coordination and Sol for research specialists; compare this topic across independent primary sources and contrary evidence.",
     "expected_skill": "run-diverse-luna-research",
     "expected_mode": "hierarchical",
     "allowed_modes": [
@@ -232,20 +232,54 @@
     ],
     "required_controls": [
       "explicit_mixed_policy",
-      "luna_terminal_specialists",
+      "sol_terminal_specialists",
       "runtime_model_provenance",
       "shared_attempt_budget"
     ]
   },
   {
-    "id": "missing-luna-nesting",
-    "prompt": "Use only Luna for this research. A Luna coordinator reports that no spawn tool is exposed; the parent still has a working direct Luna route.",
+    "id": "missing-sol-nesting",
+    "prompt": "Use only Sol for this research. A Sol coordinator reports that no spawn tool is exposed; the parent still has a working direct Sol route.",
     "expected_skill": "run-diverse-luna-research",
     "expected_mode": "flat",
     "required_controls": [
       "no_silent_model_fallback",
       "reuse_unstarted_grants",
       "record_capability_gap"
+    ]
+  },
+  {
+    "id": "sol-default-fresh-context",
+    "prompt": "Use $run-diverse-luna-research to compare independent primary and contrary sources with GPT-6.1 Sol at low effort in fresh-context default or worker agents.",
+    "expected_skill": "run-diverse-luna-research",
+    "expected_mode": "flat",
+    "required_controls": [
+      "explicit_sol_low_fresh_route",
+      "runtime_model_provenance",
+      "preserve_caller_model"
+    ]
+  },
+  {
+    "id": "monotonic-attempt-budget",
+    "prompt": "Continue this Sol research after failed starts and followups while retaining the original total attempt budget of six; do not create a new budget on continuation.",
+    "expected_skill": "run-diverse-luna-research",
+    "expected_mode": "flat",
+    "required_controls": [
+      "monotonic_attempt_budget",
+      "followup_counts_as_attempt",
+      "default_budget_six_maximum_twelve",
+      "continue_required_work_at_parent"
+    ]
+  },
+  {
+    "id": "capacity-wave-and-reserve",
+    "prompt": "Use Sol to implement two independent components; cap children at six and starts per wave at three, and retain the independent verifier reserve.",
+    "expected_skill": "run-diverse-luna-project",
+    "expected_mode": "flat",
+    "required_controls": [
+      "capacity_six_wave_three",
+      "verifier_reserve_retained",
+      "disjoint_ownership"
     ]
   }
 ]

@@ -129,7 +129,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
     manifest = {
         "name": "luna-hierarchical-skills",
         "version": ver,
-        "description": "Bounded GPT-5.6 Luna research and mixed-delivery project skills for Codex.",
+        "description": "Bounded GPT-6.1 Sol research and mixed-delivery project skills for Codex.",
         "author": {
             "name": "dj-thank",
             "url": "https://github.com/dj-thank",
@@ -142,7 +142,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
         "interface": {
             "displayName": "Luna Hierarchical Skills",
             "shortDescription": "Bounded Luna research and project teams",
-            "longDescription": "Run evidence-only research or integrated development through bounded, runtime-verified GPT-5.6 Luna workstreams.",
+            "longDescription": "Run evidence-only research or integrated development through bounded, runtime-verified GPT-6.1 Sol workstreams.",
             "developerName": "dj-thank",
             "category": "Developer Tools",
             "capabilities": ["Research", "Development", "Review"],

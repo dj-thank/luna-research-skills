@@ -47,7 +47,7 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         modes = {case["expected_mode"] for case in self.cases}
         self.assertEqual(modes, ALLOWED_MODES)
 
-    def test_explicit_luna_delivery_prompts_route_to_project(self) -> None:
+    def test_explicit_sol_delivery_prompts_route_to_project(self) -> None:
         delivery_ids = {
             "audit-fix-release",
             "api-research-and-components",
@@ -57,7 +57,7 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         }
         by_id = {case["id"]: case for case in self.cases}
         for identifier in delivery_ids:
-            self.assertIn("Luna", by_id[identifier]["prompt"])
+            self.assertIn("Sol", by_id[identifier]["prompt"])
             self.assertEqual(by_id[identifier]["expected_skill"], "run-diverse-luna-project")
         self.assertEqual(by_id["ordinary-audit-fix"]["expected_skill"], "none")
 
@@ -68,7 +68,7 @@ class RouteEvaluationManifestTests(unittest.TestCase):
         self.assertIn("allow_implicit_invocation: true", research_yaml)
         self.assertIn("explicitly requested", project_yaml)
         self.assertIn("evidence packet", research_yaml)
-        self.assertIn("only when I explicitly requested Luna implementation", research_yaml)
+        self.assertIn("only when I explicitly selected delegated implementation", research_yaml)
 
     def test_safety_and_verification_controls_are_represented(self) -> None:
         controls = {
@@ -84,6 +84,12 @@ class RouteEvaluationManifestTests(unittest.TestCase):
             "independent_verifier",
             "root_integration",
             "no_unnecessary_fanout",
+            "explicit_sol_low_fresh_route",
+            "monotonic_attempt_budget",
+            "followup_counts_as_attempt",
+            "default_budget_six_maximum_twelve",
+            "capacity_six_wave_three",
+            "verifier_reserve_retained",
         ):
             self.assertIn(required, controls)
 
