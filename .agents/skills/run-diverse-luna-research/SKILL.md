@@ -1,6 +1,6 @@
 ---
 name: run-diverse-luna-research
-description: "Research current, multi-source questions with bounded Luna evidence scouts and source verification. Use for deep comparisons or adversarial fact-checks; keep simple lookups at the root and delivery in the caller workflow."
+description: "Research unfamiliar fields and current, multi-source questions with bounded Luna evidence scouts and source verification. Use for deep comparisons or adversarial fact-checks; keep simple lookups at the root and delivery in the caller workflow."
 ---
 
 # Run Diverse Luna Research
@@ -24,6 +24,8 @@ Use C<=6, normally W=1-2 (at most 3), and one objective-wide N=6 by default (at 
 ## Anchor the answer before choosing a route
 
 Identify what the user will decide or produce, the few claims that could change it, and the evidence needed to settle them. Use the conversation first; ask only when a missing constraint would materially change the work, and continue independent research meanwhile. A post, an implementation choice, and a literature review need different depth even on the same topic.
+
+When the field is unfamiliar or the user does not yet know what to investigate, first build a short orientation map from authoritative overviews: core concepts, background, working examples and open problems. Use that map to choose distinct evidence questions; adapt the angles to the field. The user need not provide its taxonomy before research can begin. Continue into the requested investigation rather than stopping at the map.
 
 When the user corrects the target, retain relevant evidence, stop the affected assignments, and give remaining work the corrected question. A completed source inventory is not completion of the user's answer.
 
@@ -50,7 +52,7 @@ Before synthesis, verify conclusion-grade sources and every accepted runtime rec
 
 For access failures, shared source retrieval, claim sufficiency, and additional waves, follow the execution contract. Lead with the answer, citations, and practical uncertainty. Put detailed accounting in a method artifact when it would obscure the answer. Report only observed evidence gates.
 
-For a workstream that needs its own subteams, read [recursive delegation](references/recursive-delegation.md). Coordinators may delegate to further coordinators; terminal specialists stay within their assigned scope.
+When an angle contains several independent questions, read [recursive delegation](references/recursive-delegation.md) and assign that angle to a coordinator with explicit descendant credits and depth inside the same global budget. A capable coordinator may partition and dispatch its leased questions, collect their evidence and return it upward. Terminal specialists return proposed splits to their coordinator; they stay within their assigned scope.
 
 Use [model composition](references/model-policy.md) only when the user explicitly authorizes Astra coordinators with Luna specialists. The default remains Luna/low throughout; terminal specialists use the explicitly selected profile. A mixed result is never reported as a Luna-only run.
 
