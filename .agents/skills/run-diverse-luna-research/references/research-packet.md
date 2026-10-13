@@ -94,7 +94,7 @@ The root appends this after the scout completes:
 
 - assignment ID, task path, child thread UUID, parent UUID, depth, and selected role;
 - exact accepted completed turn ID;
-- effective model and reasoning effort, matched to the terminal Sol/low or explicit coordinator policy;
+- effective model and reasoning effort, matched to the terminal Luna/low or explicit coordinator policy;
 - effective sandbox or permission mode;
 - safety enforcement: `sandbox_read_only`, `prompt_only`, or `unknown`;
 - outcome: `accepted`, `rejected`, `failed`, `timed_out`, or `abandoned`;

@@ -43,7 +43,7 @@ overlapping writer, new source plane or external action returns to root.
 Logical `role/kind=coordinator` describes the assignment; `agent_role` records the
 actual tool-selected role. Do not infer model identity or delegation capability from
 either name. Only roles permitted by the current runtime and model policy may run.
-Terminal specialists require Sol/low. Coordinators can use [the explicit model
+Terminal specialists require Luna/low. Coordinators can use [the explicit model
 composition policy](model-policy.md) only when user-authorized; another model is never
 a hidden fallback.
 

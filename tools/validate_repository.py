@@ -138,7 +138,7 @@ def validate_skills(root: Path = ROOT) -> list[dict[str, str]]:
         errors.append(_error(
             "implicit_router",
             skills_dir,
-            "both skills may be discoverable, but research must remain evidence-only and project delivery requires an explicit Sol implementation or selected Project workflow",
+            "both skills may be discoverable, but research must remain evidence-only and project delivery requires an explicit Luna implementation or selected Project workflow",
             root,
         ))
     return errors

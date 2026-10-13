@@ -8,7 +8,7 @@ Use these cases only when changing the skill, its trigger description, packet co
 | “What is the stable meaning of this one documented flag?” | Single root research | Do not fan out when one authoritative lookup resolves it. |
 | “Compare the current technical, policy, market, and contrary evidence for this decision.” | Parallel research | Fix N, create independent primary/adversarial/measurement cells, verify every accepted runtime. |
 | “Research the options, implement one, run tests, commit it, and prepare a release.” | Caller workflow + bounded evidence lane | Research scouts return packets; the caller's selected workflow owns delivery. |
-| “Use Sol to research the options, implement one, run tests, commit it, and prepare a release.” | Project + bounded evidence lane | run-diverse-luna-project owns delivery; research scouts return packets only. |
+| “Use Luna to research the options, implement one, run tests, commit it, and prepare a release.” | Project + bounded evidence lane | run-diverse-luna-project owns delivery; research scouts return packets only. |
 | Two accepted evidence rows mirror one upstream source family | Coverage versus independence | Retain different coverage cells, count one independent source family, and reject duplicate coverage without an explicit retry. |
 | Synthesis quotas are represented only by rejected rows | Explicit coverage gap | Do not count them as final coverage; require accepted evidence or an explicit gap. |
 | “Is this DM invitation link official and safe to redeem?” | Parallel research with root-only activation | Separate functional behavior, sender authority, official campaign terms, adversarial phishing/privacy, and payment risk; redact the token. |
@@ -16,19 +16,19 @@ Use these cases only when changing the skill, its trigger description, packet co
 | Private/provider ledger row uses `prompt_only_public` | Reject ledger | `prompt_only_public` is valid only for `public_web`; connector/provider remains undispatched `root_only`. |
 | A `root_only` row contains a child UUID or accepted result | Reject ledger | Root-only work cannot be started or accepted as a child assignment. |
 | Five pages repeat one press release | Parallel or single research depending on remaining cells | Collapse them to one upstream source family; do not count five independent sources. |
-| Live schema exposes fork_turns but excludes none | No Sol fan-out | Static schema check fails closed; do not infer a route from field presence. |
-| Live schema types fork_turns as integer or constrains agent_type to another pattern | No Sol fan-out | Validate literal values against type, pattern, enum, const, and composition constraints. |
-| Two schema variants separately expose agent_type and fork_context | No Sol fan-out | Do not union fields across variants. |
-| Child nickname says Sol but rollout model differs | Reject and stop new dispatch | Runtime metadata, not the name, controls acceptance. |
-| Child runtime says Sol but the parent spawn used full history or a conflicting model | Reject and stop new dispatch | Bind the child path and parent UUID to one exact spawn call and verify its route fields. |
+| Live schema exposes fork_turns but excludes none | No Luna fan-out | Static schema check fails closed; do not infer a route from field presence. |
+| Live schema types fork_turns as integer or constrains agent_type to another pattern | No Luna fan-out | Validate literal values against type, pattern, enum, const, and composition constraints. |
+| Two schema variants separately expose agent_type and fork_context | No Luna fan-out | Do not union fields across variants. |
+| Child nickname says Luna but rollout model differs | Reject and stop new dispatch | Runtime metadata, not the name, controls acceptance. |
+| Child runtime says Luna but the parent spawn used full history or a conflicting model | Reject and stop new dispatch | Bind the child path and parent UUID to one exact spawn call and verify its route fields. |
 | Synthesis ledger reopens the child but its parent call ID is missing or different | Reject ledger closure | Reopen every accepted child and its unique parent spawn request, not only the initial probe. |
 | Accepted rows are nested in tree while top-level assignments is empty | Reject conflicting assignment containers | An empty alias must never bypass runtime receipt verification. |
 | A planned or started row is already marked rejected | Reject ledger | Enforce `planned|started -> pending`, `completed -> accepted|rejected`, and failure terminal states -> excluded. |
 | Two optional scouts return no new evidence while a priority cell remains uncovered | Continue or record an explicit priority gap | No-op stopping must not hide the priority cell. |
 | One scout never finishes before the wave deadline | Bounded continuation | Interrupt or abandon it, record status, exclude output, and reconcile N. |
 | Internal session says PASS; provider readback is missing; public page is stale | Plane-separated synthesis | Report conflict/unknown; never promote to provider/public/Human GO. |
-| Build a nationwide catalog from official PDFs and then generate artifacts | Caller workflow + bounded research lanes | Scouts gather evidence; the caller owns schema, staging, dedup, writes, and publishability. Select Sol Project only when Sol delivery is explicit. |
-| Evaluate a tiny-capital trading idea and deploy it to a VM | Caller workflow + high-stakes research | Research current fees, custody, legal/tax, adversarial and measurement risks; provider/VM writers remain serialized. Select Sol Project only when Sol delivery is explicit. |
+| Build a nationwide catalog from official PDFs and then generate artifacts | Caller workflow + bounded research lanes | Scouts gather evidence; the caller owns schema, staging, dedup, writes, and publishability. Select Luna Project only when Luna delivery is explicit. |
+| Evaluate a tiny-capital trading idea and deploy it to a VM | Caller workflow + high-stakes research | Research current fees, custody, legal/tax, adversarial and measurement risks; provider/VM writers remain serialized. Select Luna Project only when Luna delivery is explicit. |
 
 ## Acceptance dimensions
 
@@ -54,13 +54,13 @@ Give each fresh evaluator one raw request and the candidate skill location, plus
 Include these adjacent requests when changing entry gates:
 
 - “この一つの設定項目の意味を公式ページで確認して。”
-- “Sol のスキルの説明文を短く直して。”
-- “Sol で二つの独立コンポーネントを実装して、検証までして。”
+- “Luna のスキルの説明文を短く直して。”
+- “Luna で二つの独立コンポーネントを実装して、検証までして。”
 - “複数の案を比較し、良い案を実際に実装して。”
 
 Record case ID, raw prompt, baseline/candidate digest, observed route, files read, actual commands and writes, result, and concrete failure evidence. Evaluate outcome, process, safety and efficiency separately. Code unit tests and metadata validation do not establish implicit selection; explicitly supplying the skill tests following it, not discovering it. Record unexecuted dimensions as not run. Retain regressions as new raw cases.
 
-Official basis: [Agent Skills](https://developers.openai.com/codex/skills) and [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills), reviewed 2026-09-05. These recommend scoped descriptions, progressive disclosure and trace/artifact-based evaluations. Sol/low pins, quotas, provenance receipts and gate names are local workflow policy, not official Codex requirements.
+Official basis: [Agent Skills](https://developers.openai.com/codex/skills) and [Testing Agent Skills Systematically with Evals](https://developers.openai.com/blog/eval-skills), reviewed 2026-09-05. These recommend scoped descriptions, progressive disclosure and trace/artifact-based evaluations. Luna/low pins, quotas, provenance receipts and gate names are local workflow policy, not official Codex requirements.
 
 ## Decision and source-access cases
 
@@ -84,7 +84,7 @@ For a live source-access trial use synthetic failure fixtures; do not generate r
 - Later child turn is presented with an initial spawn call: reject fully attributed acceptance, while permitting metadata-only inspection and root-owned candidate assessment.
 - Interrupt leaves partial files or a subprocess: inspect exact ownership before any continuation; interruption alone is not rollback.
 
-Classify every check as documentation, exposed schema, live execution, synthetic validation, or not run. V2 is a native runtime capability; Sol/low, N/C/W/V, declared depth and receipt gates are this skill's operating policy.
+Classify every check as documentation, exposed schema, live execution, synthetic validation, or not run. V2 is a native runtime capability; Luna/low, N/C/W/V, declared depth and receipt gates are this skill's operating policy.
 
 ## OpenAI-docs raw requests
 
@@ -113,8 +113,8 @@ For all four, reuse the portable evaluation record above. Keep direct account/ru
 - A coordinator has a grant but no explicit delegation permission, or reaches D: return the blocked split without spawning.
 - A child finishes while its own child is still working: reject premature collection and keep that branch open.
 - A terminal specialist discovers a useful split: propose it to the coordinating owner; do not silently bypass terminal role instructions.
-- A supported model demonstrates deep native delegation while Sol lacks spawn tools: retain model-specific capability evidence and never advertise a Sol-only runtime pass.
+- A supported model demonstrates deep native delegation while Luna lacks spawn tools: retain model-specific capability evidence and never advertise a Luna-only runtime pass.
 
-- Explicit Astra coordinator policy with Sol specialists: require the version-2 policy and mixed opt-in, retain Sol/low on terminal rows, and verify actual delegation.
+- Explicit Astra coordinator policy with Luna specialists: require the version-2 policy and mixed opt-in, retain Luna/low on terminal rows, and verify actual delegation.
 - An Astra terminal worker relabels itself as coordinator without a real subteam: reject acceptance; coordinator policy is not a general model escape hatch.
-- Sol lacks spawn tools and no mixed policy was authorized: report that lane's limit and continue permitted root work without switching models.
+- Luna lacks spawn tools and no mixed policy was authorized: report that lane's limit and continue permitted root work without switching models.

@@ -1,7 +1,7 @@
 name = "luna_reviewer"
-description = "GPT-6.1 Sol fresh independent adversarial reviewer/verifier for integrated project output."
+description = "GPT-6 Luna fresh independent adversarial reviewer/verifier for integrated project output."
 nickname_candidates = ["Luna Reviewer", "Adversarial Lens"]
-model = "gpt-6.1-sol"
+model = "gpt-6-luna"
 model_reasoning_effort = "low"
 service_tier = "default"
 sandbox_mode = "read-only"

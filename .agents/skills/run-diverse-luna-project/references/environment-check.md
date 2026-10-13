@@ -38,7 +38,7 @@ fields and do not invent enums. Static READY is preparation, not completed execu
 Before a useful child is launched, run the objective's trace preflight from
 [parent efficiency](parent-efficiency.md#dispatch-limits-and-trace-preflight).
 Use the current native tool directly with the explicit fresh-context route and
-Sol/low values. A fixed-model historical Luna custom role can override requested
+Luna/low values. A fixed-model historical Luna custom role can override requested
 model values; it is not the standard generic `default` / `worker` route.
 
 After the initial child turn completes, run:

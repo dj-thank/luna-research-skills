@@ -1,13 +1,13 @@
-# Run Diverse Sol Research
+# Run Diverse Luna Research
 
 ## First 60 seconds
 
 These setup and dispatch steps belong to the root or an authorized coordinator. An assigned terminal scout checks its question, source/access boundary, scope, and deadline, then gathers evidence. It does not wait for its own completed-turn receipt; the root adds that after completion under [the packet contract](research-packet.md). If assignment or access authority is actually missing or incompatible, report that specific gap before touching the affected source.
 
-1. Confirm the requested deliverable is evidence and synthesis only. For mixed delivery, keep this skill as a bounded evidence lane. Let `run-diverse-luna-project` own delivery only when the user explicitly requested Sol implementation; otherwise return evidence to the caller's current workflow.
+1. Confirm the requested deliverable is evidence and synthesis only. For mixed delivery, keep this skill as a bounded evidence lane. Let `run-diverse-luna-project` own delivery only when the user explicitly requested Luna implementation; otherwise return evidence to the caller's current workflow.
 2. Write non-overlapping primary, adversarial, and measurement cells; choose flat mode for a few cells and recursive teams when subproblems benefit from their own coordinators.
 3. Fix one tree-wide `N`, `C`, `W`, verifier reserve `V`, deadlines, source planes, and access modes before dispatch.
-4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Sol/low child route with UUID-bound parent provenance before the wider wave.
+4. Resolve exactly one active copy of this skill, inspect the live spawn schema, and prove one fresh Luna/low child route with UUID-bound parent provenance before the wider wave.
 5. Accept packets only after exact runtime/provenance validation; the root verifies source snapshots under the freshness rule below, deduplicates source families, and alone synthesizes conclusions.
 
 Use [v2-runtime.md](v2-runtime.md) for native lifecycle operations and runtime capability checks. The remaining sections define this skill's parallel execution contract. Use [references/research-packet.md](research-packet.md) for the machine-readable packet and ledger fields.
@@ -22,15 +22,15 @@ All child packets and ledgers use the hierarchy contract in `references/research
 
 Research is always `EVIDENCE_LANE_ONLY`, including when nested in a project. Builders, reviewers, and evidence leaves have disjoint files/worktrees; reviewers/verifiers are fresh and independent. Keep `LOCAL_PASS -> DEVICE_PASS -> PROVIDER_PASS -> PUBLIC_PASS -> HUMAN_GO` separate. Record source plane, freshness, exact locator/hash, unknowns, and gate non-claims. Use the adaptive collection rule below to close optional work; record mandatory gaps explicitly. Every timeout/cancel has TTL, epoch, retry owner, dedup key, and explicit exclusion.
 
-Operate as an `EVIDENCE_LANE_ONLY` coordinator. Scouts return research packets; the root owns source verification, synthesis, authority decisions, and every mutation. For mixed delivery with an explicit Sol implementation request, let `run-diverse-luna-project` own the project and give this skill a bounded research sub-budget. In other mixed-delivery work, return packets to the caller's current workflow.
+Operate as an `EVIDENCE_LANE_ONLY` coordinator. Scouts return research packets; the root owns source verification, synthesis, authority decisions, and every mutation. For mixed delivery with an explicit Luna implementation request, let `run-diverse-luna-project` own the project and give this skill a bounded research sub-budget. In other mixed-delivery work, return packets to the caller's current workflow.
 
-GPT-6.1 Sol with low effort is this skill's default acceptance policy and the terminal specialist policy, not a universal Codex default. The documented mixed coordinator mode is an explicit exception for coordination only. Codex custom-agent files, explicit spawn values, `[agents]` defaults, and the parent can resolve differently. Treat the live `spawn_agent` schema and the completed child rollout as runtime truth. Field names such as `fork_turns` and `fork_context` are runtime-surface details, not portable platform guarantees. Do not confuse Codex custom agents with Responses API multi-agent orchestration.
+GPT-6 Luna with low effort is this skill's default acceptance policy and the terminal specialist policy, not a universal Codex default. The documented mixed coordinator mode is an explicit exception for coordination only. Codex custom-agent files, explicit spawn values, `[agents]` defaults, and the parent can resolve differently. Treat the live `spawn_agent` schema and the completed child rollout as runtime truth. Field names such as `fork_turns` and `fork_context` are runtime-surface details, not portable platform guarantees. Do not confuse Codex custom agents with Responses API multi-agent orchestration.
 
 ## 0. Decide whether to fan out
 
 Use multiple scouts only when at least two independent, bounded evidence cells can run without shared mutable state and parallel work materially improves coverage or latency.
 
-Use one root agent instead for a small or stable lookup, an ordered chain, one slow external operation, a deterministic execution graph, or work that must continuously mutate the same state. Keep implementation, tests, file generation, SSOT integration, browser/provider writes, VM changes, releases, and publishing outside this evidence lane. Route that delivery to `run-diverse-luna-project` only when the user explicitly requested Sol implementation; otherwise return packets to the caller's current workflow.
+Use one root agent instead for a small or stable lookup, an ordered chain, one slow external operation, a deterministic execution graph, or work that must continuously mutate the same state. Keep implementation, tests, file generation, SSOT integration, browser/provider writes, VM changes, releases, and publishing outside this evidence lane. Route that delivery to `run-diverse-luna-project` only when the user explicitly requested Luna implementation; otherwise return packets to the caller's current workflow.
 
 For invite, identity, official-status, phishing, privacy, or payment questions, do not let successful navigation, redemption, login, or API behavior prove sender authority, campaign authenticity, safety, or privacy. Make those separate cells.
 
@@ -67,9 +67,9 @@ python <skill-dir>/scripts/check_setup.py --agent-role <worker-or-default> --all
 
 Inspect the active `spawn_agent` schema and use only fields it exposes. Select one complete non-history route from that schema; never create a route by combining fields from different schema variants.
 
-- Use a live-schema generic `worker` or `default` with explicit `model="gpt-6.1-sol"`, `reasoning_effort="low"`, and `fork_turns="none"`. Pass `--agent-role <worker-or-default> --allow-generic-worker`; the legacy flag name now enables either generic role. Model-fixed custom Sol/Luna roles are not the standard route.
+- Use a live-schema generic `worker` or `default` with explicit `model="gpt-6-luna"`, `reasoning_effort="low"`, and `fork_turns="none"`. Pass `--agent-role <worker-or-default> --allow-generic-worker`; the legacy flag name now enables either generic role. Model-fixed custom Luna/Luna roles are not the standard route.
 - On a historical surface that exposes no `fork_turns` but does expose the complete `agent_type="default"` plus `fork_context=false` route, treat that route as a transitional compatibility path and verify its exact parent request. Do not advertise it as a current portable guarantee.
-- Explicit model or effort values do not replace completed-rollout verification. Any terminal specialist outside Sol/low is rejected even if the request was pinned correctly. An explicitly authorized mixed coordinator uses the exact model/effort policy in [model-policy.md](model-policy.md), with the mixed CLI opt-in and real child delegation.
+- Explicit model or effort values do not replace completed-rollout verification. Any terminal specialist outside Luna/low is rejected even if the request was pinned correctly. An explicitly authorized mixed coordinator uses the exact model/effort policy in [model-policy.md](model-policy.md), with the mixed CLI opt-in and real child delegation.
 
 Put the full assignment in `message`. Do not rely on inherited conversation history. Task names and nicknames are logistics, not model evidence.
 
@@ -87,7 +87,7 @@ Completion criterion: static setup passes, one complete live route is named, and
 
 ### Hierarchical dispatch route
 
-Use hierarchy only after one direct useful scout passes the runtime gate. The root then creates the smallest useful set of counted coordinator attempts and gives each coordinator an exact `descendant_budget`, unique `planned_child_attempt_ids`, leased coverage cells, permitted roles, wave width, deadline, and explicit permission to partition only those leased descendants within the declared depth. Use the exposed generic `worker` or `default` route explicitly pinned to Sol/low and accepted with `--allow-generic-worker` for each bounded function. Do not invent an unexposed role, infer a role from a task name, or fall back to another model.
+Use hierarchy only after one direct useful scout passes the runtime gate. The root then creates the smallest useful set of counted coordinator attempts and gives each coordinator an exact `descendant_budget`, unique `planned_child_attempt_ids`, leased coverage cells, permitted roles, wave width, deadline, and explicit permission to partition only those leased descendants within the declared depth. Use the exposed generic `worker` or `default` route explicitly pinned to Luna/low and accepted with `--allow-generic-worker` for each bounded function. Do not invent an unexposed role, infer a role from a task name, or fall back to another model.
 
 A coordinator may dispatch and collect only its leased direct children, including permitted subcoordinators. It must return `collected_result_ids`, terminal counts, duplicate/gap records, and the compact packets; it may not synthesize final conclusions, write shared state, reuse unallocated credits or an unlisted child. The root reopens every accepted coordinator and leaf receipt, checks the exact parent call edge, reconciles the global `N/C/V` ledger, and alone performs source reopening and synthesis. If the coordinator role, descendant call, or collection receipt cannot be proven, reject that branch and continue flat or root-only.
 
@@ -134,7 +134,7 @@ Add `--allow-generic-worker` whenever `<selected-role>` is the built-in `worker`
 
 Add `--require-spawn-provenance` so the checker binds the child receipt to the unique parent `spawn_agent` request and verifies the non-history route. Add `--require-read-only` for any lane whose contract requires enforced read-only access. Reject the packet and stop new dispatch if the parent request is missing or ambiguous, the selected turn is incomplete, the rollout is ambiguous, parent/depth/role/model/effort mismatches, or the required sandbox is absent. The probe consumes one unit of `N` regardless of outcome.
 
-Completion criterion: the first accepted packet has a completed, unambiguous Sol/low runtime receipt and an allowed safety mode, or no further scouts start and the rejected output is excluded.
+Completion criterion: the first accepted packet has a completed, unambiguous Luna/low runtime receipt and an allowed safety mode, or no further scouts start and the rejected output is excluded.
 
 ## 5. Dispatch bounded waves
 
@@ -190,7 +190,7 @@ Return an answer-first synthesis with citations beside claims, material contradi
 
 - planned, started, completed, failed, rejected, timed-out, abandoned, and accepted assignment counts;
 - quota coverage and uncovered priority cells with reasons;
-- distinct accepted scout threads with verified Sol/low metadata;
+- distinct accepted scout threads with verified Luna/low metadata;
 - selected route and safety enforcement (`sandbox_read_only`, `prompt_only`, or mixed);
 - source-family deduplication count and any excluded routing breach;
 - current evidence gates without promotion.
@@ -210,4 +210,4 @@ Completion criterion: every material conclusion is root-verified, counts reconci
 
 ## Maintenance only
 
-When changing this skill, run `scripts/test_check_setup.py`, run the bundled Skill Creator `quick_validate.py`, verify the checker version and sibling parity when both Sol skills are installed, and forward-test the raw prompts in [references/evaluation-cases.md](evaluation-cases.md) from fresh tasks. Do not load the evaluation cases during ordinary research execution.
+When changing this skill, run `scripts/test_check_setup.py`, run the bundled Skill Creator `quick_validate.py`, verify the checker version and sibling parity when both Luna skills are installed, and forward-test the raw prompts in [references/evaluation-cases.md](evaluation-cases.md) from fresh tasks. Do not load the evaluation cases during ordinary research execution.

@@ -129,7 +129,7 @@ class ReleaseBuilderTests(unittest.TestCase):
                 self.assertEqual(manifest["skills"], "./skills/")
                 self.assertEqual(manifest["author"]["name"], "dj-thank")
                 self.assertIn("description", manifest)
-                self.assertIn("GPT-6.1 Sol", manifest["description"])
+                self.assertIn("GPT-6 Luna", manifest["description"])
                 self.assertNotIn("GPT-5.6 Luna", manifest["description"])
                 self.assertIn("displayName", manifest["interface"])
             sbom = json.loads(first["sbom"].read_text(encoding="utf-8"))

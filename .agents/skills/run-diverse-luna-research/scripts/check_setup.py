@@ -14,9 +14,11 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
-EXPECTED_MODEL = "gpt-6.1-sol"
+DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
+EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
+SUPPORTED_SPECIALIST_MODELS = (DEFAULT_SPECIALIST_MODEL, "gpt-6.1-sol")
 EXPECTED_REASONING_EFFORT = "low"
-CHECKER_CONTRACT_VERSION = "2026-10-13.1"
+CHECKER_CONTRACT_VERSION = "2026-10-14.2"
 MIN_CONCURRENT_THREADS = 2
 MAX_CONCURRENT_THREADS = 6
 MAX_ATTEMPT_BUDGET = 12
@@ -70,7 +72,13 @@ except ModuleNotFoundError:  # pragma: no cover - exercised on old Python only
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate a skill-local GPT-6.1 Sol/low subagent route."
+        description="Validate a skill-local GPT-6 Luna/low subagent route."
+    )
+    parser.add_argument(
+        "--specialist-model",
+        choices=SUPPORTED_SPECIALIST_MODELS,
+        default=DEFAULT_SPECIALIST_MODEL,
+        help="Terminal profile: GPT-6 Luna by default; GPT-6.1 Sol only by explicit selection. Both use low effort.",
     )
     parser.add_argument(
         "--version",
@@ -107,12 +115,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help=(
             "Explicitly opt in to built-in worker/default roles; requires a fresh "
             "route with explicit model/effort matching the selected role policy "
-            "(Sol/low for terminal specialists)."
+            "(Luna/low for terminal specialists)."
         ),
     )
     parser.add_argument(
         "--allow-mixed-coordinators", action="store_true",
-        help="Explicitly allow the v2 ledger coordinator_model_policy for logical coordinators only; leaves remain Sol/low.",
+        help="Explicitly allow the v2 ledger coordinator_model_policy for logical coordinators only; leaves remain Luna/low.",
     )
     parser.add_argument(
         "--spawn-schema-json",
@@ -311,7 +319,7 @@ def validate_role_policy(
     if role_name == "worker" and not allow_generic_worker:
         errors.append(
             "built-in generic worker is disabled by default; pass --allow-generic-worker "
-            "for an explicit Sol/low fresh-context route"
+            "for an explicit Luna/low fresh-context route"
         )
         return errors, warnings
 
@@ -355,7 +363,7 @@ def validate_role_policy(
 
     if role_name == "default" and role_pin and not config_pin:
         warnings.append(
-            "[agents] defaults are not Sol/low, but the selected custom "
+            "[agents] defaults are not Luna/low, but the selected custom "
             "default role is pinned; completed-rollout verification remains required"
         )
     return errors, warnings
@@ -416,7 +424,7 @@ def validate_workspace_config_overrides(
     if checked and not errors:
         print(f"OK: {len(checked)} workspace config layer(s) passed override checks")
     elif not checked:
-        print("OK: no workspace config layer shadows the selected Sol route")
+        print("OK: no workspace config layer shadows the selected Luna route")
     return errors, warnings
 
 
@@ -966,7 +974,7 @@ def _row_runtime_policy(ledger: dict[str, Any], row: dict[str, Any], allow_mixed
         return EXPECTED_MODEL, EXPECTED_REASONING_EFFORT, errors
     if policy != (EXPECTED_MODEL, EXPECTED_REASONING_EFFORT):
         if not allow_mixed_coordinators:
-            errors.append("non-Sol coordinator acceptance requires --allow-mixed-coordinators")
+            errors.append("nonstandard coordinator acceptance requires --allow-mixed-coordinators")
         if row.get("may_spawn_descendants") is not True:
             errors.append("mixed coordinator acceptance requires explicit may_spawn_descendants=true")
         if not isinstance(row.get("planned_child_attempt_ids"), list) or not row["planned_child_attempt_ids"]:
@@ -974,7 +982,8 @@ def _row_runtime_policy(ledger: dict[str, Any], row: dict[str, Any], allow_mixed
     return *policy, errors
 
 
-def _accepted_runtime_errors(prefix: str, row: dict[str, Any], expected_model: str = EXPECTED_MODEL, expected_effort: str = EXPECTED_REASONING_EFFORT) -> list[str]:
+def _accepted_runtime_errors(prefix: str, row: dict[str, Any], expected_model: str | None = None, expected_effort: str = EXPECTED_REASONING_EFFORT) -> list[str]:
+    expected_model = EXPECTED_MODEL if expected_model is None else expected_model
     errors: list[str] = []
     if row.get("runtime_verified") is not True or not _canonical_uuid(row.get("thread_uuid")):
         errors.append(
@@ -2593,9 +2602,10 @@ def validate_runtime_rollout(
     allow_generic_worker: bool = False,
     require_initial_turn: bool = False,
     require_v2: bool = False,
-    expected_model: str = EXPECTED_MODEL,
+    expected_model: str | None = None,
     expected_effort: str = EXPECTED_REASONING_EFFORT,
 ) -> tuple[list[str], list[str]]:
+    expected_model = EXPECTED_MODEL if expected_model is None else expected_model
     latest_context: tuple[int, dict[str, Any]] | None = None
     first_context_line: int | None = None
     contexts_by_turn: dict[str, list[tuple[int, dict[str, Any]]]] = {}
@@ -3013,9 +3023,10 @@ def validate_spawn_provenance(
     role_name: str,
     expected_call_id: str | None = None,
     allow_generic_worker: bool = False,
-    expected_model: str = EXPECTED_MODEL,
+    expected_model: str | None = None,
     expected_effort: str = EXPECTED_REASONING_EFFORT,
 ) -> tuple[list[str], list[str]]:
+    expected_model = EXPECTED_MODEL if expected_model is None else expected_model
     errors: list[str] = []
     warnings: list[str] = []
     try:
@@ -3349,7 +3360,9 @@ def validate_ledger_receipts(
 
 
 def main(argv: list[str] | None = None) -> int:
+    global EXPECTED_MODEL
     args = parse_args(argv)
+    EXPECTED_MODEL = args.specialist_model
     codex_home = args.codex_home.expanduser().resolve()
     workspace = args.workspace.expanduser().resolve()
     config_paths = [codex_home / "config.toml", *args.config]
@@ -3479,7 +3492,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        "READY: selected routing policies passed the available checks; terminal workers remain Sol/low."
+        "READY: selected routing policies passed the available checks; terminal workers match the selected model/effort profile."
     )
     print(
         "REQUIRED: select one complete live non-history route; do not combine "
@@ -3499,7 +3512,7 @@ def main(argv: list[str] | None = None) -> int:
             "work root-only."
         )
     else:
-        print("VERIFIED: this completed child executed with Sol/low metadata.")
+        print("VERIFIED: this completed child matched the selected model/effort metadata.")
     return 0
 
 
