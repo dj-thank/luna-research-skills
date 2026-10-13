@@ -125,6 +125,8 @@ def validate_skills(root: Path = ROOT) -> list[dict[str, str]]:
         for required in (
             path.parent / "scripts" / "check_setup.py",
             path.parent / "scripts" / "test_check_setup.py",
+            path.parent / "scripts" / "check_dispatch_budget.py",
+            path.parent / "scripts" / "test_dispatch_budget.py",
         ):
             if not required.is_file():
                 errors.append(_error("skill_contract_file", required, "missing required checker contract file", root))
@@ -136,7 +138,7 @@ def validate_skills(root: Path = ROOT) -> list[dict[str, str]]:
         errors.append(_error(
             "implicit_router",
             skills_dir,
-            "both skills may be discoverable, but research must remain evidence-only and project delivery requires an explicit Luna implementation request",
+            "both skills may be discoverable, but research must remain evidence-only and project delivery requires an explicit Sol implementation or selected Project workflow",
             root,
         ))
     return errors
@@ -273,7 +275,7 @@ def validate_repository(root: Path = ROOT) -> list[dict[str, str]]:
                             errors.append(_error("unpinned_action", path, f"GitHub Action ref is not a full commit SHA: {reference}", root))
     research_scripts = root / ".agents" / "skills" / "run-diverse-luna-research" / "scripts"
     project_scripts = root / ".agents" / "skills" / "run-diverse-luna-project" / "scripts"
-    for filename in ("check_setup.py", "test_check_setup.py"):
+    for filename in ("check_setup.py", "test_check_setup.py", "check_dispatch_budget.py", "test_dispatch_budget.py"):
         research_file = research_scripts / filename
         project_file = project_scripts / filename
         if research_file.is_file() and project_file.is_file():

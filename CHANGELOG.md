@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+- Apply the six-child concurrency cap to workspace config overrides, with boundary regression tests in both skills.
+- Add repository and cross-platform user-scope update steps, including comparison, backup, and readback.
+
+### Changed
+
+- 標準の担当モデルを GPT-6.1 Sol / low に同期。既存の Luna スキル名と任意の role 名は互換性のため維持し、標準起動は generic `default` / `worker` と `fork_turns="none"` を使う。親モデルとグローバル設定を自動変更しない。
+- 分業方針を、同じ目的で総試行既定6・最大12、子の同時上限6、1 wave の開始最大3へ同期。失敗・再試行・継続も同じ予算で数え、必要な独立検証枠を保持する。
+- README を、概要・導入・最初の依頼・結果の確認へ整理。Mermaid の全体図と実装・検証のやり取り図、5段階の手順、具体的な依頼例、準備状態と実行証拠の区別を追加した。
+
+### Added
+
+- 両スキルへ、実際の呼び出し履歴を使う `check_dispatch_budget.py` と回帰テストを追加。repository validator、CI、反復検査、Cloud smoke、配布物のテストへ同じ検査を統合した。
+- Windows の実行アカウント・Python・サンドボックス差を区別する環境診断を追加。V2 を必要とする実行にだけ V2 確認を求める。
+- 2026年10月14日の確認範囲を、実測・合成検査・未実施の項目に分けた公開用記録を追加。個人のパス・raw rollout・private 設定は含めない。
+
 ## [2.1.0] - 2026-09-10
 
 ### Fixed

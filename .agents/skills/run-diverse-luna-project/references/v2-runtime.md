@@ -30,9 +30,9 @@ Before dispatch, inspect three separate layers:
 
 Use `check_setup.py --require-v2` when this run promises V2: it checks saved enablement
 and, when given a runtime receipt, its V2 metadata. It does not prove child tool exposure;
-a bounded useful child must demonstrate that separately. The checker verifies Luna/max
+a bounded useful child must demonstrate that separately. The checker verifies Sol/low
 for terminal specialists and the explicitly authorized [coordinator policy](model-policy.md)
-for coordinators. General V2 does not require Luna or a fixed reasoning effort.
+for coordinators. General V2 does not require Sol or a fixed reasoning effort.
 
 ## Native tool semantics on the current V2 surface
 
@@ -96,7 +96,7 @@ Record each continuation's tool-call ID, target, status before sending, resultin
 when visible, changed artifacts and observed checks. A running-agent steer can affect
 the current turn; it is not automatically a new completed turn.
 
-The present Luna production receipt format binds `spawn_kind=spawn_agent` to the
+The present Sol production receipt format binds `spawn_kind=spawn_agent` to the
 **initial child turn only**. A later turn must never borrow that initial call's proof.
 If the runtime lacks a structured causal link from a followup call to the exact child
 turn, keep its output as a candidate with operational evidence. Root can inspect and

@@ -1,8 +1,10 @@
-# Luna workstream packet
+# Sol workstream packet
 
 Use this checklist for every new assignment. Put all required context in the spawn message because `fork_turns="none"` and the transitional `fork_context=false` route supply no conversation history.
 
 ## Assignment packet
+
+Checker contract `2026-10-13.1` separates planning from observed dispatch provenance (ledger schema remains v2). For `planned/pending` and `not_dispatched/excluded`, keep `delegated_by` as an object; its logical `parent_attempt_id`, when supplied, must match the row (legacy v2 omission unambiguously inherits the row parent); leave an unobserved `parent_call_id` null, and leave `root_parent_call_id` null on top-level rows. The known root parent thread UUID is still required and must match `delegated_by.parent_thread_uuid`. A nested future parent thread may be null only while its parent has no observed thread UUID; once known, it must match. Never invent `pending:*` call IDs; the checker rejects that explicit placeholder prefix. Any non-null call ID requires a valid paired parent thread UUID, even during planning. Non-null edge values must be valid, consistent, and unique; no other call-ID naming format is imposed, and runtime receipt verification establishes genuineness. Every `started`, `completed`, `failed`, `timed_out`, or `abandoned` row requires the exact nonempty observed parent thread UUID and call ID, including rejected/excluded dispatches. Accepted results additionally require the existing completed-turn and verified parent-call receipts; null planning fields do not establish runtime acceptance.
 
 - **Attempt ID:** the root-reserved ledger assignment ID; include it in the spawn message. Root adds completed-turn and parent-call provenance after the result returns.
 - **Project outcome:** the overall result this workstream supports.
@@ -36,8 +38,6 @@ For a `$run-diverse-luna-research` sub-budget, replace file ownership with `EVID
 ## Return packet
 
 Require the agent to return:
-
-The assigned agent returns its work and observed checks first. Root appends completed-turn and parent-call provenance after completion, before accepting the result. Leave unobserved receipt fields unset; a future completion receipt is not a prerequisite for starting an authorized assignment. Missing assignment or access authority still blocks the affected work.
 
 1. Status: completed, partial, failed, or blocked.
 2. Outcome and artifact paths or evidence locators.

@@ -27,6 +27,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                     b'description: "Install the demo skill."\n'
                     b"---\n\nDemo instructions.\n"
                 ),
+                ".agents/skills/demo/scripts/check_dispatch_budget.py": b"# budget checker\n",
+                ".agents/skills/demo/scripts/test_dispatch_budget.py": b"# budget tests\n",
                 "docs/assets/teams.png": b"\x89PNG\r\n\x1a\nfixture",
                 "docs/evaluation.md": b"bounded evaluation",
                 "tools/MIGRATION.md": b"migration procedure",
@@ -89,6 +91,8 @@ class ReleaseBuilderTests(unittest.TestCase):
             )
             self.assertEqual(json.loads(verified.stdout)["status"], "VERIFIED")
             self.assertTrue((target / "demo" / "SKILL.md").is_file())
+            self.assertTrue((target / "demo/scripts/check_dispatch_budget.py").is_file())
+            self.assertTrue((target / "demo/scripts/test_dispatch_budget.py").is_file())
             self.assertEqual((root / "README.md").read_text(encoding="utf-8"), readme)
 
     def test_reproducible_archive_and_inventory(self) -> None:
@@ -125,6 +129,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                 self.assertEqual(manifest["skills"], "./skills/")
                 self.assertEqual(manifest["author"]["name"], "dj-thank")
                 self.assertIn("description", manifest)
+                self.assertIn("GPT-6.1 Sol", manifest["description"])
+                self.assertNotIn("GPT-5.6 Luna", manifest["description"])
                 self.assertIn("displayName", manifest["interface"])
             sbom = json.loads(first["sbom"].read_text(encoding="utf-8"))
             self.assertEqual(sbom["spdxVersion"], "SPDX-2.3")

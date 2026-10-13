@@ -50,6 +50,63 @@ python tools/install_luna_skills.py --verify --json
 - 途中で失敗した場合、導入器自身が作成し、かつ内容が変わっていないpackageだけを巻き戻します。検出した別プロセスの追加・変更は削除せず、手動確認が必要なpathとして報告します。
 - Skill packageだけを導入します。`.codex/agents`、親モデル、`~/.codex/config.toml`、provider設定は変更しません。
 
+## 既存スキルを更新する
+
+### 1. 取得元を更新する
+
+この手順は macOS・Linux・Windows 共通です。clone したリポジトリのルートで、最初に現在の変更を確認します。
+
+```sh
+git status --short
+```
+
+出力がある場合は、その変更を別途保存するか、変更のない別の clone を取得して比較します。以下は**変更のない取得元**で実行します。merge conflict や fast-forward 不能が出たら、`reset --hard` で消さずに内容を確認してください。
+
+```sh
+git switch main
+git pull --ff-only
+```
+
+Release ZIP を使っていた場合は、新しい main を別のフォルダーへ clone します。Release は固定した版なので、古い ZIP の中身は自動更新されません。
+
+### 2. 実際の導入先を確認して比較する
+
+リポジトリ内だけで使う場合は `.agents/skills` が更新済みです。このフォルダーを Codex で開き、新しいチャットで README の準備チェックへ進みます。
+
+ユーザースコープへコピーしている場合は、導入器の plan で source と target を確認します。既定の導入先は、次のコマンドでも表示できます。
+
+```sh
+python tools/install_luna_skills.py
+python -c "from pathlib import Path; print(Path.home() / '.agents' / 'skills')"
+```
+
+次は比較例です。`<導入先>` は上で確認したディレクトリへ置き換えます。差分があると `git diff --no-index` の終了コードは1になります。比較中にファイルは変更されません。
+
+```sh
+git diff --no-index .agents/skills/run-diverse-luna-research "<導入先>/run-diverse-luna-research"
+git diff --no-index .agents/skills/run-diverse-luna-project "<導入先>/run-diverse-luna-project"
+```
+
+### 3. 保全してから、選んだコピーを更新する
+
+1. 実際に使っている2つのフォルダーと、ローカルの独自変更をバックアップします。バックアップは `.agents/skills` や `.codex/skills` の外へ保存し、古いコピーがもう一つのスキルとして読み込まれないようにします。
+2. 差分を確認し、公開版で置き換えるか、独自変更を新しい公開版へ手動で移すかを決めます。公開版全体で置き換える場合は、バックアップを確かめてから対象の2つだけを入れ替えます。他のスキルは触りません。
+3. ファイルマネージャー等で、取得元の2つの package の全ファイルを導入先へ反映します。追加だけでなく削除されたファイルも確認します。Windows で権限・旧配置・移行 journal を維持する必要がある場合は、下の PowerShell 移行経路を使います。
+
+Python 導入器は更新操作を自動化しません。`destination already exists` を解消するためだけに既存コピーを消して再実行しないでください。任意の `.codex/agents` 役割を別途導入済みの場合も、自分の設定を確認して更新します。スキルのコピー操作でモデルや役割の設定は変更されません。
+
+### 4. 内容と動作を照合する
+
+公開版をそのまま導入した場合は、取得元のルートで次を実行します。
+
+```sh
+python tools/install_luna_skills.py --verify
+```
+
+別の導入先には `--target-root "<導入先>"` を追加します。独自変更を保った場合は差分が残るため、同一 bytes の検査が不合格になることがあります。その差分を確認し、同一と報告しないでください。
+
+Codex の新しいチャットで、使うスキルの場所、README の準備チェック、最初の担当の完了記録を確認します。同名コピーが複数ある場合は、古い配置を保全したうえで整理し、選ばれた実体を確かめてください。
+
 ## Windowsで移行・詳細検査を行う
 
 PowerShell 7の既存ツールは、旧配置からの移行、journal、staging hash、partial-failure試験を含むWindows向けの詳細経路です。この経路はGitHubリポジトリまたはsource ZIPから実行し、最初にdiscoveryとdry-runを実行します。

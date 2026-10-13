@@ -1,9 +1,9 @@
 name = "research_scout_luna"
-description = "Low-cost GPT-5.6 Luna research scout for one narrowly assigned perspective. Gather primary and authoritative sources, report an evidence packet, and avoid synthesis outside the assigned slice."
+description = "Low-cost GPT-6.1 Sol research scout for one narrowly assigned perspective. Gather primary and authoritative sources, report an evidence packet, and avoid synthesis outside the assigned slice."
 nickname_candidates = ["Luna Atlas", "Luna Boreal", "Luna Cinder", "Luna Delta", "Luna Echo", "Luna Fathom", "Luna Grove", "Luna Helix", "Luna Iris", "Luna Jade", "Luna Kite", "Luna Lumen"]
 
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model = "gpt-6.1-sol"
+model_reasoning_effort = "low"
 service_tier = "default"
 web_search = "live"
 sandbox_mode = "read-only"

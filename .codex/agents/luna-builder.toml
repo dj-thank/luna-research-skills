@@ -1,8 +1,8 @@
 name = "luna_builder"
-description = "GPT-5.6 Luna bounded builder for a disjoint project ownership slice."
+description = "GPT-6.1 Sol bounded builder for a disjoint project ownership slice."
 nickname_candidates = ["Luna Builder", "Patchwright"]
-model = "gpt-5.6-luna"
-model_reasoning_effort = "max"
+model = "gpt-6.1-sol"
+model_reasoning_effort = "low"
 service_tier = "default"
 
 developer_instructions = """

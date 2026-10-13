@@ -175,6 +175,8 @@ def _commands(root: Path, temporary: Path, iterations: int) -> list[tuple[list[s
         ([sys.executable, "-m", "unittest", "discover", "-s", "tools", "-p", "test_*.py"], 180),
         ([sys.executable, ".agents/skills/run-diverse-luna-research/scripts/test_check_setup.py"], 180),
         ([sys.executable, ".agents/skills/run-diverse-luna-project/scripts/test_check_setup.py"], 180),
+        ([sys.executable, ".agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py"], 180),
+        ([sys.executable, ".agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py"], 180),
         ([sys.executable, "tools/stress_contracts.py", "--iterations", str(iterations)], 1200),
         ([sys.executable, "-m", "compileall", "-q", ".agents", "tools"], 180),
         ([sys.executable, "tools/build_release.py", "--root", str(root), "--output", str(release_output)], 180),

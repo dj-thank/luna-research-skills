@@ -14,10 +14,13 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
-EXPECTED_MODEL = "gpt-5.6-luna"
-EXPECTED_REASONING_EFFORT = "max"
-CHECKER_CONTRACT_VERSION = "2026-09-05.6"
+EXPECTED_MODEL = "gpt-6.1-sol"
+EXPECTED_REASONING_EFFORT = "low"
+CHECKER_CONTRACT_VERSION = "2026-10-13.1"
 MIN_CONCURRENT_THREADS = 2
+MAX_CONCURRENT_THREADS = 6
+MAX_ATTEMPT_BUDGET = 12
+MAX_WAVE_WIDTH = 3
 READ_ONLY_SANDBOXES = {"read-only", "read_only", "readonly"}
 SOURCE_PLANES = {
     "public_web",
@@ -67,7 +70,7 @@ except ModuleNotFoundError:  # pragma: no cover - exercised on old Python only
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate a skill-local GPT-5.6 Luna/max subagent route."
+        description="Validate a skill-local GPT-6.1 Sol/low subagent route."
     )
     parser.add_argument(
         "--version",
@@ -102,14 +105,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--allow-generic-worker",
         action="store_true",
         help=(
-            "Explicitly opt in to the built-in worker role; requires a fresh "
+            "Explicitly opt in to built-in worker/default roles; requires a fresh "
             "route with explicit model/effort matching the selected role policy "
-            "(Luna/max for terminal specialists)."
+            "(Sol/low for terminal specialists)."
         ),
     )
     parser.add_argument(
         "--allow-mixed-coordinators", action="store_true",
-        help="Explicitly allow the v2 ledger coordinator_model_policy for logical coordinators only; leaves remain Luna/max.",
+        help="Explicitly allow the v2 ledger coordinator_model_policy for logical coordinators only; leaves remain Sol/low.",
     )
     parser.add_argument(
         "--spawn-schema-json",
@@ -199,7 +202,7 @@ def iter_agent_dirs(workspace: Path, codex_home: Path) -> Iterable[Path]:
 
 
 def load_role_definitions(
-    workspace: Path, codex_home: Path, role_name: str
+    workspace: Path, codex_home: Path, role_name: str, allow_generic_worker: bool = False
 ) -> tuple[list[tuple[Path, dict[str, Any]]], list[str]]:
     definitions: list[tuple[Path, dict[str, Any]]] = []
     warnings: list[str] = []
@@ -256,6 +259,9 @@ def validate_static_base(config: dict[str, Any]) -> tuple[list[str], list[str]]:
             f"{current_threads}"
         )
 
+    if isinstance(current_threads, int) and current_threads > MAX_CONCURRENT_THREADS:
+        errors.append(f"agents.max_concurrent_threads_per_session exceeds local cap={MAX_CONCURRENT_THREADS}")
+
     if "max_threads" in agents:
         warnings.append(
             "agents.max_threads is a legacy alias; prefer "
@@ -294,7 +300,7 @@ def validate_role_policy(
         and config_effort == EXPECTED_REASONING_EFFORT
     )
 
-    if role_name == "worker" and allow_generic_worker:
+    if role_name in {"worker", "default"} and allow_generic_worker:
         if definitions:
             errors.append("generic worker mode must not pretend a custom TOML definition exists")
         warnings.append(
@@ -305,7 +311,7 @@ def validate_role_policy(
     if role_name == "worker" and not allow_generic_worker:
         errors.append(
             "built-in generic worker is disabled by default; pass --allow-generic-worker "
-            "for an explicit Luna/max fresh-context route"
+            "for an explicit Sol/low fresh-context route"
         )
         return errors, warnings
 
@@ -349,14 +355,14 @@ def validate_role_policy(
 
     if role_name == "default" and role_pin and not config_pin:
         warnings.append(
-            "[agents] defaults are not Luna/max, but the selected custom "
+            "[agents] defaults are not Sol/low, but the selected custom "
             "default role is pinned; completed-rollout verification remains required"
         )
     return errors, warnings
 
 
 def validate_workspace_config_overrides(
-    workspace: Path, codex_home: Path, role_name: str
+    workspace: Path, codex_home: Path, role_name: str, allow_generic_worker: bool = False
 ) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -389,12 +395,13 @@ def validate_workspace_config_overrides(
             not isinstance(value, int)
             or isinstance(value, bool)
             or value < MIN_CONCURRENT_THREADS
+            or value > MAX_CONCURRENT_THREADS
         ):
             errors.append(
                 f"{config_path}: agents.max_concurrent_threads_per_session "
-                f"must be at least {MIN_CONCURRENT_THREADS}, got {value!r}"
+                f"must be {MIN_CONCURRENT_THREADS}..{MAX_CONCURRENT_THREADS}, got {value!r}"
             )
-        if role_name == "default":
+        if role_name == "default" and not allow_generic_worker:
             expected = {
                 "default_subagent_model": EXPECTED_MODEL,
                 "default_subagent_reasoning_effort": EXPECTED_REASONING_EFFORT,
@@ -409,7 +416,7 @@ def validate_workspace_config_overrides(
     if checked and not errors:
         print(f"OK: {len(checked)} workspace config layer(s) passed override checks")
     elif not checked:
-        print("OK: no workspace config layer shadows the selected Luna route")
+        print("OK: no workspace config layer shadows the selected Sol route")
     return errors, warnings
 
 
@@ -959,7 +966,7 @@ def _row_runtime_policy(ledger: dict[str, Any], row: dict[str, Any], allow_mixed
         return EXPECTED_MODEL, EXPECTED_REASONING_EFFORT, errors
     if policy != (EXPECTED_MODEL, EXPECTED_REASONING_EFFORT):
         if not allow_mixed_coordinators:
-            errors.append("non-Luna coordinator acceptance requires --allow-mixed-coordinators")
+            errors.append("non-Sol coordinator acceptance requires --allow-mixed-coordinators")
         if row.get("may_spawn_descendants") is not True:
             errors.append("mixed coordinator acceptance requires explicit may_spawn_descendants=true")
         if not isinstance(row.get("planned_child_attempt_ids"), list) or not row["planned_child_attempt_ids"]:
@@ -1095,12 +1102,15 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
     ):
         if not isinstance(value, int) or isinstance(value, bool) or value < 0:
             errors.append(f"{prefix}.{key} must be a non-negative integer")
-    exceptional = tree.get("exceptional_budget") is True or tree.get("exceptional") is True
-    max_budget = 64 if exceptional else 32
+    max_budget = MAX_ATTEMPT_BUDGET
     if isinstance(budget, int) and (budget < 4 or budget > max_budget):
         errors.append(
             f"{prefix}.attempt_budget_N must be from 4 through {max_budget}"
         )
+    if isinstance(cap, int) and cap > MAX_CONCURRENT_THREADS:
+        errors.append(f"{prefix}.concurrency_cap_C exceeds local cap={MAX_CONCURRENT_THREADS}")
+    if isinstance(wave_width, int) and wave_width > MAX_WAVE_WIDTH:
+        errors.append(f"{prefix}.wave_width_W exceeds local maximum={MAX_WAVE_WIDTH}")
     if isinstance(cap, int) and cap < 1:
         errors.append(f"{prefix}.concurrency_cap_C must be positive")
     if isinstance(wave_width, int) and wave_width < 1:
@@ -1182,17 +1192,30 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         if parent is None and depth != 1:
             errors.append(f"{pfx}: top-level attempt depth must be 1; missing parent")
         if parent == aid: errors.append(f"{pfx}: self-cycle")
-        # delegated_by must identify the exact parent spawn call, never task_name/path.
+        # Planning identifies the logical parent before a spawn call exists.
+        # Every dispatched state still requires the exact observed runtime edge.
+        status = row.get("execution_status", row.get("state"))
+        unstarted = status in {"planned", "not_dispatched"}
         delegated = row.get("delegated_by")
-        if not isinstance(delegated, dict): delegated = {}
+        if not isinstance(delegated, dict):
+            errors.append(f"{pfx}.delegated_by must be an object")
+            delegated = {}
         edge_parent = delegated.get("parent_attempt_id", parent)
         if edge_parent != parent: errors.append(f"{pfx}.delegated_by parent mismatch")
         for edge_key in ("parent_thread_uuid", "parent_call_id"):
+            if unstarted and delegated.get(edge_key) is None and (
+                edge_key == "parent_call_id" or parent is not None
+            ):
+                continue
             if not isinstance(delegated.get(edge_key), str) or not delegated[edge_key].strip(): errors.append(f"{pfx}.delegated_by.{edge_key} is required")
-        try: uuid.UUID(str(delegated.get("parent_thread_uuid")))
-        except (ValueError, TypeError): errors.append(f"{pfx}.delegated_by.parent_thread_uuid must be UUID")
+        if not (unstarted and parent is not None and delegated.get("parent_thread_uuid") is None
+                and delegated.get("parent_call_id") is None):
+            try: uuid.UUID(str(delegated.get("parent_thread_uuid")))
+            except (ValueError, TypeError): errors.append(f"{pfx}.delegated_by.parent_thread_uuid must be UUID")
         edge_thread = delegated.get("parent_thread_uuid")
         edge_call = delegated.get("parent_call_id")
+        if isinstance(edge_call, str) and edge_call.strip().lower().startswith("pending:"):
+            errors.append(f"{pfx}.delegated_by.parent_call_id cannot be a pending: placeholder")
         if isinstance(edge_thread, str) and isinstance(edge_call, str) and edge_call:
             edge_key = (edge_thread, edge_call)
             previous_edge = edge_owners.get(edge_key)
@@ -1209,7 +1232,7 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
                 uuid.UUID(str(root_thread))
             except (ValueError, TypeError):
                 errors.append(f"{pfx}.root_parent_thread_uuid must be UUID")
-            if not isinstance(root_call, str) or not root_call.strip():
+            if not (unstarted and root_call is None) and (not isinstance(root_call, str) or not root_call.strip()):
                 errors.append(f"{pfx}.root_parent_call_id is required")
             if root_thread != edge_thread or root_call != edge_call:
                 errors.append(f"{pfx}: root parent edge must match delegated_by")
@@ -2004,9 +2027,9 @@ def validate_research_ledger(
         not isinstance(budget, int)
         or isinstance(budget, bool)
         or budget < 3
-        or budget > 20
+        or budget > MAX_ATTEMPT_BUDGET
     ):
-        errors.append(f"ledger.N must be an integer from 3 through 20, got {budget!r}")
+        errors.append(f"ledger.N must be an integer from 3 through {MAX_ATTEMPT_BUDGET}, got {budget!r}")
         budget = None
     overall_deadline = _parse_timestamp(ledger.get("overall_deadline"))
     if overall_deadline is None:
@@ -2312,9 +2335,9 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None, allow
         not isinstance(budget, int)
         or isinstance(budget, bool)
         or budget < 1
-        or budget > 20
+        or budget > MAX_ATTEMPT_BUDGET
     ):
-        errors.append(f"project ledger.N must be an integer from 1 through 20, got {budget!r}")
+        errors.append(f"project ledger.N must be an integer from 1 through {MAX_ATTEMPT_BUDGET}, got {budget!r}")
         budget = None
     reserve = ledger.get("verifier_reserve")
     if (
@@ -2371,12 +2394,14 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None, allow
         if kind == "verifier":
             verifier_rows += 1
         role = row.get("agent_role")
+        # Generic roles execute the logical kind from the bounded packet; accepted
+        # rows still require exact model/effort and parent-spawn receipt checks.
         role_allowed = {
-            "coordinator": {"coordinator", "luna_project_coordinator"},
-            "builder": {"builder", "luna_builder", "default"},
-            "reviewer": {"reviewer", "luna_reviewer", "verifier"},
-            "verifier": {"reviewer", "luna_reviewer", "verifier"},
-            "evidence_lane": {"evidence_lane", "research_scout_luna"},
+            "coordinator": {"coordinator", "luna_project_coordinator", "worker", "default"},
+            "builder": {"builder", "luna_builder", "worker", "default"},
+            "reviewer": {"reviewer", "luna_reviewer", "verifier", "worker", "default"},
+            "verifier": {"reviewer", "luna_reviewer", "verifier", "worker", "default"},
+            "evidence_lane": {"evidence_lane", "research_scout_luna", "worker", "default"},
         }
         if kind in role_allowed and role is not None and role not in role_allowed[kind]:
             errors.append(f"{prefix}.agent_role {role!r} incompatible with kind {kind!r}")
@@ -3087,15 +3112,15 @@ def validate_spawn_provenance(
     explicit_effort = arguments.get("reasoning_effort")
     if role_name == "worker" and not allow_generic_worker:
         errors.append("generic worker provenance requires --allow-generic-worker")
-    if role_name == "worker" and allow_generic_worker:
+    if role_name in {"worker", "default"} and allow_generic_worker:
         if explicit_model != expected_model:
             errors.append(
-                "generic worker spawn request must explicitly set model="
+                "generic worker/default spawn request must explicitly set model="
                 f"{expected_model!r}"
             )
         if explicit_effort != expected_effort:
             errors.append(
-                "generic worker spawn request must explicitly set reasoning_effort="
+                "generic worker/default spawn request must explicitly set reasoning_effort="
                 f"{expected_effort!r}"
             )
     if explicit_model is not None and explicit_model != expected_model:
@@ -3354,7 +3379,7 @@ def main(argv: list[str] | None = None) -> int:
     errors.extend(role_errors)
     warnings.extend(more_role_warnings)
     override_errors, override_warnings = validate_workspace_config_overrides(
-        workspace, codex_home, args.agent_role
+        workspace, codex_home, args.agent_role, args.allow_generic_worker
     )
     errors.extend(override_errors)
     warnings.extend(override_warnings)
@@ -3454,7 +3479,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     print(
-        "READY: selected routing policies passed the available checks; terminal workers remain Luna/max."
+        "READY: selected routing policies passed the available checks; terminal workers remain Sol/low."
     )
     print(
         "REQUIRED: select one complete live non-history route; do not combine "
@@ -3474,7 +3499,7 @@ def main(argv: list[str] | None = None) -> int:
             "work root-only."
         )
     else:
-        print("VERIFIED: this completed child executed with Luna/max metadata.")
+        print("VERIFIED: this completed child executed with Sol/low metadata.")
     return 0
 
 
