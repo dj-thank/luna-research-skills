@@ -20,6 +20,8 @@
 
 ### Added
 
+- 英語版 `README.en.md` と、両README冒頭の English / 日本語リンクを追加。4つの図、導入・依頼・検証の5段階の手順、実例と確認範囲を英語で説明する。plugin ZIPでも英語READMEを収録し、スキルへのリンクを配布先へ変換する。
+
 - READMEの量子センサー例を実際に調査した結果と、GPT-6 Luna / lowの6体による分担・深さ2の再委任・回収・独立検証を記録した公開文書とJSONを追加。READMEから開けるようにし、実際の流れをMermaidとステップ別に説明。判定・取得範囲・未検証の境界を保持する。
 
 - 両スキルへ、実際の呼び出し履歴を使う `check_dispatch_budget.py` と回帰テストを追加。repository validator、CI、反復検査、Cloud smoke、配布物のテストへ同じ検査を統合した。

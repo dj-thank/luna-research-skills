@@ -19,8 +19,10 @@ class ReleaseBuilderTests(unittest.TestCase):
             root = Path(temp) / "repo"
             root.mkdir()
             (root / "VERSION").write_text("2.0.0\n", encoding="utf-8")
-            readme = "![Teams](docs/assets/teams.png)\n[Skill](.agents/skills/demo/SKILL.md)\n[Migration](tools/MIGRATION.md)\n[Development](CONTRIBUTING.md)\n"
+            readme = "![Teams](docs/assets/teams.png)\n[Skill](.agents/skills/demo/SKILL.md)\n[Migration](tools/MIGRATION.md)\n[Development](CONTRIBUTING.md)\n[English](README.en.md)\n"
             (root / "README.md").write_text(readme, encoding="utf-8")
+            english_readme = "[日本語](README.md)\n[Research](.agents/skills/demo/SKILL.md)\n"
+            (root / "README.en.md").write_text(english_readme, encoding="utf-8")
             files = {
                 ".agents/skills/demo/SKILL.md": (
                     b"---\nname: demo\n"
@@ -47,6 +49,7 @@ class ReleaseBuilderTests(unittest.TestCase):
             with zipfile.ZipFile(outputs["plugin"]) as plugin:
                 self.assertEqual(plugin.read("docs/assets/teams.png"), files["docs/assets/teams.png"])
                 for name in (
+                    "README.en.md",
                     "docs/evaluation.md",
                     "tools/MIGRATION.md",
                     "tools/install_luna_skills.py",
@@ -59,6 +62,9 @@ class ReleaseBuilderTests(unittest.TestCase):
                     files["tools/install_luna_skills.py"],
                 )
                 self.assertIn("[Skill](skills/demo/SKILL.md)", plugin.read("README.md").decode("utf-8"))
+                self.assertIn("[English](README.en.md)", plugin.read("README.md").decode("utf-8"))
+                self.assertIn("[日本語](README.md)", plugin.read("README.en.md").decode("utf-8"))
+                self.assertIn("[Research](skills/demo/SKILL.md)", plugin.read("README.en.md").decode("utf-8"))
                 self.assertNotIn(".codex/agents/demo.toml", plugin.namelist())
                 extracted = Path(temp) / "extracted-plugin"
                 plugin.extractall(extracted)
@@ -94,6 +100,7 @@ class ReleaseBuilderTests(unittest.TestCase):
             self.assertTrue((target / "demo/scripts/check_dispatch_budget.py").is_file())
             self.assertTrue((target / "demo/scripts/test_dispatch_budget.py").is_file())
             self.assertEqual((root / "README.md").read_text(encoding="utf-8"), readme)
+            self.assertEqual((root / "README.en.md").read_text(encoding="utf-8"), english_readme)
 
     def test_reproducible_archive_and_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
