@@ -15,6 +15,8 @@ Codexで観点ごとにエージェントを分けて調査する「Luna Researc
 
 この README は **main ブランチの仕様**を説明します。Release の ZIP は、それぞれの公開時点を固定した版です。最新の仕様を試す場合は、下の手順で main を取得してください。[変更履歴](CHANGELOG.md)
 
+実際の例を見るなら、[量子センサーの調査結果](docs/quantum-sensors-research-2026-10-14.md)と[6体のLunaによる分担・再委任・検証](docs/luna-research-e2e-2026-10-14.md)を読めます。実際の流れは下の調査例にも図で掲載しています。
+
 ## まず、この3つだけ
 
 - **調べたい** → `$run-diverse-luna-research`
@@ -197,6 +199,42 @@ $run-diverse-luna-research
 
 「何を決めたいか」を添えると、調べる範囲を絞れます。担当は別の論点を受け持ち、親が原典を確認します。同じ発表を転載したページを、独立した複数の裏付けに数えません。
 
+### この調査例を実際に試した結果
+
+上の量子センサーの依頼を、公開資料を使って実行しました。**GPT-6 Luna / lowを延べ6体**起動し、実装担当から2体への再委任、根拠の回収、別文脈での独立検証まで完了しました。
+
+| 見たいもの | 内容 |
+|---|---|
+| [量子センサーの調査結果を読む](docs/quantum-sensors-research-2026-10-14.md) | 全体像、用語、NV磁場計測と重力勾配の実装例、比較の条件、未確認の点 |
+| [6体の実行の流れを読む](docs/luna-research-e2e-2026-10-14.md) | 担当ごとの仕事、再委任と回収、検証結果、実行中の修正、確認範囲 |
+| [公開用の実行記録JSON](docs/luna-research-e2e-2026-10-14.json) | 親子関係、実測した担当モデル、8つの主張の判定、出典と取得範囲 |
+
+```mermaid
+flowchart TD
+    R0["親：目的と公開概説を確認"] --> B["Q-BG · Luna<br/>原理・用語と調査観点を提案"]
+    B --> R1["親：観点と全体予算を確定"]
+    R1 --> I["Q-IMPL · Luna<br/>実装例を分割し、子の根拠を回収"]
+    R1 --> L["Q-LIMIT · Luna<br/>問題点・反証を調査"]
+    I -->|"再委任"| N["Q-NV · Lunaの子<br/>NVダイヤモンドの磁場計測"]
+    I -->|"再委任"| G["Q-GRAV · Lunaの子<br/>重力勾配センサーの測定"]
+    N -->|"出典・条件・不明点を返す"| I
+    G -->|"出典・条件・不明点を返す"| I
+    I -->|"2人の結果をまとめて返す"| R2["親：原典を開き、比較と草稿を作成"]
+    L --> R2
+    R2 --> V["Q-VERIFY · 別文脈のLuna<br/>8つの主張と出典を独立検証"]
+    V --> R3["親：指摘を反映し、調査結果と実行記録を完成"]
+    classDef parent fill:#eef2f7,stroke:#64748b,color:#172033;
+    classDef luna fill:#e3f6f1,stroke:#21806b,color:#153f36;
+    classDef child fill:#d8ecff,stroke:#3377b8,color:#173b5b;
+    class R0,R1,R2,R3 parent;
+    class B,I,L,V luna;
+    class N,G child;
+```
+
+図の親の工程は同じCodexです。Q-IMPLは子への依頼と回収を行った同じ担当で、Lunaの担当は合計6体です。**同時最大3体、確認した深さは2**でした。親が7資料を確認し、独立検証では8つの主張のうち5件がPASS、3件がQUALIFYとなり、親が必要な限定表現を反映しました。
+
+これは実際のCodexの分業手順と文献調査の確認です。センサー実験の実機再現や料金・利用枠の削減率は確認していません。
+
 ### 実装を頼む
 
 ```text
@@ -282,7 +320,7 @@ python .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-r
 
 現在の Luna 経路と、Sol を明示して選ぶ経路は、設定・実行記録・親の起動記録を照合する checker で区別します。公開版の回帰テストと CI は、モデルの取り違え・明示選択なしの Sol 受理・同時上限超過を検査します。
 
-[Luna 方針と確認範囲](docs/luna-first-2026-10-14.md)に現在の実測を記録します。[未知分野の手順と再委任の実行確認](docs/unknown-field-research-2026-10-14.md)には、Luna の担当から Luna の子を呼び、根拠を戻した範囲を記録しています。[前の Sol 経路の確認](docs/compatibility-2026-10-14.md)と[2026年9月5日の評価](docs/research-evaluation-2026-09-05.md)は、その時点のモデルの記録として保持します。過去の成功を、別のモデルの実行証明に使いません。
+[量子センサー例の6体による実行記録](docs/luna-research-e2e-2026-10-14.md)に、実際の調査から独立検証とまとめまでの確認を記録しています。[Luna 方針と確認範囲](docs/luna-first-2026-10-14.md)には、モデル方針の更新時の実測を記録します。[未知分野の手順と再委任の実行確認](docs/unknown-field-research-2026-10-14.md)には、Luna の担当から Luna の子を呼び、根拠を戻した範囲を記録しています。[前の Sol 経路の確認](docs/compatibility-2026-10-14.md)と[2026年9月5日の評価](docs/research-evaluation-2026-09-05.md)は、その時点のモデルの記録として保持します。過去の成功を、別のモデルの実行証明に使いません。
 
 ## 困ったとき
 
@@ -302,6 +340,8 @@ Python の導入器・実行記録チェッカー・回帰テストは標準ラ�
 | 資料 | 読む場面 |
 |---|---|
 | [Research のスキル](.agents/skills/run-diverse-luna-research/SKILL.md) / [Project のスキル](.agents/skills/run-diverse-luna-project/SKILL.md) | 実際の作業手順を確認したい |
+| [量子センサーの調査結果](docs/quantum-sensors-research-2026-10-14.md) | 出典付きの実際の調査例を読みたい |
+| [6体の分担・再委任・検証](docs/luna-research-e2e-2026-10-14.md) | 調査がどの順番で動き、どこまで確認したか知りたい |
 | [導入と更新](docs/INSTALLATION.md) | 別プロジェクト・Windows 移行・Cloud・plugin で使いたい |
 | [今回の確認範囲](docs/compatibility-2026-10-14.md) | 実測と未検証の境界を確認したい |
 | [開発・検証手順](CONTRIBUTING.md) | コードやスキルを変更したい |
