@@ -1,0 +1,362 @@
+{
+  "schema_version": 1,
+  "record_kind": "Public summary of locally revalidated native runtime receipts",
+  "research_verified_at": "2026-10-13T19:03:10.593767+00:00",
+  "research_evidence_gate": "LOCAL_PASS",
+  "research_result": "PASS",
+  "scope": "Actual README quantum-sensor research in this Codex runtime: orientation, separate perspectives, native depth-2 subdelegation, upward collection, public primary-source checks, fresh independent verification and root synthesis",
+  "runtime_route": {
+    "model": "gpt-6-luna",
+    "reasoning_effort": "low",
+    "agent_type": "default",
+    "fork_turns": "none",
+    "multi_agent_surface": "V2",
+    "parent_model_changed": false
+  },
+  "required_stages": {
+    "orientation": "PASS; Q-BG collected definition and proposed investigation angles after root official overview",
+    "perspective_assignment": "PASS; background / implementation / adversarial cells with disjoint scopes",
+    "parallel_execution": "PASS; implementation and limits overlapped; both measurement leaves overlapped",
+    "subdelegation": "PASS; Q-IMPL personally started Q-GRAV and Q-NV, actual parent edges and depth2 verified",
+    "upward_collection": "PASS; both child finals completed before coordinator final containing their evidence",
+    "source_validation": "PASS_WITH_RECORDED_ACCESS_GAPS; all retained material claims root-opened; detailed inaccessible-source claims excluded",
+    "fresh_independent_review": "PASS_WITH_QUALIFICATIONS; 8 checks, 5 PASS and3 QUALIFY; wording changes applied by root",
+    "runtime_ledger_revalidation": "PASS; installed Research checker reopened all6 actual initial turns and parent spawn edges",
+    "final_synthesis_and_artifact": "PASS; Japanese sourced research report and method report written"
+  },
+  "attempts": {
+    "budget": 6,
+    "native_spawns": 6,
+    "followups": 0,
+    "accepted": 6,
+    "open": 0,
+    "maximum_observed_concurrency": 3,
+    "maximum_observed_depth": 2
+  },
+  "runtime_summary": [
+    {
+      "attempt_id": "Q-BG",
+      "parent_attempt_id": null,
+      "depth": 1,
+      "wave": 1,
+      "runtime_model": "gpt-6-luna",
+      "runtime_effort": "low",
+      "agent_role": "default",
+      "started_at": "2026-10-13T18:38:18.864Z",
+      "finished_at": "2026-10-13T18:39:24.801Z",
+      "runtime_verified": true
+    },
+    {
+      "attempt_id": "Q-IMPL",
+      "parent_attempt_id": null,
+      "depth": 1,
+      "wave": 2,
+      "runtime_model": "gpt-6-luna",
+      "runtime_effort": "low",
+      "agent_role": "default",
+      "started_at": "2026-10-13T18:42:00.355Z",
+      "finished_at": "2026-10-13T18:45:07.273Z",
+      "runtime_verified": true
+    },
+    {
+      "attempt_id": "Q-LIMIT",
+      "parent_attempt_id": null,
+      "depth": 1,
+      "wave": 2,
+      "runtime_model": "gpt-6-luna",
+      "runtime_effort": "low",
+      "agent_role": "default",
+      "started_at": "2026-10-13T18:42:19.055Z",
+      "finished_at": "2026-10-13T18:43:15.609Z",
+      "runtime_verified": true
+    },
+    {
+      "attempt_id": "Q-GRAV",
+      "parent_attempt_id": "Q-IMPL",
+      "depth": 2,
+      "wave": 3,
+      "runtime_model": "gpt-6-luna",
+      "runtime_effort": "low",
+      "agent_role": "default",
+      "started_at": "2026-10-13T18:43:11.098Z",
+      "finished_at": "2026-10-13T18:44:19.725Z",
+      "runtime_verified": true
+    },
+    {
+      "attempt_id": "Q-NV",
+      "parent_attempt_id": "Q-IMPL",
+      "depth": 2,
+      "wave": 3,
+      "runtime_model": "gpt-6-luna",
+      "runtime_effort": "low",
+      "agent_role": "default",
+      "started_at": "2026-10-13T18:43:17.864Z",
+      "finished_at": "2026-10-13T18:44:06.289Z",
+      "runtime_verified": true
+    },
+    {
+      "attempt_id": "Q-VERIFY",
+      "parent_attempt_id": null,
+      "depth": 1,
+      "wave": 4,
+      "runtime_model": "gpt-6-luna",
+      "runtime_effort": "low",
+      "agent_role": "default",
+      "started_at": "2026-10-13T18:51:34.410Z",
+      "finished_at": "2026-10-13T18:52:15.776Z",
+      "runtime_verified": true
+    }
+  ],
+  "collection": {
+    "result": "OBSERVED_UPWARD_COLLECTION",
+    "coordinator": "Q-IMPL",
+    "children": [
+      "Q-GRAV",
+      "Q-NV"
+    ],
+    "both_children_completed_before_coordinator_final": true,
+    "actual_coordinator_spawn_and_wait_calls_checked": true,
+    "returned_child_specific_evidence_checked": true
+  },
+  "sources": {
+    "root_verification_completed_at": "2026-10-13T19:03:10.397210+00:00",
+    "source_plane": "public_web",
+    "documents": [
+      {
+        "source_id": "S1",
+        "source_family_id": "degen_rmp_2017",
+        "canonical_url": "https://arxiv.org/abs/1611.02427",
+        "root_opened_locator": "Abstract; definition and historical examples",
+        "source_date": "2017 article; author abstract v2, 2017-06-06",
+        "scope": "abstract only at root",
+        "root_opened": true
+      },
+      {
+        "source_id": "S2",
+        "source_family_id": "nist",
+        "canonical_url": "https://www.nist.gov/quantum-information-science/quantum-sensing-explained",
+        "root_opened_locator": "What makes a quantum sensor quantum?; atomic clock and spin examples",
+        "source_date": "Updated 2026-04-02",
+        "scope": "official explainer; same NIST authority as S7",
+        "root_opened": true
+      },
+      {
+        "source_id": "S3",
+        "source_family_id": "pham_njp_2011",
+        "canonical_url": "https://arxiv.org/html/1207.3339v1",
+        "root_opened_locator": "Sections 1 and 3.2, including measured 136 vs calculated 86 nT/√Hz",
+        "source_date": "2011 journal; author manuscript submitted 2012-07-13",
+        "scope": "full author text opened; no direct experimental replication",
+        "root_opened": true
+      },
+      {
+        "source_id": "S4",
+        "source_family_id": "stray_nature_2022",
+        "canonical_url": "https://research.birmingham.ac.uk/en/publications/quantum-sensing-for-gravity-cartography/",
+        "root_opened_locator": "Abstract, statistical uncertainty/survey/tunnel and Bayesian inference",
+        "source_date": "Nature 2022-02-24",
+        "scope": "institutional abstract for same Nature paper; detailed blocked full-text numbers excluded",
+        "root_opened": true
+      },
+      {
+        "source_id": "S5",
+        "source_family_id": "nichols_pra_2016",
+        "canonical_url": "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.94.042101",
+        "root_opened_locator": "Abstract; noisy finite-resource phase-estimation and restricted local readout",
+        "source_date": "2016-10-03",
+        "scope": "model-specific counterexample; abstract only",
+        "root_opened": true
+      },
+      {
+        "source_id": "S6",
+        "source_family_id": "mitchell_rmp_2020",
+        "canonical_url": "https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.92.021001",
+        "root_opened_locator": "Abstract; field resolution, bandwidth/time and sensed-region size",
+        "source_date": "2020-04-28",
+        "scope": "abstract only; no universal current performance limit inferred",
+        "root_opened": true
+      },
+      {
+        "source_id": "S7",
+        "source_family_id": "nist",
+        "canonical_url": "https://www.nist.gov/pml/nist-technical-note-1297/nist-tn-1297-appendix-d4-measurand-defined-measurement-method",
+        "root_opened_locator": "D.4.1 and D.4.3; method implementation and systematic calibration effects",
+        "source_date": "Updated 2025-08-12",
+        "scope": "general measurement guidance; sensor-wide application labeled inference",
+        "root_opened": true
+      }
+    ],
+    "distinct_upstream_families": 6,
+    "deduplication": "NIST documents share one authority. DOI/arXiv/author PDF of Degen are one paper. Nature and Birmingham abstract for Stray are one paper. Reopening by a verifier adds no source independence.",
+    "excluded_from_final_claims": [
+      "Degen full-text three-definition taxonomy because root author-PDF fetch timed out; abstract supports retained broader definition",
+      "Specific atomic-interferometer instrument attribution is not stated in the directly opened institutional abstract; final table uses its documented quantum gravity-gradient sensor label",
+      "Gravity detailed 466 E/√Hz, 10-minute averaging, laboratory test masses, and 15-minute projection from indexed snippets/denied full text",
+      "Background proceedings estimates and proposed squeezing protocols not needed for the final answer"
+    ],
+    "access_events": [
+      {
+        "actor": "root",
+        "url": "https://web.mit.edu/pcappell/www/pubs/Degen17.pdf",
+        "result": "Timeout; author abstract used instead"
+      },
+      {
+        "actor": "root",
+        "url": "https://doi.org/10.1103/PhysRevA.94.042101",
+        "result": "Inaccessible DOI endpoint; public publisher abstract opened"
+      },
+      {
+        "actor": "root",
+        "url": "https://doi.org/10.1103/RevModPhys.92.021001",
+        "result": "DOI fetch timeout; public publisher abstract opened"
+      },
+      {
+        "actor": "Q-GRAV",
+        "url": "https://www.nature.com/articles/s41586-021-04315-3",
+        "result": "Auth redirect inaccessible; institutional abstract used"
+      },
+      {
+        "actor": "Q-GRAV",
+        "url": "https://pure-oai.bham.ac.uk/ws/portalfiles/portal/164719780/s41586_021_04315_3.pdf",
+        "result": "HTTP403; no bypass, detailed snippets excluded"
+      }
+    ]
+  },
+  "original_claim_map_reviewed": [
+    {
+      "claim_id": "C1",
+      "claim": "Quantum sensing uses quantum systems, properties, or phenomena to measure physical quantities; examples include atomic clocks and magnetometers.",
+      "independent_verdict": "PASS",
+      "source_and_locator": "https://arxiv.org/abs/1611.02427, abstract",
+      "root_final_verdict": "SUPPORTED",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C2",
+      "claim": "In the NV implementation, an AC field affects spin phase and the state is read through fluorescence; atomic clocks use atomic transitions as a frequency/time reference.",
+      "independent_verdict": "QUALIFY",
+      "source_and_locator": "https://arxiv.org/html/1207.3339v1, section 1; https://www.nist.gov/quantum-information-science/quantum-sensing-explained, lines 143–144",
+      "root_final_verdict": "SUPPORTED_WITH_STATED_SCOPE",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C3",
+      "claim": "The NV wide-field experiment imaged a 4.75 kHz AC magnetic field; its measured average-best sensitivity was about 136 nT/√Hz per 614 nm × 614 nm pixel, while 86 nT/√Hz was calculated as a shot-noise limit.",
+      "independent_verdict": "PASS",
+      "source_and_locator": "https://arxiv.org/html/1207.3339v1, section 3.2",
+      "root_final_verdict": "SUPPORTED",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C4",
+      "claim": "The gravity-gradient survey reports 20 E statistical uncertainty, a 0.5 m spatial-resolution survey across an 8.5 m line, and detection of a 2 m tunnel at SNR 8; Bayesian inference estimates its centre.",
+      "independent_verdict": "PASS",
+      "source_and_locator": "https://research.birmingham.ac.uk/en/publications/quantum-sensing-for-gravity-cartography/, abstract",
+      "root_final_verdict": "SUPPORTED",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C5",
+      "claim": "The two examples measure different physical quantities, so their sensitivity numbers cannot be ranked directly.",
+      "independent_verdict": "PASS",
+      "source_and_locator": "https://arxiv.org/html/1207.3339v1, sections 1 and 3.2; https://research.birmingham.ac.uk/en/publications/quantum-sensing-for-gravity-cartography/, abstract",
+      "root_final_verdict": "SUPPORTED",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C6",
+      "claim": "NV laser technical noise limits performance relative to the calculated shot-noise value; Nichols et al. show a case where multiprobe entanglement has no practical advantage.",
+      "independent_verdict": "QUALIFY",
+      "source_and_locator": "https://arxiv.org/html/1207.3339v1, section 3.2; https://journals.aps.org/pra/abstract/10.1103/PhysRevA.94.042101, abstract",
+      "root_final_verdict": "SUPPORTED_WITH_STATED_SCOPE",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C7",
+      "claim": "Sensitivity alone is insufficient; bandwidth or duration and sensed-region size also matter.",
+      "independent_verdict": "PASS",
+      "source_and_locator": "https://journals.aps.org/rmp/abstract/10.1103/RevModPhys.92.021001, abstract",
+      "root_final_verdict": "SUPPORTED",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    },
+    {
+      "claim_id": "C8",
+      "claim": "Known atomic properties do not remove the need to evaluate total instrument uncertainty; NIST TN 1297 is general guidance rather than validation of a particular sensor’s calibration.",
+      "independent_verdict": "QUALIFY",
+      "source_and_locator": "https://www.nist.gov/pml/nist-technical-note-1297/nist-tn-1297-appendix-d4-measurand-defined-measurement-method, D.4.1–D.4.2",
+      "root_final_verdict": "SUPPORTED_WITH_STATED_SCOPE",
+      "root_note": "Final report applied phrasing correction or retained explicit inference/unknown label; no universal advantage claim"
+    }
+  ],
+  "independent_review": {
+    "original_verdict": "QUALIFY",
+    "claim_checks": 8,
+    "PASS": 5,
+    "QUALIFY": 3,
+    "root_disposition": "Accepted with source-scoped wording; all proposed factual qualifications applied; uncertainty/inference labels retained",
+    "text_changes": [
+      {
+        "before": "原子干渉計による重力勾配測定",
+        "after": "量子重力勾配センサーの測定"
+      },
+      {
+        "before": "原子干渉計の重力勾配センサー",
+        "after": "量子重力勾配センサー"
+      },
+      {
+        "before": "原子時計は原子の準位を周波数・時間の基準に利用します。",
+        "after": "原子時計は原子のエネルギー準位を使って時間を測ります。"
+      },
+      {
+        "before": "画素の大きさと空間分解能は区別する。",
+        "after": "ピクセルの一辺の長さと空間分解能は別の指標。"
+      },
+      {
+        "before": "特定の雑音・有限資源・局所的な読み出しを仮定した位相推定モデルで、複数のプローブをもつれさせても実際の利点が得られない場合を示しています。",
+        "after": "特定の雑音と有限資源を仮定する位相推定モデルで、読み出しを局所的な観測量へ制限したとき、複数のプローブをもつれさせても実際の利点が得られない場合を示しています。"
+      },
+      {
+        "before": "比較では、感度、測定値の不確かさ、帯域、測定時間、空間条件、雑音環境、比較対象の条件を確認します。",
+        "after": "今回の調査から作った比較のチェック項目は、感度、測定値の不確かさ、帯域、測定時間、空間条件、雑音環境、比較対象の条件です。"
+      }
+    ],
+    "not_rereviewed": "No further child starts; original independent QUALIFY verdict preserved. Root checked the final wording against unchanged opened sources."
+  },
+  "operational_corrections": [
+    {
+      "stage": "before any dispatch",
+      "issue": "Initial5-row plan lacked the second terminal primary cell required by ceil(20% of N)",
+      "fix": "Split implementation into two real terminal measurements; total N remained6 with one verifier reserve"
+    },
+    {
+      "stage": "coordinator closure",
+      "issue": "Collection receipt was not initially populated in the root ledger",
+      "fix": "Added receipt from actual child completion records, native coordinator calls and received child-specific packets"
+    },
+    {
+      "stage": "post-verifier inspection",
+      "issue": "Ordinary budget check rejected audit after verifier spent the reserve",
+      "fix": "Use --verification for zero-new-dispatch receipt auditing; no additional spawn or budget expansion"
+    }
+  ],
+  "safety": {
+    "effective_sandbox": "workspace-write",
+    "source_plane": "public_web",
+    "no_mutation_boundary": "prompt_only",
+    "technical_read_only_proven": false,
+    "private_material_delegation_proven": false
+  },
+  "existing_skill_and_repo_changes_during_research": "None during this research execution; task-local helpers and artifacts only",
+  "not_proven": [
+    "Universal success in other environments or deeper hierarchies",
+    "Physical reproduction of cited quantum-sensor experiments",
+    "Latest best performance or commercial/clinical availability",
+    "Subscription-token savings, zero usage, or billing reduction"
+  ],
+  "artifacts": {
+    "research_report": "quantum-sensors-research-2026-10-14.md",
+    "research_report_sha256": "889f8a585a05d94fa84e385db4c5aba0fe8f3fa42a5d29010fded3b68129bffd",
+    "workflow_report": "luna-research-e2e-2026-10-14.md"
+  },
+  "evidence_replay_limit": "Private raw runtime records were checked locally. This public summary does not allow independent replay of the private runtime receipt check."
+}
