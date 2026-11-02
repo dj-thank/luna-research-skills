@@ -405,6 +405,8 @@ Use the [review evidence producer](docs/comparison-reports.md#export-a-review-co
 
 The saving example validates evidence, digest and report before publishing an `accepted` directory. It retains interrupted `.pending` files and refusal audits and never overwrites an earlier run.
 
+The [recovery inspector](docs/comparison-recovery.md) checks a trusted evidence pin and distinguishes complete published, complete staged, incomplete and conflicting runs. It is read-only and never reruns, publishes or deletes anything.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

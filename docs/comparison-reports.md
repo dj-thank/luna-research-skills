@@ -160,6 +160,12 @@ rename followed by process termination can leave a valid `accepted` bundle even
 without a success message; inspect the files rather than trusting the process exit.
 Start a new attempt in a different fresh directory to preserve earlier evidence.
 
+The [read-only recovery inspector](comparison-recovery.md) applies these checks
+to the known run layout and distinguishes complete published, complete staged,
+incomplete and conflicting results. It requires an independently approved evidence
+pin and never publishes or cleans up files. A zero exit also covers complete
+staged evidence, so inspect its returned state.
+
 The fresh parent reservation and single writer keep the destination absent during
 publication. Do not share this directory with another writer. This is a process
 interruption protocol, not a promise of power-loss durability or atomic behavior

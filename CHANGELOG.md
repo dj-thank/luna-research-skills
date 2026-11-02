@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Add a read-only comparison recovery inspector that verifies an independent evidence pin, sidecar and mandatory report, distinguishes published/staged/incomplete/conflicting runs, and retains valid negative comparisons. Package it with explicit recovery-state documentation and CLI regressions.
+
 - Stage the documented comparison bundle until its evidence, pin and report are checked, then publish it under a fresh `accepted` directory. Retain interrupted artifacts and refusal audits, with subprocess regressions for partial writes and lost publication acknowledgements.
 
 - Add an offline, success-only CI evidence checker for an independently specified commit and required check name/app pairs. Reject cancelled, ambiguous, incomplete or stale snapshots; retain optional-check behavior and document the distinction from GitHub merge authorization.
