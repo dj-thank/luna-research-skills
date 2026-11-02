@@ -377,7 +377,7 @@ if (Test-Path -LiteralPath $manifestOut) {
 }
 
 # Inspect the lexical ancestor chain before Resolve-Path or source content reads.
-$sourceLexical = [IO.Path]::GetFullPath($Source)
+$sourceLexical = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Source)
 $sourceCursor = $sourceLexical
 while ($sourceCursor) {
     $sourceAncestor = Get-Item -LiteralPath $sourceCursor -Force -ErrorAction Stop
