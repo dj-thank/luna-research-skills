@@ -90,7 +90,7 @@ Create the machine-readable [project ledger](project-ledger.md) in `planning` ph
 python <skill-dir>/scripts/check_setup.py --agent-role <worker-or-default> --allow-generic-worker --ledger-json <project-ledger.json>
 ```
 
-Draw dependencies between workstreams. Dispatch only ready nodes. Merge cells that would inspect the same evidence or edit the same files. Preserve the full `V=max(1,ceil(.15*N))` reservation for independent critics, contradiction checks, or verifiers; combine or remove lower-value cells before spending that reservation.
+Draw dependencies between workstreams. Dispatch only ready nodes with usable, revision-pinned inputs; a failed terminal dependency is not an accepted build input. Use [swarm coordination](swarm-coordination.md) for readiness, shared-resource release and recovery. Merge cells that would inspect the same evidence or edit the same files. Preserve the full `V=max(1,ceil(.15*N))` reservation for independent critics, contradiction checks, or verifiers; combine or remove lower-value cells before spending that reservation.
 
 Completion criterion: every workstream has one bounded outcome, unique ownership or viewpoint, dependencies, and a checkable completion criterion; no two concurrent builders own the same file; planned non-verifier starts are at most `N-V`.
 
@@ -102,10 +102,10 @@ Use waves rather than filling every slot:
 
 1. Reserve one budget unit before each fresh spawn.
 2. Normally start W=1-2 attempts, never more than W=3, bounded by ready independent cells, remaining N and available C. Preserve N-V and run the trace preflight before additional dispatch.
-3. Collect results and inspect the shared workspace before opening dependent work.
+3. Collect each completed result and inspect its candidate before opening dependent work. Release ready dependencies without waiting for unrelated children in the same wave; each new batch has a new wave number and uses the same global N/C/W/V.
 4. Verify every completed child with its exact `--runtime-thread` and `--runtime-turn`, or exact rollout and turn, before accepting its result or candidate changes.
 5. Use followup_task for a tightly related continuation within the remaining budget. Keep the continuation candidate and activation evidence separate from initial-turn production receipts, then perform root assessment and a fresh final audit as described in [v2-runtime.md](v2-runtime.md).
-6. Reassign a failed cell once only when its result is still required, budget remains, and the retry has a new bounded hypothesis.
+6. Reassign a failed cell once only when its result is still required, budget remains, and the retry has a new bounded hypothesis. Verify the previous writer has stopped or is isolated before handing over its resource; an expired deadline does not release ownership.
 
 Use bounded waits. When an assignment or wave deadline expires, interrupt or safely abandon the work, record `timed_out` or `abandoned`, and exclude late unverified output. A result started after its deadline or accepted after its assignment/overall deadline is invalid. A sensitive `root_only` evidence row that was never delegated closes as `not_dispatched/excluded` with a terminal timestamp and explicit gap; it never carries child runtime evidence. Do not make “no live assignment remains” depend on an unbounded wait.
 

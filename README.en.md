@@ -286,6 +286,12 @@ sequenceDiagram
     P->>U: Explain the result, evidence and remaining work
 ```
 
+### Reduce swarm waiting and ownership conflicts
+
+Run an API workstream and an independent documentation workstream together. Once the parent accepts the API result, the UI workstream can start from that exact revision while documentation continues. A fresh verifier later checks the same root-integrated candidate.
+
+Pin dependency revisions, assign disjoint edits, and identify shared-device owners. After a timeout, verify that the previous writer can no longer affect the resource before handing it over. The ledger checks ownership conflicts and retry ordering; it cannot prove that a process stopped or that delivery became faster. See the [practical swarm coordination example](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md) for readiness and stale-result handling.
+
 ### Turn research into improvements
 
 ```text

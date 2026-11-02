@@ -34,11 +34,34 @@ Every row requires:
 
 - `attempt_id`, `kind`, and one bounded `objective`;
 - `kind`: `builder`, `evidence_lane`, `reviewer`, `verifier`, or `operator`;
-- non-empty `ownership`; concurrent accepted builders/operators may not share an ownership path;
-- `dependencies`, referencing only earlier attempt IDs;
+- non-empty `ownership`; concurrent dispatched builders/operators may not share a normalized ownership path or its descendants, even before acceptance. Planned reservations may overlap; root serializes them before dispatch. Recorded sequential handoff is allowed, but root must separately verify actual writer release;
+- `dependencies`, referencing only earlier attempt IDs; root checks accepted, revision-pinned inputs before builder/final-verifier dispatch, while diagnostic reviewers may deliberately inspect failed inputs;
 - assignment `deadline`, `acceptance_criteria`, and an exact `evidence_locator`;
 - `execution_status` and `acceptance_status` using the research state machine: `planned/pending`, terminal root-only `not_dispatched/excluded`, or actual child work ending in `completed`, `failed`, `timed_out`, or `abandoned`;
-- `integration_status`: `not_applicable`, `pending`, `integrated`, or `rejected`.
+- `integration_status`: `not_applicable`, `pending`, `integrated`, or `rejected`. `integrated` requires `completed/accepted`; `rejected` records an excluded candidate and never satisfies accepted-writer closure.
+
+### Recovery validation and compatibility
+
+New v2 plans include the recovery fields listed above. Legacy v2 records that omit
+them remain readable; their omission is not evidence of stale-result protection.
+Checker `2026-11-02.3` validates supplied `epoch` and `ttl_seconds` as positive
+integers (not booleans), `dedup_key` as a non-empty string, and `cancel_reason` as
+null or a non-empty string. Supplied retry epochs increase along their ancestry,
+and supplied dedup keys identify the same logical work. A dispatched newer retry
+epoch cannot coexist with an accepted stale ancestor. A planned retry alone does
+not invalidate an existing result.
+
+A dispatched retry requires a terminal previous attempt and a start at or after
+that attempt's recorded end. This ordering check does not prove actual process
+termination. TTL is validated as a duration value; it is not a runtime timer and
+does not trigger interruption or release a resource. Root applies the explicit
+deadlines and the [resource-release procedure](swarm-coordination.md).
+
+Ownership comparison is lexical and case-insensitive, normalizing separators and
+dot segments. Use a common namespace; symlink aliases, separate mounts, worktree
+identity and external resource identity require root inspection. Unknown writer
+intervals cannot establish safe sequential handoff. These structural checks run
+without opening the owned paths and do not install filesystem locks.
 
 For an evidence lane, also include `source_plane`, `access_mode`, and `safety_enforcement`. `prompt_only_public` is valid only for `public_web`. `connector_private` and `provider` remain `root_only` while external tool permissions cannot be mechanically proven. A root-only row closes without child runtime metadata as `not_dispatched/excluded`, with a terminal timestamp and explicit gap. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
@@ -82,8 +105,8 @@ Evidence-lane rows use source plane enum `public_web|local|internal_session|conn
   "closure_status": "open",
   "N": 4,
   "attempt_budget_N": 4,
-  "concurrency_cap_C": 8,
-  "wave_width_W": 4,
+  "concurrency_cap_C": 2,
+  "wave_width_W": 2,
   "max_workflow_depth": 2,
   "verifier_reserve_V": 1,
   "verifier_reserve": 1,
@@ -98,9 +121,9 @@ Evidence-lane rows use source plane enum `public_web|local|internal_session|conn
     {
       "attempt_id": "P-01",
       "parent_attempt_id": null,
-      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110", "parent_call_id": "call-root-p01"},
+      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110", "parent_call_id": null},
       "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110",
-      "root_parent_call_id": "call-root-p01",
+      "root_parent_call_id": null,
       "depth": 1,
       "wave": 1,
       "planned_at": "2026-08-16T17:00:00+09:00",
@@ -142,9 +165,9 @@ Evidence-lane rows use source plane enum `public_web|local|internal_session|conn
     {
       "attempt_id": "P-02",
       "parent_attempt_id": null,
-      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110", "parent_call_id": "call-root-p02"},
+      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110", "parent_call_id": null},
       "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110",
-      "root_parent_call_id": "call-root-p02",
+      "root_parent_call_id": null,
       "depth": 1,
       "wave": 1,
       "planned_at": "2026-08-16T17:00:00+09:00",

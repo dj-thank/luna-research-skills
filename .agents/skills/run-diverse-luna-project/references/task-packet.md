@@ -12,7 +12,8 @@ Checker contract `2026-10-13.1` separates planning from observed dispatch proven
 - **Bounded objective:** one deliverable, decision, question, or verification boundary.
 - **Inputs:** exact files, artifacts, URLs, commands, or prior decisions to use.
 - **Ownership:** files or modules the agent may edit; write `read-only` when it must not edit. This is a behavioral boundary, not proof of an enforced read-only sandbox.
-- **Dependencies:** completed inputs and work that remains outside this assignment.
+- **Dependencies:** accepted inputs with their exact commit or artifact digest and evidence locator; identify work that remains outside this assignment. Explicitly label a diagnostic review of a failed input. Final verifiers receive the root-integrated revision.
+- **Shared resources, when used:** resource ID, current owner/epoch, permitted operation and observed release evidence required before another writer starts. Follow [swarm coordination](swarm-coordination.md); a timeout alone is not release.
 - **Constraints:** user authority, safety, compatibility, style, time, and attempt limits.
 - **Timing:** per-assignment deadline, wave deadline, retry allowance, and timeout disposition.
 - **Acceptance check:** observable conditions that end this assignment.

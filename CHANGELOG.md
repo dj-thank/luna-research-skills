@@ -6,6 +6,9 @@
 
 ### Fixed
 
+- Reject conflicting active writer ownership, retries started before their predecessor ends, and integration of unaccepted results in project ledgers. Normalize lexical path aliases and allow recorded sequential handoffs.
+- Validate supplied v2 recovery fields, increasing retry epochs and stable logical-work keys; reject stale accepted ancestors after a newer retry starts while preserving legacy records without recovery fields.
+- Correct the copyable project planning ledger's concurrency/wave limits and unobserved spawn-call fields, and exercise both documented planning ledgers through both packaged checkers.
 - Return structured dispatch diagnostics for malformed configuration, state, and rollout records while preserving the existing state on rejection.
 - Bound each stress-test command and include its iteration, command, exit/timeout reason, and output tail in failure diagnostics.
 - Count literal exec-wrapped spawn/followup calls in the shared dispatch budget and inspect them when verifying leaf/coordinator delegation. Reject uncountable dynamic wrappers instead of silently accepting zero attempts; ignore comments and quoted examples.
@@ -31,6 +34,7 @@
 
 ### Added
 
+- Add a practical swarm coordination procedure for rolling ready-work dispatch, revision-pinned handoffs, shared-resource release and late-result handling, with Japanese and English README entry points.
 - Add optional `check_setup.py --json` results with separate static, schema, ledger, runtime, provenance, and receipt-validation stages; text output remains the default.
 - Add bounded first-request examples, a research-to-implementation handoff, and an illustrative comparison with incompatible measurement conditions.
 - 英語版 `README.en.md` と、両README冒頭の English / 日本語リンクを追加。4つの図、導入・依頼・検証の5段階の手順、実例と確認範囲を英語で説明する。plugin ZIPでも英語READMEを収録し、スキルへのリンクを配布先へ変換する。

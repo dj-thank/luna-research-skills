@@ -10,7 +10,11 @@ Run these as raw prompts in fresh tasks after any routing, checker, or contract 
 | One narrow refactor in one file with known tests | Do not invoke this broad project workflow |
 | Use Luna to research several current APIs and implement two disjoint components | Project at root; evidence-only research sub-budget; single root integration |
 | Provider deployment or public publication is mentioned | Keep external writer root-serialized; require authority and separate PROVIDER/PUBLIC/HUMAN gates |
-| Two builders would edit the same path | Merge or serialize them; project ledger rejects overlapping accepted ownership |
+| Two active builders own a directory and a file inside it | Reject concurrent ownership, including normalized path aliases; allow recorded sequential handoff only after actual writer release |
+| A retry starts while the original attempt is still running | Reject the retry; preserve the old attempt and the same global budget |
+| A dependent build receives a failed result | Keep it blocked or supply an explicitly accepted replacement; diagnostic review of the failure remains possible |
+| A late result arrives after its retry has started | Exclude the stale result and reassess affected downstream work |
+| An unaccepted result is marked integrated | Reject integration; require completed and accepted evidence |
 | A child reports completion but has no exact parent call or used full history | Reject the child receipt and stop dependent integration |
 | Parent call task name matches but no SubAgentActivity/output binds the child UUID | Reject provenance; task names are diagnostic only |
 | A writable child says its assignment was read-only | Record behavioral no-mutation and the writable effective sandbox separately; never claim `sandbox_read_only` |
