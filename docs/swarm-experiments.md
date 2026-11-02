@@ -80,6 +80,53 @@ consumer acknowledgements, and it does not inherit the paper's performance claim
 Scope labels are trusted fixture inputs, not signatures or proof of actual bytes.
 No native transport, dispatch, acceptance, or installed skill policy changes.
 
+### Compare bounded delivery recovery
+
+Run `python tools/benchmark_delivery.py` against its separate
+[18-case fixture](../tools/fixtures/delivery_benchmark.json). This extends the
+experiment beyond static routing; it does not replace or deploy a message bus.
+All three policies see the same loss/corruption schedule and have a ceiling of
+two transmissions. The send-once control uses one; ACK retry stops only after a
+matching acknowledgement or exhaustion. The third policy also stores a receiver
+receipt and its local effect row in one SQLite transaction. A duplicate returns
+the recorded acknowledgement without applying another local effect.
+
+The frozen cases cover lost data and ACKs, mismatched identities, corrupted bytes,
+rollback between receipt and effect, and reopening a connection after commit but
+before confirmation. ACK identity binds run, sender, epoch, consumer contract,
+recipient, delivery ID and digest. The receiver compares bytes with the trusted
+fixture digest before writing. A third scheduled success beyond the two-attempt
+ceiling remains unused. Database rows are read back to count actual local effects.
+
+| Policy | Correct cases | Transmissions | Local effect rows | Confirmed cases |
+|---|---:|---:|---:|---:|
+| Send once | 3/18 | 18 | 10 | 1 |
+| Retry missing ACKs | 9/18 | 35 | 26 | 16 |
+| Retry with transactional receiver deduplication | 18/18 | 35 | 17 | 16 |
+
+The final policy recovers 15 send-once failures without losing a send-once success.
+Plain retry repeats effects when an ACK is lost. When every ACK is lost, the local
+effect exists but the sender still reports `unconfirmed`. No ACK is not proof that
+the operation did not happen. An expected negative control is retained in JSON;
+the CLI exits 1 on a comparison mismatch and 2 on malformed input.
+
+The identity/retry/uncertainty distinction follows Birrell and Nelson,
+[Implementing Remote Procedure Calls](https://www.cl.cam.ac.uk/teaching/0708/DigiCommI/birrell1984rpc.pdf),
+sections 3.1–3.2 (1984), read on 2026-11-02. The bounded retry policy and SQLite
+model are this experiment's choices; the paper's performance is not transferred.
+Connections are closed/reopened, not processes killed or devices powered off.
+The effect is a local database row inside the receipt transaction. These tests do
+not establish concurrent-writer behavior, authenticated transport or exactly-once
+file writes, external tool calls, payments, or other out-of-transaction effects.
+
+For a real handoff, preserve the delivery identity across bounded retries, bind
+the acknowledgement to the expected artifact/consumer, and reconcile an uncertain
+result from receiver evidence before repeating a side effect. Receiver deduplication
+requires an appropriate durable transaction or idempotent operation; a sender's
+in-memory `seen` set is insufficient. A message retry does not create a new native
+spawn/followup allowance, reset the task budget, release a writer, or prove artifact
+acceptance. Root still applies the ordinary receipt and artifact gates.
+
 ## Research hypotheses, including counterevidence
 
 The following primary papers were opened on 2026-11-02. Version-pinned snapshots

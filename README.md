@@ -38,7 +38,7 @@ cd luna-research-skills
 | 最初の依頼を書く | [調査・実装の依頼例](#ステップ4最初の依頼を送る) |
 | 他のプロジェクトへ導入・更新する | [OS共通の導入とWindows移行](docs/INSTALLATION.md) |
 | 担当選択・依存待ち・再試行を確認する | [スウォームの運用とPlanner 1.2](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md) |
-| エージェントを起動せず評価ツールを試す | [3つの比較を再現する](#比較を自分で再現する) |
+| エージェントを起動せず評価ツールを試す | [4つの比較を再現する](#比較を自分で再現する) |
 | 変更に参加する | [開発・検証手順](CONTRIBUTING.md) |
 
 ## まず、この3つだけ
@@ -382,6 +382,7 @@ python .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-r
 python tools/benchmark_swarm.py
 python tools/benchmark_review.py
 python tools/benchmark_communication.py
+python tools/benchmark_delivery.py
 ```
 
 | コマンド | 比較するもの |
@@ -389,6 +390,7 @@ python tools/benchmark_communication.py
 | `benchmark_swarm.py` | 18状態の次担当・停止理由と、通信の配信先 |
 | `benchmark_review.py` | 12ケース、同じ2回の評価上限での批評・少数意見・重複評価の再利用 |
 | `benchmark_communication.py` | 14ケース、run ID・epoch・受信側の入力契約を用いた配信 |
+| `benchmark_delivery.py` | 18ケース、配送・受信確認の欠落と、SQLiteの受信記録・処理の重複防止 |
 
 JSONで結果を返し、固定した期待結果と一致しなければ非ゼロで終了します。比較対象の方式が不正解になること自体は、保存された実験結果です。[評価の前提と採用条件](docs/swarm-experiments.md)には、正解の固定、失敗例の保持、実際の成果物を開いて確かめる手順をまとめています。
 

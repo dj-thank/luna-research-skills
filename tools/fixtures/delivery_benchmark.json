@@ -1,0 +1,395 @@
+{
+  "schema_version": 1,
+  "attempt_limit": 2,
+  "envelope": {
+    "run_id": "run-1",
+    "sender": "P",
+    "epoch": 2,
+    "contract_id": "api-v2",
+    "recipient": "C",
+    "delivery_id": "delivery-1",
+    "artifact_digest": "3758ba9185098103159ccc88c29921d9032886d7761a29fe93a99d34d4363c1c"
+  },
+  "payload": "validated artifact: P -> C\n",
+  "cases": [
+    {
+      "id": "clean",
+      "faults": [
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": true,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 1,
+        "ack_retry_dedup": 1
+      }
+    },
+    {
+      "id": "drop-data-once",
+      "faults": [
+        "drop_data",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "drop-all-data",
+      "faults": [
+        "drop_data",
+        "drop_data",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 0,
+        "confirmed": false
+      },
+      "expected_policy_correct": {
+        "send_once": true,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "drop-ack-once",
+      "faults": [
+        "drop_ack",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "drop-all-acks",
+      "faults": [
+        "drop_ack",
+        "drop_ack",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": false
+      },
+      "expected_policy_correct": {
+        "send_once": true,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "corrupt-data-once",
+      "faults": [
+        "corrupt_data",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-ack-delivery-once",
+      "faults": [
+        "ack_delivery_id",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "rollback-before-effect",
+      "faults": [
+        "rollback",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "reopen-after-commit",
+      "faults": [
+        "reopen",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-data-run",
+      "faults": [
+        "data_run_id",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-data-contract",
+      "faults": [
+        "data_contract_id",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-data-epoch",
+      "faults": [
+        "data_epoch",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-data-recipient",
+      "faults": [
+        "data_recipient",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": true,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-ack-recipient",
+      "faults": [
+        "ack_recipient",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-ack-digest",
+      "faults": [
+        "ack_artifact_digest",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-ack-epoch",
+      "faults": [
+        "ack_epoch",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-ack-contract",
+      "faults": [
+        "ack_contract_id",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    },
+    {
+      "id": "wrong-ack-run",
+      "faults": [
+        "ack_run_id",
+        "ok"
+      ],
+      "expected": {
+        "effect_count": 1,
+        "confirmed": true
+      },
+      "expected_policy_correct": {
+        "send_once": false,
+        "ack_retry": false,
+        "ack_retry_dedup": true
+      },
+      "expected_attempts": {
+        "send_once": 1,
+        "ack_retry": 2,
+        "ack_retry_dedup": 2
+      }
+    }
+  ]
+}

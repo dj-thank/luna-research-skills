@@ -376,7 +376,7 @@ For larger tasks, a coordinator may delegate further when its actual tools suppo
 | OS CI | Windows, macOS and Linux with Python 3.11–3.13; Windows migration checks also cover PowerShell 5.1/7 | Success in every user environment or with every current model |
 | Installation and packaging | Existing-copy protection, isolated installation/readback, reproducible ZIPs | Automatic updates to a user's installed copies |
 | Ledger and planner | Dependencies, ownership conflicts, budgets, deadlines, retries and acceptance records | Process termination or enforced filesystem locks |
-| Known-answer comparisons | The three tools below retain outcomes and unsuccessful comparison policies | LLM reasoning gains or real task speed/cost savings |
+| Known-answer comparisons | The four tools below retain outcomes and unsuccessful comparison policies | LLM reasoning gains or real task speed/cost savings |
 | Actual agent records | Published examples identify their date, model and evidence | Unconditional transfer to another environment or model |
 
 ### Reproduce the comparisons
@@ -387,6 +387,7 @@ Run from the repository or source ZIP root. The plugin ZIP includes the answer f
 python tools/benchmark_swarm.py
 python tools/benchmark_review.py
 python tools/benchmark_communication.py
+python tools/benchmark_delivery.py
 ```
 
 | Command | Comparison |
@@ -394,6 +395,7 @@ python tools/benchmark_communication.py
 | `benchmark_swarm.py` | Next assignments and blocker reasons for 18 states, plus communication recipients |
 | `benchmark_review.py` | Critique, minority proposals and duplicate evaluation reuse on 12 cases with the same two-call ceiling |
 | `benchmark_communication.py` | Run identity, epoch and recipient input contracts on 14 delivery cases |
+| `benchmark_delivery.py` | Lost deliveries/ACKs and transactional SQLite receipt/effect deduplication on 18 cases |
 
 Each emits JSON and exits nonzero when results disagree with the frozen expectations. An alternative policy's incorrect answer can itself be an expected experimental result. The [evaluation and adoption guide](docs/swarm-experiments.md) explains fixed answers, preserved failures and reopening actual artifacts.
 
