@@ -376,6 +376,15 @@ if (Test-Path -LiteralPath $manifestOut) {
     throw "Refusing to overwrite an existing manifest: $manifestOut"
 }
 
+# Inspect the lexical ancestor chain before Resolve-Path or source content reads.
+$sourceLexical = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Source)
+$sourceCursor = $sourceLexical
+while ($sourceCursor) {
+    $sourceAncestor = Get-Item -LiteralPath $sourceCursor -Force -ErrorAction Stop
+    Assert-NotReparsePoint -Item $sourceAncestor -Label 'Source path'
+    $sourceParent = [IO.Directory]::GetParent($sourceCursor)
+    $sourceCursor = if ($null -eq $sourceParent) { $null } else { $sourceParent.FullName }
+}
 $sourceFull = Get-NormalizedPath $Source
 if (-not (Test-Path -LiteralPath $sourceFull -PathType Container)) {
     throw "Source directory does not exist: $Source"

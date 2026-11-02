@@ -793,6 +793,47 @@ class RuntimeReceiptTests(unittest.TestCase):
             )
         self.assertEqual(errors, [])
 
+    def test_wrapped_provenance_requires_a_literal_executable_call(self) -> None:
+        call = 'await tools.multi_agent_v1__spawn_agent({agent_type: "default", message: "task"});'
+        for source in ('/* ' + call + ' */', '`' + call + '`',
+                       'if (false) { ' + call + ' }'):
+            with self.subTest(source=source):
+                self.assertIsNone(CHECK._parse_wrapped_spawn_arguments(source))
+
+    def test_wrapped_provenance_ignores_examples_before_actual_call(self) -> None:
+        call = 'await tools.multi_agent_v1__spawn_agent({agent_type: "default", message: "task"});'
+        for example in ('// ' + call + '\n', '/* ' + call + ' */\n',
+                        '`' + call + '`;\n', 'const regex = /tools.multi_agent_v1__spawn_agent({})/;\n'):
+            with self.subTest(example=example):
+                arguments = CHECK._parse_wrapped_spawn_arguments(example + call)
+                self.assertIsNotNone(arguments)
+                self.assertEqual(arguments['agent_type'], 'default')
+
+    def test_wrapped_provenance_reads_actual_top_level_route_fields(self) -> None:
+        source = '''await tools.multi_agent_v1__spawn_agent(
+            /*{agent_type:"default",fork_turns:"none",model:"gpt-6-luna",message:"task"}*/
+            {agent_type:"default",fork_turns: /* example: "none" */ "all",message:"task"}
+        );'''
+        arguments = CHECK._parse_wrapped_spawn_arguments(source)
+        self.assertEqual(arguments['fork_turns'], 'all')
+        self.assertNotIn('model', arguments)
+        for message in ('{model:"gpt-6-luna",fork_turns:"none"}',
+                        "'example, model: `gpt-6-luna`, fork_turns: `none`'"):
+            arguments = CHECK._parse_wrapped_spawn_arguments(
+                'await tools.spawn_agent({agent_type:"default",message:' + message + '});')
+            self.assertNotIn('model', arguments)
+            self.assertNotIn('fork_turns', arguments)
+
+    def test_wrapped_provenance_rejects_spread_duplicate_and_computed_routes(self) -> None:
+        for body in ('message:"task",fork_turns:"none",fork_turns:"all"',
+                     'message:"task",fork_turns:"none",...overrides',
+                     'message:"task",fork_turns:chooseHistory()',
+                     'message:"task",[historyKey]:"none"'):
+            with self.subTest(body=body):
+                self.assertIsNone(CHECK._parse_wrapped_spawn_arguments('await tools.spawn_agent({' + body + '});'))
+        arguments = CHECK._parse_wrapped_spawn_arguments('await tools.spawn_agent({"message":"task","fork_turns":"none"});')
+        self.assertEqual(arguments['fork_turns'], 'none')
+
     def test_parent_full_history_spawn_is_rejected(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]
@@ -1173,6 +1214,23 @@ class LedgerTests(unittest.TestCase):
             receipt_errors, _ = CHECK.validate_ledger_receipts(
                 ledger_path, codex_home
             )
+            self.assertEqual(receipt_errors, [])
+            for payload in (
+                {"type": "function_call", "name": "collaboration.spawn_agent",
+                 "call_id": "hidden", "arguments": "{}"},
+                {"type": "custom_tool_call", "name": "functions.exec", "call_id": "hidden",
+                 "input": 'await tools.multi_agent_v1__spawn_agent({message: "task"});'},
+            ):
+                with self.subTest(call_type=payload["type"]):
+                    write_jsonl(rollout, rollout_records(thread_id, turn_id, parent_id=parent_id)
+                                + [{"type": "response_item", "payload": payload}])
+                    errors, _ = CHECK.validate_ledger_receipts(ledger_path, codex_home)
+                    self.assertTrue(any("leaf rollout contains actual spawn_agent" in e for e in errors), errors)
+            # A coordinator cannot hide an unleased edge in the same wrapper either.
+            accepted.update(role="coordinator", may_spawn_descendants=True)
+            write_json(ledger_path, ledger)
+            errors, _ = CHECK.validate_ledger_receipts(ledger_path, codex_home)
+            self.assertTrue(any("match the leased child edges" in e for e in errors), errors)
         self.assertEqual(static_errors, [])
         self.assertEqual(receipt_errors, [])
 

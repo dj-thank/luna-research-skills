@@ -63,6 +63,179 @@ class DispatchBudgetTests(unittest.TestCase):
             state.write_text('{}', encoding='utf-8')
             self.assertEqual(GUARD.main(['--state',str(state),'--config',str(config),'--init']), 2)
 
+    def wrapped_counts(self, source, **payload_overrides):
+        with tempfile.TemporaryDirectory() as folder:
+            trace = Path(folder) / 'root.jsonl'
+            call = {'timestamp': '2026-10-13T01:00:00Z', 'type': 'response_item',
+                    'payload': {'type': 'custom_tool_call', 'name': 'functions.exec',
+                                'call_id': 'wrapped', 'input': source, **payload_overrides}}
+            rows = [{'type': 'session_meta', 'payload': {'id': 'root'}}, call, call]
+            trace.write_text('\n'.join(json.dumps(row) for row in rows), encoding='utf-8')
+            return GUARD.observed_attempts({
+                'started_at': '2026-10-12T00:00:00Z', 'rollouts': [str(trace)]})
+
+    def test_wrapped_calls_count_individually_and_duplicate_receipts_once(self):
+        result = self.wrapped_counts('''
+            const a = await tools.multi_agent_v1__spawn_agent({message: "first"});
+            const b = await tools.collaboration.spawn_agent({message: "second"});
+            await tools.multi_agent_v1__followup_task({target: "a", message: "fix"});
+        ''')
+        self.assertEqual(result, {'spawn_agent': 2, 'followup_task': 1, 'total': 3})
+        with self.assertRaises(ValueError):
+            GUARD.check_limits(self.state(), result, new_spawns=3)
+
+    def test_quoted_task_content_and_comments_are_not_dispatches(self):
+        result = self.wrapped_counts('''
+            // await tools.collaboration.spawn_agent({});
+            /* await tools.collaboration.followup_task({}); */
+            const example = 'await tools.collaboration.spawn_agent({})';
+            await tools.multi_agent_v1__spawn_agent({
+                message: "Example: tools.collaboration.followup_task({})"
+            });
+        ''')
+        self.assertEqual(result, {'spawn_agent': 1, 'followup_task': 0, 'total': 1})
+
+    def test_wrapped_dispatch_requires_call_id(self):
+        with self.assertRaisesRegex(ValueError, 'call_id'):
+            self.wrapped_counts('await tools.collaboration.spawn_agent({});', call_id=None)
+
+    def test_dynamic_wrappers_fail_closed(self):
+        for source in (
+            'for (let i=0; i<10; i++) { await tools.collaboration.spawn_agent({}); }',
+            'items.map(async x => await tools.collaboration.followup_task({}));',
+            'const text = `${await tools.multi_agent_v1__spawn_agent({})}`;',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_unrelated_exec_is_not_a_dispatch(self):
+        self.assertEqual(self.wrapped_counts('text(await tools.exec_command({cmd: "echo hi"}));')['total'], 0)
+
+    def test_indirect_tool_references_fail_closed(self):
+        for source in (
+            'await tools["multi_agent_v1__spawn_agent"]({});',
+            'const dispatch = tools.multi_agent_v1__spawn_agent; await dispatch({});',
+            'const t = tools; await t.spawn_agent({});',
+            'await tools.collaboration.spawn_agent.call(null, {});',
+            'const dispatch = tools.collaboration.spawn_agent.bind(tools); await dispatch({});',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_regex_literals_do_not_hide_or_invent_calls(self):
+        for source, count in (
+            ("const regex = /'/; await tools.multi_agent_v1__spawn_agent({});", 1),
+            ('const regex = /["\\/]/g; await tools.multi_agent_v1__followup_task({});', 1),
+            ('const regex = /tools.multi_agent_v1__spawn_agent({})/;', 0),
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(self.wrapped_counts(source)['total'], count)
+
+    def test_non_exec_custom_tool_source_is_not_executed(self):
+        self.assertEqual(self.wrapped_counts('+await tools.collaboration.spawn_agent({});', name='apply_patch')['total'], 0)
+
+    def test_template_interpolation_requires_direct_native_calls(self):
+        for source in ('text(`count=${results.length}`);',
+                       'const source="tools.spawn_agent({})"; text(`${eval(source)}`);'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'template interpolation'):
+                self.wrapped_counts(source)
+        self.assertEqual(self.wrapped_counts(r'text(`example=\${not_an_expression}`);')['total'], 0)
+
+    def test_ambiguous_slash_cannot_mask_a_dispatch(self):
+        for source in (
+            "{} /'/; await tools.multi_agent_v1__spawn_agent({}); // '",
+            "if (true) /'/; await tools.multi_agent_v1__spawn_agent({}); // '",
+            'value++ / 2; await tools.collaboration.spawn_agent({});',
+            "let foo\n/'/; await tools.multi_agent_v1__spawn_agent({}); // '",
+            'const x = value / 2; await tools.collaboration.spawn_agent({});',
+            'const of=4; of / 2; await tools.spawn_agent({}); const x=3; x / 1;',
+            'obj.return / 2; await tools.spawn_agent({}); obj.x / 1;',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'ambiguous slash'):
+                self.wrapped_counts(source)
+
+    def test_dynamic_code_rejected_even_without_literal_dispatch(self):
+        for source in (
+            'await import("data:text/javascript,tools.spawn_agent({})");',
+            'await eval("tools.multi_agent_v1__spawn_agent({})");',
+            'await eval("tools.multi_agent_v1__followup_task({})");',
+            'await globalThis["eval"]("tools.multi_agent_v1__spawn_agent({})");',
+            'const run = new Function("return tools.spawn_agent({})"); run();',
+            'const run = (() => {})["constructor"]("return tools.spawn_agent({})"); run();',
+            'const run = (() => {})["con" + "structor"]("return tools.spawn_agent({})"); run();',
+            'const key = "constructor"; const run = (() => {})[key]; run("tools.spawn_agent({})")();',
+            'const F = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(()=>{}), "constructor").value; F("return tools.spawn_agent({})")();',
+            'const F = Object["getOwnPropertyDescriptors"](()=>{});',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+        self.assertEqual(self.wrapped_counts('text(result.content[0]); text(result["content"]);')['total'], 0)
+
+    def test_destructuring_extraction_fails_closed_as_a_syntax_class(self):
+        patterns = (
+            'const {"constructor": F} = Object;',
+            'const {["constructor"]: F} = Object;',
+            'const {["con" + "structor"]: F} = Object;',
+            'const {[`constructor`]: F} = Object;',
+            'const { /* key */ "constructor": F} /* binding */ = Object;',
+            r'const {"constr\u0075ctor": F} = Object;',
+            'let F; ({"constructor": F} = Object);',
+            'let unused, {"constructor": F} = Object;',
+            'const {nested: {"constructor": F}} = {nested: Object};',
+            'const {"constructor": F = Object} = Object;',
+            'const {...rest} = Object;',
+            'const [F] = [Object];',
+            'let F; [F] = [Object];',
+            'for (const {"constructor": F} of [Object]) {}',
+            'for ({"constructor": F} in {}) {}',
+            'function run({"constructor": F}) {}',
+            'const run = ({"constructor": F}) => F;',
+            'const run = async ([F]) => F;',
+            'const o = {run(a, {"constructor": F}) {}};',
+            'const o = {"run"({["constructor"]: F}) {}};',
+            'try {throw Object;} catch ({"constructor": F}) {}',
+        )
+        for pattern in patterns:
+            source = pattern + ' F("return tools.spawn_agent({})")();'
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+        # The same family must not authorize a hidden followup or zero-dispatch
+        # extraction merely because no literal dispatch name survived lexing.
+        for source in ('const {"constructor": F} = Object; F("return tools.followup_task({})")();',
+                       'const {"content": value} = result;'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_unbalanced_receipt_delimiters_fail_closed(self):
+        for source in ('const {"constructor": F = Object;',
+                       'text([1, 2);', 'await tools.spawn_agent({}); }'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_literal_objects_and_arrays_are_not_binding_patterns(self):
+        for source, count in (
+            ('const data = {"content": result}; text(data["content"]);', 0),
+            ('const data = [result]; text(data[0]);', 0),
+            ('text({"example": "const {constructor: F} = Object"});', 0),
+            ('function harmless(value = {"content": 1}, array = [1]) {}', 0),
+            ('await tools.spawn_agent({"message": "example", items: [1, 2]});', 1),
+            ('const a = await tools.spawn_agent({message: "a"}); '
+             'await tools.followup_task({target: a.id, message: "b"});', 2),
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(self.wrapped_counts(source)['total'], count)
+
+    def test_method_and_getter_calls_cannot_reuse_one_dispatch_site(self):
+        for source in (
+            'const o={run(){return tools.spawn_agent({});}}; o.run(); o.run();',
+            'const o={"run"(){return tools.spawn_agent({});}}; o.run(); o.run();',
+            'const o={["run"](){return tools.spawn_agent({});}}; o.run(); o.run();',
+            'const o={get x(){return tools.spawn_agent({});}}; const a=o.x, b=o.x;',
+            'class Task { result=tools.spawn_agent({}); } new Task(); new Task();',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'dynamic wrapper'):
+                self.wrapped_counts(source)
+
 
 if __name__ == '__main__':
     unittest.main()

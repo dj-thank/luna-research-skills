@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 from datetime import datetime
 import json
 import math
@@ -14,11 +15,20 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
+# Load by file location so standalone packages and importlib-based consumers
+# share the same dispatch recognition without modifying the process sys.path.
+_DISPATCH_SPEC = importlib.util.spec_from_file_location(
+    'luna_dispatch_budget', Path(__file__).with_name('check_dispatch_budget.py')
+)
+assert _DISPATCH_SPEC is not None and _DISPATCH_SPEC.loader is not None
+_DISPATCH = importlib.util.module_from_spec(_DISPATCH_SPEC)
+_DISPATCH_SPEC.loader.exec_module(_DISPATCH)
+
 DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
 EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
 SUPPORTED_SPECIALIST_MODELS = (DEFAULT_SPECIALIST_MODEL, "gpt-6.1-sol")
 EXPECTED_REASONING_EFFORT = "low"
-CHECKER_CONTRACT_VERSION = "2026-10-14.2"
+CHECKER_CONTRACT_VERSION = "2026-11-02.1"
 MIN_CONCURRENT_THREADS = 2
 MAX_CONCURRENT_THREADS = 6
 MAX_ATTEMPT_BUDGET = 12
@@ -2862,88 +2872,99 @@ def _canonical_uuid_strings(value: object) -> set[str]:
     return result
 
 
-def _wrapped_string_property(body: str, key: str) -> str | None:
-    pattern = (
-        r"(?:^|[,\{\n])\s*"
-        + re.escape(key)
-        + r"\s*:\s*(['\"])(.*?)\1"
-    )
-    matches = re.findall(pattern, body, flags=re.DOTALL)
-    if len(matches) != 1:
-        return None
-    return matches[0][1]
-
-
-def _wrapped_boolean_property(body: str, key: str) -> bool | None:
-    pattern = (
-        r"(?:^|[,\{\n])\s*"
-        + re.escape(key)
-        + r"\s*:\s*(true|false)\b"
-    )
-    matches = re.findall(pattern, body)
-    if len(matches) != 1:
-        return None
-    return matches[0] == "true"
-
-
 def _parse_wrapped_spawn_arguments(value: object) -> dict[str, Any] | None:
-    """Parse the app's nested exec -> multi_agent spawn receipt conservatively.
+    """Read top-level literal arguments from one supported executable call.
 
-    The desktop app records nested tool calls as a JavaScript ``custom_tool_call``
-    rather than a direct JSON ``function_call``.  The route fields are simple
-    literals; the task message itself is intentionally treated as opaque.
+    Comments, nested message objects and quoted examples cannot supply route
+    fields. Expressions, spreads and duplicate keys are not routing evidence.
     """
     if not isinstance(value, str):
         return None
-    call_matches = list(
-        re.finditer(r"\btools\.[A-Za-z_][A-Za-z0-9_.]*spawn_agent\s*\(", value)
-    )
-    if len(call_matches) != 1:
+    try:
+        calls = _DISPATCH.wrapped_dispatch_calls(value)
+        visible = _DISPATCH._visible_wrapper_code(value)
+    except ValueError:
         return None
-    object_start = value.find("{", call_matches[0].end())
-    if object_start < 0:
+    if len(calls) != 1 or calls[0][0] != "spawn_agent":
+        return None
+    start = calls[0][1]
+    while start < len(visible) and visible[start].isspace():
+        start += 1
+    if start >= len(visible) or visible[start] != "{":
         return None
 
-    depth = 0
-    quote: str | None = None
-    escaped = False
-    object_end: int | None = None
-    for index in range(object_start, len(value)):
-        character = value[index]
-        if quote is not None:
-            if escaped:
-                escaped = False
-            elif character == "\\":
-                escaped = True
-            elif character == quote:
-                quote = None
-            continue
-        if character in {'"', "'", "`"}:
-            quote = character
-        elif character == "{":
-            depth += 1
-        elif character == "}":
-            depth -= 1
-            if depth == 0:
-                object_end = index
+    segments = []
+    segment_start = start + 1
+    stack = ["}"]
+    pairs = {"{": "}", "[": "]", "(": ")"}
+    end = None
+    for index in range(start + 1, len(visible)):
+        character = visible[index]
+        if character in pairs:
+            stack.append(pairs[character])
+        elif character in "}])":
+            if not stack or stack.pop() != character:
+                return None
+            if not stack:
+                segments.append((segment_start, index))
+                end = index + 1
                 break
-    if object_end is None:
+        elif character == "," and len(stack) == 1:
+            segments.append((segment_start, index))
+            segment_start = index + 1
+    if end is None or not visible[end:].lstrip().startswith(")"):
         return None
 
-    body = value[object_start + 1 : object_end]
-    message_marker = re.search(r"(?:^|[,\{\n])\s*message\s*:", body)
-    if message_marker is None:
-        return None
-    arguments: dict[str, Any] = {"message": "__wrapped_message__"}
-    for key in ("task_name", "agent_type", "fork_turns", "model", "reasoning_effort"):
-        literal = _wrapped_string_property(body, key)
-        if literal is not None:
-            arguments[key] = literal
-    for key in ("fork_context",):
-        literal_boolean = _wrapped_boolean_property(body, key)
-        if literal_boolean is not None:
-            arguments[key] = literal_boolean
-    return arguments
+    def literal(at: int, stop: int) -> tuple[str, int] | None:
+        # Route values are simple ASCII literals. Escaped/computed values are
+        # intentionally rejected instead of applying Python's string semantics.
+        match = re.match(r"([\"'`])([^\\\r\n]*?)\1", value[at:stop])
+        if match is None or "${" in match.group(2):
+            return None
+        return match.group(2), at + match.end()
+
+    strings = {"task_name", "agent_type", "fork_turns", "model", "reasoning_effort"}
+    arguments: dict[str, Any] = {}
+    seen = set()
+    for begin, stop in segments:
+        while begin < stop and visible[begin].isspace():
+            begin += 1
+        if begin == stop:
+            continue
+        if visible[begin] in "\"'`":
+            key_literal = literal(begin, stop)
+            if key_literal is None:
+                return None
+            key, position = key_literal
+        else:
+            key_match = re.match(r"[A-Za-z_][A-Za-z0-9_]*", visible[begin:stop])
+            if key_match is None:
+                return None
+            key = key_match.group()
+            position = begin + key_match.end()
+        while position < stop and visible[position].isspace():
+            position += 1
+        if position >= stop or visible[position] != ":" or key in seen or key == "__proto__":
+            return None
+        seen.add(key)
+        position += 1
+        while position < stop and visible[position].isspace():
+            position += 1
+        if position == stop:
+            return None
+        if key == "message":
+            arguments[key] = "__wrapped_message__"
+        elif key in strings:
+            result = literal(position, stop)
+            if result is None or visible[result[1]:stop].strip():
+                return None
+            arguments[key] = result[0]
+        elif key == "fork_context":
+            boolean = visible[position:stop].strip()
+            if boolean not in {"true", "false"}:
+                return None
+            arguments[key] = boolean == "true"
+    return arguments if "message" in arguments else None
 
 
 def _parent_spawn_calls(
@@ -3006,7 +3027,7 @@ def _parent_spawn_calls(
             )
         ):
             arguments = _parse_spawn_arguments(payload.get("arguments"))
-        elif payload.get("type") == "custom_tool_call":
+        elif _DISPATCH.is_exec_wrapper(payload):
             arguments = _parse_wrapped_spawn_arguments(payload.get("input"))
         else:
             continue
@@ -3267,17 +3288,17 @@ def validate_ledger_receipts(
                 for line_number, line in enumerate(handle, start=1):
                     doc = json.loads(line)
                     payload = doc.get("payload") if isinstance(doc, dict) else None
-                    if isinstance(payload, dict) and doc.get("type") == "response_item" and payload.get("type") == "function_call":
-                        name = payload.get("name")
-                        if isinstance(name, str) and (name == "spawn_agent" or name.endswith(".spawn_agent") or name.endswith("__spawn_agent")):
+                    if isinstance(payload, dict) and doc.get("type") == "response_item":
+                        spawn_count = _DISPATCH.dispatch_names(payload).count("spawn_agent")
+                        if spawn_count:
                             call_id = payload.get("call_id")
                             if not isinstance(call_id, str) or not call_id.strip():
                                 errors.append(
                                     f"assignments[{index}]: spawn_agent call at line {line_number} has no call_id"
                                 )
                             else:
-                                actual_spawn_call_ids.append(call_id)
-        except (OSError, json.JSONDecodeError) as exc:
+                                actual_spawn_call_ids.extend([call_id] * spawn_count)
+        except (OSError, ValueError) as exc:
             errors.append(f"assignments[{index}]: cannot scan child rollout: {exc}")
         coordinator_roles = {
             "coordinator",

@@ -45,6 +45,35 @@ counts actual native calls, including unsuccessful attempts; registering a child
 does not replace the independent runtime/provenance checks. --verification may
 spend the protected reserve only on required verification.
 
+Direct function calls and literal exec-wrapper calls share the same attempt
+counter. Multiple calls in one wrapper consume separate attempts; duplicate
+receipts of that wrapper are counted once. Comments and quoted task examples
+are ignored. Wrappers with dynamic control flow or any template
+interpolation cannot establish an exact count and block new dispatch; use
+direct native calls for those cases. Receipt verification uses the same scan
+to detect unauthorized leaf spawns and unleased coordinator edges.
+Only exec custom tools are wrappers; patch contents are never executable
+dispatch evidence. Computed tool access, aliases, and ambiguous slash contexts
+also fail closed. Spawn provenance reads literal top-level argument properties,
+rejecting spreads, duplicate keys and computed routing fields; comments or
+nested message examples cannot establish model or history-isolation settings.
+Dynamic evaluation (`eval`, dynamic `import`, function constructors, reflective/global access)
+is rejected even without a visible dispatch call. Computed member access is
+limited to numeric indexes and simple non-executable literal keys; use direct
+native calls when a wrapper falls outside this supported receipt syntax.
+Slash is accepted only for comments or unambiguous regex literals; division
+and automatic-semicolon-insertion ambiguities block new dispatch. The parser
+does not infer arbitrary JavaScript execution from a wrapper's source text.
+Function, method, getter and class bodies containing dispatch are unsupported:
+one call site can execute repeatedly. Object reflection helpers that recover
+executable functions are rejected even without a literal dispatch call site.
+Object/array destructuring declarations, assignments, iteration targets and
+formal parameters are unsupported even for benign keys: masked literal keys
+can otherwise extract executable functions without a visible call site.
+Malformed delimiter nesting also blocks new dispatch. Ordinary literal object
+arguments, array values and object-valued parameter defaults remain supported.
+This is a conservative receipt subset, not a JavaScript sandbox or evaluator.
+
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger
 budgets require a root-recorded remaining acceptance condition and a different

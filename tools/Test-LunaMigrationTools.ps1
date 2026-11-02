@@ -90,6 +90,23 @@ try {
     Assert-True -Condition (-not (Test-Path -LiteralPath $dryRunProfile)) `
         -Message 'Disposable dry-run changed the filesystem.'
 
+    # Set-Location does not update .NET's process directory. Relative source
+    # paths must still follow the caller's PowerShell location.
+    $resolvedSource = (Resolve-Path -LiteralPath $Source).Path
+    $processDirectory = [Environment]::CurrentDirectory
+    Push-Location -LiteralPath (Split-Path -Parent $resolvedSource)
+    try {
+        [Environment]::CurrentDirectory = $testRoot
+        $relativeSource = Join-Path '.' (Split-Path -Leaf $resolvedSource)
+        $relativeText = (& $installer -Source $relativeSource -TestUserProfile $dryRunProfile) -join [Environment]::NewLine
+        $relativePlan = $relativeText | ConvertFrom-Json
+        Assert-True -Condition ($relativePlan.state -eq 'planned' -and $relativePlan.packageCount -eq $dryRun.packageCount) `
+            -Message 'Relative source did not resolve from the PowerShell location.'
+    } finally {
+        [Environment]::CurrentDirectory = $processDirectory
+        Pop-Location
+    }
+
     # A clean profile must complete the production-path WhatIf. On a machine
     # where the packages are already installed, the installer's fail-closed
     # overwrite refusal is the expected non-mutating result instead. This
@@ -250,6 +267,14 @@ try {
             $chainRejected = $_.Exception.Message -match 'reparse point|symlink|junction'
         }
         Assert-True -Condition $chainRejected -Message 'Discovery followed a parent-chain junction.'
+        $installerChainRejected = $false
+        try {
+            & $installer -Source (Join-Path $chainJunction 'skills') | Out-Null
+        } catch {
+            $installerChainRejected = $_.Exception.Message -match 'Source path contains a reparse point'
+        }
+        Assert-True -Condition $installerChainRejected `
+            -Message 'Installer followed a source parent-chain junction before reading contents.'
         [IO.Directory]::Delete($chainJunction, $false)
 
         $stageProfile = Join-Path $testRoot ('luna-skills-test-profile-' + [guid]::NewGuid().ToString('N'))

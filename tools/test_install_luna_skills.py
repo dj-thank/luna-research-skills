@@ -4,7 +4,10 @@ import contextlib
 import io
 import json
 import os
+import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -39,6 +42,119 @@ class LunaSkillInstallerTests(unittest.TestCase):
         )
         return package
 
+    @unittest.skipUnless(os.name == "nt", "Windows junction support")
+    def test_reserved_package_replaced_with_junction_denied_before_write(self) -> None:
+        self.make_skill("alpha")
+        outside = self.root / "outside"
+        outside.mkdir()
+        plan = installer.build_plan(self.source, self.target)
+        reserve = installer._reserve_destination
+        destination = self.target / "alpha"
+
+        def replace_with_junction(path):
+            reserve(path)
+            path.rmdir()
+            subprocess.run(["cmd", "/c", "mklink", "/J", str(path), str(outside)],
+                           check=True, capture_output=True)
+
+        try:
+            with mock.patch.object(installer, "_reserve_destination", side_effect=replace_with_junction):
+                with self.assertRaisesRegex(installer.InstallError, "reparse|pin"):
+                    installer.install_skills(plan)
+            self.assertEqual(list(outside.iterdir()), [])
+        finally:
+            if os.path.lexists(destination):
+                os.rmdir(destination)  # Remove the fixture junction itself only.
+
+    @unittest.skipUnless(os.name == "nt", "Windows namespace locking")
+    def test_target_root_cannot_be_replaced_after_reservation(self) -> None:
+        self.make_skill("alpha")
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "alpha").mkdir()
+        plan = installer.build_plan(self.source, self.target)
+        reserve = installer._reserve_destination
+        attempted = []
+
+        def replace(destination):
+            reserve(destination)
+            attempted.append(True)
+            # This rename must fail while the destination chain is pinned.
+            self.target.rename(self.root / "parked")
+            os.symlink(outside, self.target, target_is_directory=True)
+
+        with mock.patch.object(installer, "_reserve_destination", side_effect=replace):
+            with self.assertRaises(installer.InstallError):
+                installer.install_skills(plan)
+        self.assertTrue(attempted)
+        self.assertEqual(list((outside / "alpha").iterdir()), [])
+        self.assertFalse((self.root / "parked").exists())
+        self.assertFalse((self.target / "alpha" / "SKILL.md").exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows namespace locking")
+    def test_parent_remains_pinned_between_check_and_file_open(self) -> None:
+        self.make_skill("alpha")
+        plan = installer.build_plan(self.source, self.target)
+        original_open = Path.open
+        blocked = []
+
+        def try_replace(path, mode="r", *args, **kwargs):
+            if mode == "xb":
+                try:
+                    path.parent.rename(path.parent.with_name(path.parent.name + "-moved"))
+                except OSError:
+                    blocked.append(path)
+                else:
+                    self.fail("destination directory could be replaced before open")
+            return original_open(path, mode, *args, **kwargs)
+
+        with mock.patch.object(Path, "open", try_replace):
+            installer.install_skills(plan)
+        self.assertEqual(len(blocked), 2)
+        installer.verify_installation(self.source, self.target)
+
+    @unittest.skipIf(os.name == "nt", "POSIX descriptor-relative writes")
+    def test_posix_file_creation_does_not_follow_swapped_parent(self) -> None:
+        self.make_skill("alpha")
+        outside = self.root / "outside"
+        (outside / "alpha" / "references").mkdir(parents=True)
+        plan = installer.build_plan(self.source, self.target)
+        original_open = os.open
+        swapped = []
+        attempted = []
+
+        def replace_before_open(path, flags, *args, **kwargs):
+            if flags & os.O_CREAT and not attempted:
+                attempted.append(True)
+                try:
+                    self.target.rename(self.root / "parked")
+                except OSError:
+                    # Some POSIX-backed Windows mounts deny rename while the
+                    # directory fd is open, providing stronger namespace pinning.
+                    pass
+                else:
+                    self.target.symlink_to(outside, target_is_directory=True)
+                    swapped.append(True)
+            return original_open(path, flags, *args, **kwargs)
+
+        try:
+            failure = None
+            with mock.patch.object(os, "open", side_effect=replace_before_open):
+                try:
+                    installer.install_skills(plan)
+                except installer.InstallError as exc:
+                    failure = exc
+            self.assertTrue(attempted)
+            if swapped:
+                self.assertIsNotNone(failure)
+            else:
+                self.assertIsNone(failure)
+                installer.verify_installation(self.source, self.target)
+            self.assertEqual(list(outside.rglob("*.md")), [])
+        finally:
+            if self.target.is_symlink():
+                self.target.unlink()
+
     def test_default_source_supports_repository_and_plugin_layouts(self) -> None:
         repository = self.root / "repository"
         plugin = self.root / "plugin"
@@ -50,6 +166,72 @@ class LunaSkillInstallerTests(unittest.TestCase):
             installer.default_source(repository), repository / ".agents/skills"
         )
         self.assertEqual(installer.default_source(plugin), plugin / "skills")
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "POSIX named pipes")
+    def test_file_replaced_with_fifo_fails_without_waiting_for_a_writer(self) -> None:
+        probe = self.root / "fifo-probe"
+        try:
+            os.mkfifo(probe)
+        except OSError as exc:
+            self.skipTest(f"filesystem does not support named pipes: {exc}")
+        probe.unlink()
+        script = textwrap.dedent("""\
+            import os
+            import sys
+            from pathlib import Path
+            from unittest import mock
+            import install_luna_skills as installer
+
+            package = Path(sys.argv[1])
+            path = package / 'references' / 'guide.md'
+            mode = sys.argv[2]
+            swapped = []
+            original_stat, original_open = os.lstat, os.open
+
+            def swap():
+                path.unlink()
+                os.mkfifo(path)
+                swapped.append(True)
+
+            def stat_then_swap(candidate, *args, **kwargs):
+                details = original_stat(candidate, *args, **kwargs)
+                if Path(candidate) == path and not swapped:
+                    swap()
+                return details
+
+            def swap_then_open(candidate, flags, *args, **kwargs):
+                if candidate == path.name and not swapped:
+                    swap()
+                return original_open(candidate, flags, *args, **kwargs)
+
+            expected = installer._snapshot_skill(package)
+            try:
+                if mode == 'source':
+                    with mock.patch.object(os, 'lstat', side_effect=stat_then_swap):
+                        installer._read_regular_file(path, 'references/guide.md')
+                else:
+                    with mock.patch.object(os, 'open', side_effect=swap_then_open):
+                        installer._remove_owned_package(package, expected)
+            except installer.InstallError as exc:
+                assert swapped and 'non-regular' in str(exc), str(exc)
+                assert path.exists(), 'the replaced file must be preserved'
+            else:
+                raise AssertionError('a raced FIFO must be rejected')
+            finally:
+                if swapped:
+                    path.unlink()
+            """)
+        for mode in ("source", "rollback"):
+            with self.subTest(mode=mode):
+                package = self.make_skill(f"alpha-{mode}")
+                try:
+                    result = subprocess.run(
+                        [sys.executable, "-c", script, str(package), mode],
+                        cwd=Path(__file__).parent, capture_output=True, text=True, timeout=5,
+                    )
+                except subprocess.TimeoutExpired:
+                    self.fail(f"{mode} blocked while opening a raced FIFO")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_plan_is_non_mutating(self) -> None:
         self.make_skill("alpha")
