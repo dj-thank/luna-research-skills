@@ -33,6 +33,7 @@ def _visible_wrapper_code(source: str) -> str:
     code = list(source)
     index = 0
     regex_allowed = True
+    previous_token = ''
     while index < len(source):
         start = index
         character = source[index]
@@ -61,6 +62,7 @@ def _visible_wrapper_code(source: str) -> str:
                 if re.search(r'\btools\b|(?:spawn_agent|followup_task)\b', source[start:index]):
                     raise ValueError('cannot count dispatch inside template interpolation')
             regex_allowed = False
+            previous_token = 'literal'
         elif character == '/' and regex_allowed:
             index += 1
             in_class = False
@@ -81,18 +83,31 @@ def _visible_wrapper_code(source: str) -> str:
             else:
                 raise ValueError('cannot count dispatch in an unterminated regex')
             regex_allowed = False
+            previous_token = 'literal'
+        elif character == '/' and previous_token in {')', '}', '++', '--'}:
+            raise ValueError('cannot count dispatch after an ambiguous slash; use direct native calls')
         elif character.isalpha() or character in '_$':
             index += 1
             while index < len(source) and (source[index].isalnum() or source[index] in '_$'):
                 index += 1
-            regex_allowed = source[start:index] in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new'}
+            previous_token = source[start:index]
+            regex_allowed = previous_token in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'else', 'do', 'in', 'instanceof', 'of', 'extends', 'break', 'continue', 'debugger'}
+            continue
+        elif source[index:index + 2] in {'++', '--'}:
+            previous_token = source[index:index + 2]
+            regex_allowed = False
+            index += 2
             continue
         else:
             if not character.isspace():
+                previous_token = character
                 regex_allowed = character not in ')]}.' and not character.isdigit()
             index += 1
             continue
         code[start:index] = ' ' * (index - start)
+        # Preserve a literal's start for argument parsing, never its contents.
+        if character in '\"\'`' or (character == '/' and not source.startswith(('//', '/*'), start)):
+            code[start] = character
     return ''.join(code)
 
 

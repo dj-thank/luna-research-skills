@@ -137,6 +137,16 @@ class DispatchBudgetTests(unittest.TestCase):
     def test_benign_template_expression_is_not_dispatch(self):
         self.assertEqual(self.wrapped_counts('text(`count=${results.length}`);')['total'], 0)
 
+    def test_ambiguous_slash_cannot_mask_a_dispatch(self):
+        for source in (
+            "{} /'/; await tools.multi_agent_v1__spawn_agent({}); // '",
+            "if (true) /'/; await tools.multi_agent_v1__spawn_agent({}); // '",
+            'value++ / 2; await tools.collaboration.spawn_agent({});',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'ambiguous slash'):
+                self.wrapped_counts(source)
+        self.assertEqual(self.wrapped_counts('const x = value / 2; await tools.collaboration.spawn_agent({});')['total'], 1)
+
 
 if __name__ == '__main__':
     unittest.main()

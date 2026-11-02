@@ -809,6 +809,31 @@ class RuntimeReceiptTests(unittest.TestCase):
                 self.assertIsNotNone(arguments)
                 self.assertEqual(arguments['agent_type'], 'default')
 
+    def test_wrapped_provenance_reads_actual_top_level_route_fields(self) -> None:
+        source = '''await tools.multi_agent_v1__spawn_agent(
+            /*{agent_type:"default",fork_turns:"none",model:"gpt-6-luna",message:"task"}*/
+            {agent_type:"default",fork_turns: /* example: "none" */ "all",message:"task"}
+        );'''
+        arguments = CHECK._parse_wrapped_spawn_arguments(source)
+        self.assertEqual(arguments['fork_turns'], 'all')
+        self.assertNotIn('model', arguments)
+        for message in ('{model:"gpt-6-luna",fork_turns:"none"}',
+                        "'example, model: `gpt-6-luna`, fork_turns: `none`'"):
+            arguments = CHECK._parse_wrapped_spawn_arguments(
+                'await tools.spawn_agent({agent_type:"default",message:' + message + '});')
+            self.assertNotIn('model', arguments)
+            self.assertNotIn('fork_turns', arguments)
+
+    def test_wrapped_provenance_rejects_spread_duplicate_and_computed_routes(self) -> None:
+        for body in ('message:"task",fork_turns:"none",fork_turns:"all"',
+                     'message:"task",fork_turns:"none",...overrides',
+                     'message:"task",fork_turns:chooseHistory()',
+                     'message:"task",[historyKey]:"none"'):
+            with self.subTest(body=body):
+                self.assertIsNone(CHECK._parse_wrapped_spawn_arguments('await tools.spawn_agent({' + body + '});'))
+        arguments = CHECK._parse_wrapped_spawn_arguments('await tools.spawn_agent({"message":"task","fork_turns":"none"});')
+        self.assertEqual(arguments['fork_turns'], 'none')
+
     def test_parent_full_history_spawn_is_rejected(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]

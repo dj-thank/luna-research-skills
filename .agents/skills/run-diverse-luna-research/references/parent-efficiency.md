@@ -52,6 +52,11 @@ are ignored. Wrappers with dynamic control flow or dispatch inside template
 interpolation cannot establish an exact count and block new dispatch; use
 direct native calls for those cases. Receipt verification uses the same scan
 to detect unauthorized leaf spawns and unleased coordinator edges.
+Only exec custom tools are wrappers; patch contents are never executable
+dispatch evidence. Computed tool access, aliases, and ambiguous slash contexts
+also fail closed. Spawn provenance reads literal top-level argument properties,
+rejecting spreads, duplicate keys and computed routing fields; comments or
+nested message examples cannot establish model or history-isolation settings.
 
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger

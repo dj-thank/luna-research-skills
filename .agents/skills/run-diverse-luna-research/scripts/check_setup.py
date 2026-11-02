@@ -2872,89 +2872,99 @@ def _canonical_uuid_strings(value: object) -> set[str]:
     return result
 
 
-def _wrapped_string_property(body: str, key: str) -> str | None:
-    pattern = (
-        r"(?:^|[,\{\n])\s*"
-        + re.escape(key)
-        + r"\s*:\s*(['\"])(.*?)\1"
-    )
-    matches = re.findall(pattern, body, flags=re.DOTALL)
-    if len(matches) != 1:
-        return None
-    return matches[0][1]
-
-
-def _wrapped_boolean_property(body: str, key: str) -> bool | None:
-    pattern = (
-        r"(?:^|[,\{\n])\s*"
-        + re.escape(key)
-        + r"\s*:\s*(true|false)\b"
-    )
-    matches = re.findall(pattern, body)
-    if len(matches) != 1:
-        return None
-    return matches[0] == "true"
-
-
 def _parse_wrapped_spawn_arguments(value: object) -> dict[str, Any] | None:
-    """Parse the app's nested exec -> multi_agent spawn receipt conservatively.
+    """Read top-level literal arguments from one supported executable call.
 
-    The desktop app records nested tool calls as a JavaScript ``custom_tool_call``
-    rather than a direct JSON ``function_call``.  The route fields are simple
-    literals; the task message itself is intentionally treated as opaque.
+    Comments, nested message objects and quoted examples cannot supply route
+    fields. Expressions, spreads and duplicate keys are not routing evidence.
     """
     if not isinstance(value, str):
         return None
     try:
         calls = _DISPATCH.wrapped_dispatch_calls(value)
+        visible = _DISPATCH._visible_wrapper_code(value)
     except ValueError:
         return None
     if len(calls) != 1 or calls[0][0] != "spawn_agent":
         return None
-    object_start = value.find("{", calls[0][1])
-    if object_start < 0:
+    start = calls[0][1]
+    while start < len(visible) and visible[start].isspace():
+        start += 1
+    if start >= len(visible) or visible[start] != "{":
         return None
 
-    depth = 0
-    quote: str | None = None
-    escaped = False
-    object_end: int | None = None
-    for index in range(object_start, len(value)):
-        character = value[index]
-        if quote is not None:
-            if escaped:
-                escaped = False
-            elif character == "\\":
-                escaped = True
-            elif character == quote:
-                quote = None
-            continue
-        if character in {'"', "'", "`"}:
-            quote = character
-        elif character == "{":
-            depth += 1
-        elif character == "}":
-            depth -= 1
-            if depth == 0:
-                object_end = index
+    segments = []
+    segment_start = start + 1
+    stack = ["}"]
+    pairs = {"{": "}", "[": "]", "(": ")"}
+    end = None
+    for index in range(start + 1, len(visible)):
+        character = visible[index]
+        if character in pairs:
+            stack.append(pairs[character])
+        elif character in "}])":
+            if not stack or stack.pop() != character:
+                return None
+            if not stack:
+                segments.append((segment_start, index))
+                end = index + 1
                 break
-    if object_end is None:
+        elif character == "," and len(stack) == 1:
+            segments.append((segment_start, index))
+            segment_start = index + 1
+    if end is None or not visible[end:].lstrip().startswith(")"):
         return None
 
-    body = value[object_start + 1 : object_end]
-    message_marker = re.search(r"(?:^|[,\{\n])\s*message\s*:", body)
-    if message_marker is None:
-        return None
-    arguments: dict[str, Any] = {"message": "__wrapped_message__"}
-    for key in ("task_name", "agent_type", "fork_turns", "model", "reasoning_effort"):
-        literal = _wrapped_string_property(body, key)
-        if literal is not None:
-            arguments[key] = literal
-    for key in ("fork_context",):
-        literal_boolean = _wrapped_boolean_property(body, key)
-        if literal_boolean is not None:
-            arguments[key] = literal_boolean
-    return arguments
+    def literal(at: int, stop: int) -> tuple[str, int] | None:
+        # Route values are simple ASCII literals. Escaped/computed values are
+        # intentionally rejected instead of applying Python's string semantics.
+        match = re.match(r"([\"'`])([^\\\r\n]*?)\1", value[at:stop])
+        if match is None or "${" in match.group(2):
+            return None
+        return match.group(2), at + match.end()
+
+    strings = {"task_name", "agent_type", "fork_turns", "model", "reasoning_effort"}
+    arguments: dict[str, Any] = {}
+    seen = set()
+    for begin, stop in segments:
+        while begin < stop and visible[begin].isspace():
+            begin += 1
+        if begin == stop:
+            continue
+        if visible[begin] in "\"'`":
+            key_literal = literal(begin, stop)
+            if key_literal is None:
+                return None
+            key, position = key_literal
+        else:
+            key_match = re.match(r"[A-Za-z_][A-Za-z0-9_]*", visible[begin:stop])
+            if key_match is None:
+                return None
+            key = key_match.group()
+            position = begin + key_match.end()
+        while position < stop and visible[position].isspace():
+            position += 1
+        if position >= stop or visible[position] != ":" or key in seen or key == "__proto__":
+            return None
+        seen.add(key)
+        position += 1
+        while position < stop and visible[position].isspace():
+            position += 1
+        if position == stop:
+            return None
+        if key == "message":
+            arguments[key] = "__wrapped_message__"
+        elif key in strings:
+            result = literal(position, stop)
+            if result is None or visible[result[1]:stop].strip():
+                return None
+            arguments[key] = result[0]
+        elif key == "fork_context":
+            boolean = visible[position:stop].strip()
+            if boolean not in {"true", "false"}:
+                return None
+            arguments[key] = boolean == "true"
+    return arguments if "message" in arguments else None
 
 
 def _parent_spawn_calls(

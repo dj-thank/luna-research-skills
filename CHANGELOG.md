@@ -7,6 +7,7 @@
 ### Fixed
 
 - Count literal exec-wrapped spawn/followup calls in the shared dispatch budget and inspect them when verifying leaf/coordinator delegation. Reject uncountable dynamic wrappers instead of silently accepting zero attempts; ignore comments and quoted examples.
+- Bind wrapped spawn provenance to actual top-level literal arguments, so comment examples, nested task content, duplicate keys and object spreads cannot stand in for the selected model or fresh-context setting. Ignore non-exec custom-tool payloads and reject ambiguous syntax.
 - Protect Python installer destination traversal during concurrent directory replacement, and reject PowerShell source paths with junction/reparse ancestors before reading package content.
 
 
