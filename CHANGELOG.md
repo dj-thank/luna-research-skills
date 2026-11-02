@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Add a read-only comparison report checker with separately pinned evidence, independent answer labels, per-case losses and calibration-inclusive call counts. Include a portable example, CLI regression tests and English/Japanese README navigation; a consistent rejected-policy report remains valid evidence.
+
 - Keep checker help, version and validation commands free of sibling bytecode-cache writes under default Python settings, without changing an importing process's bytecode policy. Test the packaged scripts with CI cache-suppression variables ignored.
 - Repair plugin documentation links to relocated skill files and include referenced benchmark answer fixtures. Check nested links, preserve source documents and leave code examples/external URLs unchanged.
 - Reject repeated blocked-attempt identities in benchmark scoring, retaining all reported reasons so a later entry cannot hide a contradiction.

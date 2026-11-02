@@ -1,0 +1,197 @@
+{
+  "cases": [
+    {
+      "available_answers": [
+        "good",
+        "wrong"
+      ],
+      "choices": {
+        "baseline": "good",
+        "candidate": "good"
+      },
+      "id": "stable",
+      "valid_answers": [
+        "good"
+      ]
+    },
+    {
+      "available_answers": [
+        "good",
+        "wrong"
+      ],
+      "choices": {
+        "baseline": null,
+        "candidate": "good"
+      },
+      "id": "recover",
+      "valid_answers": [
+        "good"
+      ]
+    },
+    {
+      "available_answers": [
+        "good",
+        "wrong"
+      ],
+      "choices": {
+        "baseline": "wrong",
+        "candidate": "good"
+      },
+      "id": "repair",
+      "valid_answers": [
+        "good"
+      ]
+    },
+    {
+      "available_answers": [
+        "wrong"
+      ],
+      "choices": {
+        "baseline": null,
+        "candidate": null
+      },
+      "id": "absent",
+      "valid_answers": [
+        "good"
+      ]
+    },
+    {
+      "available_answers": [
+        "good",
+        "wrong"
+      ],
+      "choices": {
+        "baseline": null,
+        "candidate": null
+      },
+      "id": "missed",
+      "valid_answers": [
+        "good"
+      ]
+    }
+  ],
+  "evidence_kind": "synthetic_known_answer",
+  "per_case_budget": 2,
+  "policies": {
+    "baseline": "original",
+    "candidate": "revised"
+  },
+  "schema_version": 1,
+  "work": [
+    {
+      "case_id": "stable",
+      "id": "baseline/stable/0",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "stable",
+      "id": "candidate/stable/0",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "recover",
+      "id": "baseline/recover/0",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "recover",
+      "id": "baseline/recover/1",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "recover",
+      "id": "candidate/recover/0",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "repair",
+      "id": "baseline/repair/0",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "repair",
+      "id": "baseline/repair/1",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "repair",
+      "id": "candidate/repair/0",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "repair",
+      "id": "candidate/repair/1",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "absent",
+      "id": "baseline/absent/0",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "absent",
+      "id": "baseline/absent/1",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "absent",
+      "id": "candidate/absent/0",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "absent",
+      "id": "candidate/absent/1",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "missed",
+      "id": "baseline/missed/0",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "missed",
+      "id": "baseline/missed/1",
+      "phase": "evaluation",
+      "policy": "baseline"
+    },
+    {
+      "case_id": "missed",
+      "id": "candidate/missed/0",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": "missed",
+      "id": "candidate/missed/1",
+      "phase": "evaluation",
+      "policy": "candidate"
+    },
+    {
+      "case_id": null,
+      "id": "cal/0",
+      "phase": "calibration",
+      "policy": "candidate"
+    },
+    {
+      "case_id": null,
+      "id": "cal/1",
+      "phase": "calibration",
+      "policy": "candidate"
+    }
+  ],
+  "work_unit": "deterministic_oracle_call"
+}

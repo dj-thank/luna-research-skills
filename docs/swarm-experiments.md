@@ -227,6 +227,12 @@ not model open-ended reasoning.
 
 ## Promotion and reporting
 
+For a reusable, read-only report contract, see
+[checking comparison reports](comparison-reports.md). Pin the evidence separately
+from the report, then recompute per-case gains/losses and calibration-inclusive
+work. An accurate report of a rejected policy is valid evidence; report consistency
+and the case gate are separate results.
+
 ### Reproduce the bounded review comparison
 
 Run `python tools/benchmark_review.py`. Its separate

@@ -1,0 +1,37 @@
+{
+  "evidence_kind": "synthetic_known_answer",
+  "evidence_sha256": "a1341c81e895bd870fdc0c79c84f26f9521beb4e9778b3788c2cb25a9f13b56d",
+  "metrics": {
+    "baseline": {
+      "abstain": 3,
+      "calibration_calls": 0,
+      "correct": 1,
+      "evaluation_calls": 9,
+      "false_accept": 1,
+      "missed_available": 2,
+      "total_calls": 9
+    },
+    "candidate": {
+      "abstain": 2,
+      "calibration_calls": 2,
+      "correct": 3,
+      "evaluation_calls": 8,
+      "false_accept": 0,
+      "missed_available": 1,
+      "total_calls": 10
+    }
+  },
+  "passes_case_gate": true,
+  "policies": {
+    "baseline": "original",
+    "candidate": "revised"
+  },
+  "recoveries": [
+    "recover",
+    "repair"
+  ],
+  "regressions": [],
+  "schema_version": 1,
+  "total_cases": 5,
+  "work_unit": "deterministic_oracle_call"
+}

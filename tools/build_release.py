@@ -167,6 +167,7 @@ def build(root: Path, output: Path) -> dict[str, Path]:
             "SECURITY.md",
             "tools/MIGRATION.md",
             "tools/install_luna_skills.py",
+            "tools/check_comparison.py",
         }:
             if name.endswith(".md"):
                 data = re.sub(rb"(\]\((?:\.\./)*)\.agents/skills/", rb"\1skills/", data)
