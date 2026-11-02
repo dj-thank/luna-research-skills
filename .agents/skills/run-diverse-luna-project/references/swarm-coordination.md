@@ -25,6 +25,7 @@ is included in both standalone packages, but its scope remains project v2.
 |---|---|
 | `selected_attempt_ids` | One deterministic candidate batch in ledger order, bounded by available C/W/N and the unfulfilled final-verifier reserve |
 | `blocked` | Unselected planned attempts, reason codes and causal attempt IDs; distinguish dependency, ownership, time, capacity and integration waits |
+| `dependency_replacement_hints` | Recorded accepted retries of a blocked dependency, with root-review and ledger-order requirements; execution still uses the original dependency IDs |
 | `active_attempt_ids`, `active_alerts` | Active work and expired deadline/TTL alerts; expiry does not release a writer or a slot |
 | `integration_pending_attempt_ids` | Accepted writer candidates awaiting root integration |
 | `capacity`, `next_wave` | Ledger-derived spend, remaining reserve and conservative available slots; use the larger of recorded and observed active counts |
@@ -42,6 +43,27 @@ Dispatched rows with a recorded finish after that snapshot still occupy capacity
 with an alert; a future finish cannot release a slot early.
 The planner does not rewrite wave assignments, wait, retry or repair invalid
 ledgers. Root records any approved plan change before executing its suggestion.
+
+If a consumer still names a failed or rejected attempt after a retry succeeds,
+the original dependency remains blocked. Planner 1.2 lists completed, accepted
+retry descendants in `dependency_replacement_hints`, including multi-step retry
+lineage. The recorded finish must be at or before the snapshot. Pending, failed,
+future-finished and unrelated attempts sharing only a dedup key are not candidates.
+An invalid ledger produces no hints.
+
+Root reopens each candidate's artifact and acceptance evidence, checks the
+consumer's actual input requirements, then explicitly updates the dependency if
+appropriate. Different acceptance criteria can require new review even within the
+same retry chain. `requires_root_review` remains true for every hint. Multiple
+recorded accepted candidates remain visible; the planner does not choose a winner
+from their epoch or list order. Legacy rows may lack epoch protection.
+
+When `requires_ledger_reordering` is true, the retry occurs after the consumer in
+ledger order. Referenced dependencies must be earlier, so changing the ID alone
+would produce an invalid ledger. Root must preserve dependency ordering when
+editing the plan, revalidate it, and rerun the planner and dispatch preflight.
+Hints grant no authority to rewrite a ledger or start work; all existing blockers,
+capacity limits and required checks still apply.
 
 ## Execute one live selection
 

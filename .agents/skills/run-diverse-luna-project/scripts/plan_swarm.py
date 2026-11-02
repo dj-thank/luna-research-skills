@@ -14,7 +14,7 @@ import sys
 # Sibling imports must not create cache files in a read-only advisory command.
 sys.dont_write_bytecode = True
 
-VERSION = "1.1"
+VERSION = "1.2"
 TERMINAL = {"completed", "failed", "timed_out", "abandoned", "not_dispatched"}
 WRITERS = {"builder", "operator"}
 # Candidate reviewers do not satisfy Project's final-verifier closure reserve.
@@ -90,6 +90,17 @@ def plan(ledger, open_children, now, *, specialist_model=CHECK.DEFAULT_SPECIALIS
     reserve = settings.get("verifier_reserve_V", settings.get("verifier_reserve", 0))
     by_id = {r["attempt_id"]: r for r in rows}
     end = lambda r: timestamp(r.get("finished_at")) or timestamp(r.get("timeout_at"))
+    order = {r["attempt_id"]: i for i, r in enumerate(rows)}
+    accepted_retries = {}
+    for candidate in rows:
+        if (candidate["execution_status"] != "completed" or candidate["acceptance_status"] != "accepted"
+                or end(candidate) is None or end(candidate) > now):
+            continue
+        ancestor, seen = candidate.get("retry_of"), {candidate["attempt_id"]}
+        while ancestor in by_id and ancestor not in seen:
+            seen.add(ancestor)
+            accepted_retries.setdefault(ancestor, []).append(candidate["attempt_id"])
+            ancestor = by_id[ancestor].get("retry_of")
     active = [r for r in rows if r["execution_status"] == "started" or
               (r["execution_status"] not in {"planned", "not_dispatched"}
                and end(r) is not None and end(r) > now)]
@@ -104,7 +115,7 @@ def plan(ledger, open_children, now, *, specialist_model=CHECK.DEFAULT_SPECIALIS
     pending = [r["attempt_id"] for r in rows if r["execution_status"] == "completed"
                and r["acceptance_status"] == "accepted" and r["integration_status"] == "pending"
                and end(r) is not None and end(r) <= now]
-    selected, blocked, alerts = [], [], []
+    selected, blocked, alerts, hints = [], [], [], []
     live_writers = [r for r in rows if r["kind"] in WRITERS and
                     (r["execution_status"] == "started" or
                      (r["execution_status"] in TERMINAL and end(r) is not None and end(r) > now))]
@@ -131,8 +142,10 @@ def plan(ledger, open_children, now, *, specialist_model=CHECK.DEFAULT_SPECIALIS
         reasons = expiration(r)
         if timestamp(r.get("planned_at")) and timestamp(r["planned_at"]) > now:
             reasons.append(reason("PLANNED_AT_FUTURE"))
+        hinted_dependencies = set()
         for dep in r.get("dependencies", []):
             d = by_id[dep]
+            before = len(reasons)
             if d["execution_status"] in TERMINAL and d["execution_status"] != "completed":
                 reasons.append(reason("DEPENDENCY_FAILED", [dep]))
             elif d["execution_status"] != "completed" or d["acceptance_status"] not in (
@@ -140,6 +153,14 @@ def plan(ledger, open_children, now, *, specialist_model=CHECK.DEFAULT_SPECIALIS
                 reasons.append(reason("DEPENDENCY_NOT_ACCEPTED", [dep]))
             elif end(d) is None or end(d) > now:
                 reasons.append(reason("DEPENDENCY_FINISH_FUTURE", [dep]))
+            if len(reasons) > before and dep in accepted_retries and dep not in hinted_dependencies:
+                hinted_dependencies.add(dep)
+                # Do not infer interchangeable artifacts or silently retarget an edge.
+                # Include all recorded candidates, not an invented "latest winner".
+                hints.append({"attempt_id": r["attempt_id"], "dependency_attempt_id": dep,
+                              "requires_root_review": True, "candidates": [
+                                  {"attempt_id": aid, "requires_ledger_reordering": order[aid] >= order[r["attempt_id"]]}
+                                  for aid in accepted_retries[dep]]})
         if r.get("retry_of"):
             d = by_id[r["retry_of"]]
             if d["execution_status"] not in TERMINAL or end(d) is None or end(d) > now:
@@ -182,6 +203,7 @@ def plan(ledger, open_children, now, *, specialist_model=CHECK.DEFAULT_SPECIALIS
     return {"schema_version": 1, "advisory_only": True, "now": now.isoformat(),
             "next_wave": 1 + max((r["wave"] for r in rows if r["execution_status"] not in {"planned", "not_dispatched"}), default=0),
             "selected_attempt_ids": selected, "blocked": blocked,
+            "dependency_replacement_hints": hints,
             "active_attempt_ids": [r["attempt_id"] for r in active], "active_alerts": alerts,
             "integration_pending_attempt_ids": pending,
             "capacity": {"ledger_attempts_used": used, "ledger_attempts_remaining": remaining,
