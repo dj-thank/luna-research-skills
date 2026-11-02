@@ -1,0 +1,665 @@
+{
+  "schema_version": 1,
+  "fixture_notice": "Synthetic labels, not authenticated artifacts, real messages or native runtime receipts.",
+  "cases": [
+    {
+      "id": "valid",
+      "description": "A current, matching artifact is required.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "duplicate",
+      "description": "Repeated same payload is delivered once.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        },
+        {
+          "event_id": "repeat",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "stale-first",
+      "description": "Old epoch arrives before current result.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "old",
+          "sender": "P",
+          "epoch": 1,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        },
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "stale-last",
+      "description": "Old epoch arrives after current result.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        },
+        {
+          "event_id": "old",
+          "sender": "P",
+          "epoch": 1,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "wrong-run",
+      "description": "A foreign run reuses producer and epoch.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "foreign",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-old",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "wrong-run-poison",
+      "description": "Foreign payload must not hide same-digest current result.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "foreign",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-old",
+          "contract_id": "api-v2"
+        },
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "wrong-contract",
+      "description": "Producer epoch is current but interface contract is incompatible.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "incompatible",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v1"
+        }
+      ],
+      "expected_deliveries": [],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": false,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "wrong-contract-poison",
+      "description": "Incompatible contract must not consume current-contract dedup state.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "incompatible",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v1"
+        },
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": false,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "different-consumer-contracts",
+      "description": "Same bytes may be declared under distinct contracts for different consumers.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C",
+          "D"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        },
+        "D": {
+          "P": "api-v1"
+        }
+      },
+      "events": [
+        {
+          "event_id": "v2",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        },
+        {
+          "event_id": "v1",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v1"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "v2",
+          "C"
+        ],
+        [
+          "v1",
+          "D"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": false,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "valid-fanout",
+      "description": "Both matching dependent consumers need the payload.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C",
+          "D"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        },
+        "D": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "good",
+          "C"
+        ],
+        [
+          "good",
+          "D"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "no-consumers",
+      "description": "No routes means no delivery.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": []
+      },
+      "consumer_contracts": {},
+      "events": [
+        {
+          "event_id": "good",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "different-payloads",
+      "description": "Distinct current artifacts must both remain visible.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "one",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        },
+        {
+          "event_id": "two",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-b",
+          "run_id": "run-current",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [
+        [
+          "one",
+          "C"
+        ],
+        [
+          "two",
+          "C"
+        ]
+      ],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": true,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "missing-run",
+      "description": "An envelope missing run identity cannot satisfy scoped delivery.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "missing",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "contract_id": "api-v2"
+        }
+      ],
+      "expected_deliveries": [],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": true,
+        "run_contract_scoped": true
+      }
+    },
+    {
+      "id": "missing-contract",
+      "description": "An envelope missing contract identity cannot satisfy scoped delivery.",
+      "run_id": "run-current",
+      "agents": [
+        "P",
+        "C",
+        "D"
+      ],
+      "current_epochs": {
+        "P": 2
+      },
+      "recipients": {
+        "P": [
+          "C"
+        ]
+      },
+      "consumer_contracts": {
+        "C": {
+          "P": "api-v2"
+        }
+      },
+      "events": [
+        {
+          "event_id": "missing",
+          "sender": "P",
+          "epoch": 2,
+          "artifact_digest": "payload-a",
+          "run_id": "run-current"
+        }
+      ],
+      "expected_deliveries": [],
+      "expected_policy_correct": {
+        "dependency_epoch_dedup": false,
+        "run_scoped": false,
+        "run_contract_scoped": true
+      }
+    }
+  ]
+}
