@@ -101,6 +101,48 @@ not model open-ended reasoning.
 
 ## Promotion and reporting
 
+### Reproduce the bounded review comparison
+
+Run `python tools/benchmark_review.py`. Its separate
+[frozen fixture](../tools/fixtures/review_benchmark.json) contains independent
+correctness labels, expected choices and expected evaluation counts. All three
+policies receive the same three initial proposals and one critic proposal, with a
+ceiling of two deterministic oracle calls. The tool reports the calls actually
+used; a cache hit is not another oracle call. Missing a valid answer and returning
+an invalid answer are separate failures. Three-way ties are outside this fixture
+and are rejected explicitly.
+
+The policies check the majority plus the critic, the majority plus the minority,
+or the majority plus the critic with exact evaluation reuse. The last policy
+retains critic priority and checks another independent candidate only if duplicate
+work left a call available. The budget includes failed evaluations; exhaustion
+returns an unchecked result, not a passing verdict. Reuse applies only within one
+serial policy/case evaluation to the deterministic scorer and includes the full
+proposal, full answer key, validator source revision and epoch. No external cached
+receipt or agent-provided digest is accepted. Changed content or context requires
+a new evaluation. This is an offline simulator, not a native scheduling change or
+a cache for LLM judgments.
+
+On the 12 injected cases, critic checking returns 7 correct answers, minority
+checking 8, and critic checking with reuse 9. Minority checking still loses two
+baseline successes, so its higher aggregate score does not pass the case gate.
+Reuse recovers two missed answers with zero baseline regressions in these cases;
+it uses 22 oracle calls versus 24 for the baseline. Both receive 48 proposals.
+Its three abstentions include a case where a distinct invalid critic consumes the
+remaining call and prevents inspection of a correct minority. These are curated
+fault cases, not an estimated accuracy rate or a speed/cost measurement.
+
+The CLI fails when outcomes, labels or call counts disagree with the fixture.
+`passes_case_gate` is only a local case comparison, never permission to deploy.
+The regression tests cover changed oracle/proposal/revision/epoch, cached rejection,
+exhaustion, failed evaluations and deliberately wrong fixtures. The earlier failed
+minority policy remains in the comparison. As discussed in the paper's
+[oracle experiment](https://arxiv.org/html/2508.17536v1#S5), known-answer access is a
+different setting from open-ended debate. Reuse also requires deterministic,
+side-effect-free evaluation; see the [Python caching documentation](https://docs.python.org/3/library/functools.html#functools.lru_cache).
+
+### Adoption requirements
+
 Archive baseline, candidate revision, hypothesis, frozen fixture digest, per-case
 outputs, rejected candidates, repair reason and fresh verification. Native traces
 stay outside the public repository; publish a redacted outcome summary with its

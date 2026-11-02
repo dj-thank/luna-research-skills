@@ -1,0 +1,391 @@
+{
+  "schema_version": 1,
+  "hypothesis": "Retain critic priority, but spend a duplicate deterministic check on another independent candidate within the same two-call ceiling.",
+  "oracle": {
+    "selected_attempt_ids": [
+      "A"
+    ],
+    "blocked_reasons": {
+      "B": [
+        "DEPENDENCY_NOT_ACCEPTED"
+      ]
+    }
+  },
+  "proposals": {
+    "good": {
+      "selected_attempt_ids": [
+        "A"
+      ],
+      "blocked": [
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "DEPENDENCY_NOT_ACCEPTED"
+            }
+          ]
+        }
+      ]
+    },
+    "wrong": {
+      "selected_attempt_ids": [
+        "B"
+      ],
+      "blocked": [
+        {
+          "attempt_id": "A",
+          "reasons": [
+            {
+              "code": "WRONG_REASON"
+            }
+          ]
+        }
+      ]
+    },
+    "duplicate": {
+      "selected_attempt_ids": [
+        "A"
+      ],
+      "blocked": [
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "WRONG_REASON"
+            }
+          ]
+        },
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "DEPENDENCY_NOT_ACCEPTED"
+            }
+          ]
+        }
+      ]
+    },
+    "reverse": {
+      "selected_attempt_ids": [
+        "A"
+      ],
+      "blocked": [
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "DEPENDENCY_NOT_ACCEPTED"
+            }
+          ]
+        },
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "WRONG_REASON"
+            }
+          ]
+        }
+      ]
+    },
+    "same_duplicate": {
+      "selected_attempt_ids": [
+        "A"
+      ],
+      "blocked": [
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "DEPENDENCY_NOT_ACCEPTED"
+            }
+          ]
+        },
+        {
+          "attempt_id": "B",
+          "reasons": [
+            {
+              "code": "DEPENDENCY_NOT_ACCEPTED"
+            }
+          ]
+        }
+      ]
+    },
+    "wrong_other": {
+      "selected_attempt_ids": [],
+      "blocked": [
+        {
+          "attempt_id": "A",
+          "reasons": [
+            {
+              "code": "WRONG_REASON"
+            }
+          ]
+        }
+      ]
+    },
+    "wrong_alias": {
+      "selected_attempt_ids": [
+        "B"
+      ],
+      "blocked": [
+        {
+          "attempt_id": "A",
+          "reasons": [
+            {
+              "code": "WRONG_REASON"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "valid_labels": {
+    "good": true,
+    "wrong": false,
+    "duplicate": false,
+    "reverse": false,
+    "same_duplicate": false,
+    "wrong_other": false,
+    "wrong_alias": false
+  },
+  "budget": 2,
+  "epoch": 1,
+  "limits": [
+    "Injected proposals and known answers, not an LLM quality benchmark.",
+    "Cache is local to one policy/case; no external receipts or persistent verdicts are trusted.",
+    "Proposal content, oracle content, validator revision and epoch identify an evaluation.",
+    "Matched ceilings do not imply equal work; report actual calls and abstentions.",
+    "Cases used to design a policy are regressions, not unseen accuracy samples."
+  ],
+  "cases": [
+    {
+      "id": "correct-minority-wrong-critic",
+      "independent": [
+        "wrong",
+        "wrong",
+        "good"
+      ],
+      "critique": "wrong",
+      "expected": {
+        "checked_critique": null,
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "hostile-minority-correct-critic",
+      "independent": [
+        "wrong",
+        "wrong",
+        "wrong_other"
+      ],
+      "critique": "good",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": null,
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "both-alternatives-correct",
+      "independent": [
+        "wrong",
+        "wrong",
+        "good"
+      ],
+      "critique": "good",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "correct-majority-hostile-alternatives",
+      "independent": [
+        "good",
+        "good",
+        "wrong"
+      ],
+      "critique": "wrong_other",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "correct-majority-duplicate-critic",
+      "independent": [
+        "good",
+        "good",
+        "wrong_other"
+      ],
+      "critique": "duplicate",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "no-valid-answer",
+      "independent": [
+        "wrong",
+        "wrong",
+        "wrong_other"
+      ],
+      "critique": "duplicate",
+      "expected": {
+        "checked_critique": null,
+        "checked_minority": null,
+        "unique_critique": null
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "unanimous-wrong-correct-critic",
+      "independent": [
+        "wrong",
+        "wrong",
+        "wrong"
+      ],
+      "critique": "good",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "duplicate-minority-correct-critic",
+      "independent": [
+        "wrong",
+        "wrong",
+        "duplicate"
+      ],
+      "critique": "good",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": null,
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "same-content-different-id",
+      "independent": [
+        "wrong",
+        "wrong",
+        "good"
+      ],
+      "critique": "wrong_alias",
+      "expected": {
+        "checked_critique": null,
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "distinct-critic-exhausts-budget",
+      "independent": [
+        "wrong",
+        "wrong",
+        "good"
+      ],
+      "critique": "wrong_other",
+      "expected": {
+        "checked_critique": null,
+        "checked_minority": "good",
+        "unique_critique": null
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 2
+      }
+    },
+    {
+      "id": "duplicate-valid-answer",
+      "independent": [
+        "good",
+        "good",
+        "wrong"
+      ],
+      "critique": "good",
+      "expected": {
+        "checked_critique": "good",
+        "checked_minority": "good",
+        "unique_critique": "good"
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 1
+      }
+    },
+    {
+      "id": "unanimous-duplicate-invalid",
+      "independent": [
+        "wrong",
+        "wrong",
+        "wrong"
+      ],
+      "critique": "wrong",
+      "expected": {
+        "checked_critique": null,
+        "checked_minority": null,
+        "unique_critique": null
+      },
+      "expected_calls": {
+        "checked_critique": 2,
+        "checked_minority": 2,
+        "unique_critique": 1
+      }
+    }
+  ]
+}
