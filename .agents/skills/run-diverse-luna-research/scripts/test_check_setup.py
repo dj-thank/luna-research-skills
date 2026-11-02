@@ -2997,5 +2997,37 @@ class SwarmContractRegressionTests(unittest.TestCase):
         self.assertEqual(self.tree_errors(ledger), [])
 
 
+class ProjectCandidateLifecycleTests(unittest.TestCase):
+    def fixture(self, **overrides):
+        # Reuse the executable planner's realistic flat-project fixture.
+        spec = importlib.util.spec_from_file_location("planner_examples", Path(__file__).with_name("test_plan_swarm.py"))
+        examples = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(examples)
+        rows = [examples.row("A", "builder", "completed", acceptance_status="pending"),
+                examples.row("R", "reviewer", wave=2, dependencies=["A"], ownership=["read-only"]),
+                examples.row("V", "verifier", wave=3)]
+        return examples.ledger(rows, **overrides)
+
+    def errors(self, value):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "ledger.json"
+            write_json(path, value)
+            return CHECK.validate_project_ledger(path)[0]
+
+    def test_v2_completed_candidate_can_await_review_in_planning_and_integration(self):
+        for phase in ("planning", "integration"):
+            self.assertEqual(self.errors(self.fixture(phase=phase)), [])
+
+    def test_pending_candidate_cannot_be_integrated_or_completely_closed(self):
+        value = self.fixture()
+        value["assignments"][0]["integration_status"] = "integrated"
+        self.assertTrue(any("integrated result requires completed/accepted" in e for e in self.errors(value)))
+        value = self.fixture(phase="closure", closure_status="complete")
+        self.assertTrue(any("cannot contain pending acceptance" in e for e in self.errors(value)))
+
+    def test_v1_completed_pending_state_remains_invalid(self):
+        self.assertTrue(CHECK._state_errors("v1", "completed", "pending"))
+
+
 if __name__ == "__main__":
     unittest.main(module=__name__)
