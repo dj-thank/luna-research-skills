@@ -147,6 +147,20 @@ class DispatchBudgetTests(unittest.TestCase):
                 self.wrapped_counts(source)
         self.assertEqual(self.wrapped_counts('const x = value / 2; await tools.collaboration.spawn_agent({});')['total'], 1)
 
+    def test_dynamic_code_rejected_even_without_literal_dispatch(self):
+        for source in (
+            'await eval("tools.multi_agent_v1__spawn_agent({})");',
+            'await eval("tools.multi_agent_v1__followup_task({})");',
+            'await globalThis["eval"]("tools.multi_agent_v1__spawn_agent({})");',
+            'const run = new Function("return tools.spawn_agent({})"); run();',
+            'const run = (() => {})["constructor"]("return tools.spawn_agent({})"); run();',
+            'const run = (() => {})["con" + "structor"]("return tools.spawn_agent({})"); run();',
+            'const key = "constructor"; const run = (() => {})[key]; run("tools.spawn_agent({})")();',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+        self.assertEqual(self.wrapped_counts('text(result.content[0]); text(result["content"]);')['total'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

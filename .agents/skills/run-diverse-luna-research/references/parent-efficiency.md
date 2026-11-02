@@ -57,6 +57,10 @@ dispatch evidence. Computed tool access, aliases, and ambiguous slash contexts
 also fail closed. Spawn provenance reads literal top-level argument properties,
 rejecting spreads, duplicate keys and computed routing fields; comments or
 nested message examples cannot establish model or history-isolation settings.
+Dynamic evaluation (`eval`, function constructors, reflective/global access)
+is rejected even without a visible dispatch call. Computed member access is
+limited to numeric indexes and simple non-executable literal keys; use direct
+native calls when a wrapper falls outside this supported receipt syntax.
 
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger

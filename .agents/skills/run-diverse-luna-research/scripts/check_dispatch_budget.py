@@ -34,6 +34,7 @@ def _visible_wrapper_code(source: str) -> str:
     index = 0
     regex_allowed = True
     previous_token = ''
+    computed_accesses = []
     while index < len(source):
         start = index
         character = source[index]
@@ -100,6 +101,8 @@ def _visible_wrapper_code(source: str) -> str:
             continue
         else:
             if not character.isspace():
+                if character == '[' and not regex_allowed:
+                    computed_accesses.append(index)
                 previous_token = character
                 regex_allowed = character not in ')]}.' and not character.isdigit()
             index += 1
@@ -108,7 +111,19 @@ def _visible_wrapper_code(source: str) -> str:
         # Preserve a literal's start for argument parsing, never its contents.
         if character in '\"\'`' or (character == '/' and not source.startswith(('//', '/*'), start)):
             code[start] = character
-    return ''.join(code)
+    visible = ''.join(code)
+    for start in computed_accesses:
+        stop = visible.find(']', start + 1)
+        if stop < 0:
+            raise ValueError('cannot count dispatch through an incomplete computed property')
+        key = source[start + 1:stop].strip()
+        literal_key = re.fullmatch(r"([\"'])([A-Za-z0-9_]+)\1", key)
+        if key.isdecimal():
+            continue
+        if literal_key and literal_key.group(2) not in {'constructor', 'eval', 'Function', 'AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction'}:
+            continue
+        raise ValueError('cannot count dispatch through a dynamic executable property')
+    return visible
 
 
 def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
@@ -118,6 +133,10 @@ def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
     them rather than allowing a zero count to authorize further delegation.
     """
     visible = _visible_wrapper_code(source)
+    # Dynamic code can invoke a native tool without a visible literal call site.
+    # Reject it even when the eventual dispatch count would otherwise be zero.
+    if re.search(r'\b(?:eval|Function|AsyncFunction|GeneratorFunction|AsyncGeneratorFunction|constructor|globalThis|Reflect)\b|\\', visible):
+        raise ValueError('cannot count dispatch through dynamic code execution')
     calls = []
     spans = []
     for token in re.finditer(r'\btools\b', visible):
