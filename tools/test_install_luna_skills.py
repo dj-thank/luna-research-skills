@@ -5,7 +5,9 @@ import io
 import json
 import os
 import subprocess
+import sys
 import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -164,6 +166,72 @@ class LunaSkillInstallerTests(unittest.TestCase):
             installer.default_source(repository), repository / ".agents/skills"
         )
         self.assertEqual(installer.default_source(plugin), plugin / "skills")
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "POSIX named pipes")
+    def test_file_replaced_with_fifo_fails_without_waiting_for_a_writer(self) -> None:
+        probe = self.root / "fifo-probe"
+        try:
+            os.mkfifo(probe)
+        except OSError as exc:
+            self.skipTest(f"filesystem does not support named pipes: {exc}")
+        probe.unlink()
+        script = textwrap.dedent("""\
+            import os
+            import sys
+            from pathlib import Path
+            from unittest import mock
+            import install_luna_skills as installer
+
+            package = Path(sys.argv[1])
+            path = package / 'references' / 'guide.md'
+            mode = sys.argv[2]
+            swapped = []
+            original_stat, original_open = os.lstat, os.open
+
+            def swap():
+                path.unlink()
+                os.mkfifo(path)
+                swapped.append(True)
+
+            def stat_then_swap(candidate, *args, **kwargs):
+                details = original_stat(candidate, *args, **kwargs)
+                if Path(candidate) == path and not swapped:
+                    swap()
+                return details
+
+            def swap_then_open(candidate, flags, *args, **kwargs):
+                if candidate == path.name and not swapped:
+                    swap()
+                return original_open(candidate, flags, *args, **kwargs)
+
+            expected = installer._snapshot_skill(package)
+            try:
+                if mode == 'source':
+                    with mock.patch.object(os, 'lstat', side_effect=stat_then_swap):
+                        installer._read_regular_file(path, 'references/guide.md')
+                else:
+                    with mock.patch.object(os, 'open', side_effect=swap_then_open):
+                        installer._remove_owned_package(package, expected)
+            except installer.InstallError as exc:
+                assert swapped and 'non-regular' in str(exc), str(exc)
+                assert path.exists(), 'the replaced file must be preserved'
+            else:
+                raise AssertionError('a raced FIFO must be rejected')
+            finally:
+                if swapped:
+                    path.unlink()
+            """)
+        for mode in ("source", "rollback"):
+            with self.subTest(mode=mode):
+                package = self.make_skill(f"alpha-{mode}")
+                try:
+                    result = subprocess.run(
+                        [sys.executable, "-c", script, str(package), mode],
+                        cwd=Path(__file__).parent, capture_output=True, text=True, timeout=5,
+                    )
+                except subprocess.TimeoutExpired:
+                    self.fail(f"{mode} blocked while opening a raced FIFO")
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_plan_is_non_mutating(self) -> None:
         self.make_skill("alpha")
