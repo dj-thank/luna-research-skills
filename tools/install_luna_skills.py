@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager, ExitStack
 import hashlib
 import json
 import os
@@ -430,6 +431,84 @@ def verify_installation(source_root: Path | str, target_root: Path | str) -> Ins
     return InstallPlan(source_root=source, target_root=target, skills=skills)
 
 
+
+@contextmanager
+def _directory_guard(path: Path):
+    """Reject links and pin a directory chain for namespace-safe mutations.
+
+    Windows refuses directory rename/deletion while these handles are open.
+    POSIX mutations use the returned no-follow directory descriptor instead
+    of re-resolving the pathname after validation.
+    """
+    absolute = _absolute(path)
+    if os.name == "nt":
+        import ctypes
+        from ctypes import wintypes
+
+        kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+        create = kernel.CreateFileW
+        create.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD,
+                           wintypes.LPVOID, wintypes.DWORD, wintypes.DWORD,
+                           wintypes.HANDLE]
+        create.restype = wintypes.HANDLE
+        query = kernel.GetFileInformationByHandleEx
+        query.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
+        query.restype = wintypes.BOOL
+        close = kernel.CloseHandle
+        close.argtypes = [wintypes.HANDLE]
+        close.restype = wintypes.BOOL
+        handles = []
+        cursor = Path(absolute.anchor)
+        try:
+            for part in (None, *absolute.parts[1:]):
+                if part is not None:
+                    cursor = cursor / part
+                # LIST_DIRECTORY | READ_ATTRIBUTES; deny write/delete sharing.
+                # OPEN_REPARSE_POINT inspects the final component itself.
+                handle = create(str(cursor), 0x81, 0x1, None, 3,
+                                0x02000000 | 0x00200000, None)
+                if handle == wintypes.HANDLE(-1).value:
+                    raise InstallError(f"cannot pin destination directory {cursor}: {ctypes.WinError(ctypes.get_last_error())}")
+                handles.append(handle)
+                attributes = (wintypes.DWORD * 2)()
+                if not query(handle, 9, attributes, ctypes.sizeof(attributes)):
+                    raise InstallError(f"cannot inspect pinned directory {cursor}: {ctypes.WinError(ctypes.get_last_error())}")
+                if attributes[0] & WINDOWS_REPARSE_POINT or not attributes[0] & 0x10:
+                    raise InstallError(f"destination directory is a reparse point or non-directory: {cursor}")
+            yield None
+        finally:
+            for handle in reversed(handles):
+                close(handle)
+    else:
+        # macOS's fixed root aliases are the only accepted no-follow exception.
+        if sys.platform == "darwin" and len(absolute.parts) > 1:
+            alias = Path(absolute.anchor) / absolute.parts[1]
+            if alias in DARWIN_SYSTEM_ALIASES and _lexists(alias):
+                details = os.lstat(alias)
+                if _is_reparse_or_symlink(alias, st=details):
+                    if not _is_allowed_platform_alias(alias, details):
+                        raise InstallError(f"unsafe platform alias: {alias}")
+                    absolute = DARWIN_SYSTEM_ALIASES[alias].joinpath(*absolute.parts[2:])
+        descriptor = os.open(absolute.anchor, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            for part in absolute.parts[1:]:
+                next_descriptor = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,
+                                          dir_fd=descriptor)
+                os.close(descriptor)
+                descriptor = next_descriptor
+            yield descriptor
+        finally:
+            os.close(descriptor)
+
+
+def _mkdir_direct(path: Path) -> None:
+    with _directory_guard(path.parent) as descriptor:
+        if descriptor is None:
+            path.mkdir()
+        else:
+            os.mkdir(path.name, dir_fd=descriptor)
+
+
 def _ensure_direct_directory(path: Path) -> list[Path]:
     absolute = _absolute(path)
     _assert_existing_path_chain_is_direct(absolute, label="destination path")
@@ -445,7 +524,7 @@ def _ensure_direct_directory(path: Path) -> list[Path]:
     try:
         for directory in reversed(missing):
             try:
-                directory.mkdir()
+                _mkdir_direct(directory)
                 created.append(directory)
             except FileExistsError:
                 pass
@@ -453,11 +532,7 @@ def _ensure_direct_directory(path: Path) -> list[Path]:
             _assert_existing_path_chain_is_direct(directory, label="destination path")
         return created
     except BaseException:
-        for directory in reversed(created):
-            try:
-                directory.rmdir()
-            except OSError:
-                pass
+        _remove_created_directories(created)
         raise
 
 
@@ -466,7 +541,7 @@ def _ensure_owned_subdirectory(package_root: Path, relative_parent: Path) -> Pat
     for part in relative_parent.parts:
         cursor = cursor / part
         try:
-            cursor.mkdir()
+            _mkdir_direct(cursor)
         except FileExistsError:
             details = os.lstat(cursor)
             if _is_reparse_or_symlink(cursor, st=details) or not stat.S_ISDIR(details.st_mode):
@@ -476,7 +551,7 @@ def _ensure_owned_subdirectory(package_root: Path, relative_parent: Path) -> Pat
 
 def _reserve_destination(destination: Path) -> None:
     try:
-        destination.mkdir()
+        _mkdir_direct(destination)
     except FileExistsError as exc:
         raise InstallError(
             f"destination already exists; refusing to overwrite: {destination}"
@@ -497,12 +572,19 @@ def _write_reserved_skill(destination: Path, skill: SkillSnapshot) -> None:
         parent = _ensure_owned_subdirectory(destination, relative.parent)
         output = parent / relative.name
         try:
-            with output.open("xb") as handle:
-                handle.write(snapshot.content)
-                handle.flush()
-                os.fsync(handle.fileno())
-            if os.name != "nt":
-                os.chmod(output, snapshot.mode)
+            with _directory_guard(parent) as descriptor:
+                if descriptor is None:
+                    handle = output.open("xb")
+                else:
+                    file_descriptor = os.open(relative.name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                                              snapshot.mode, dir_fd=descriptor)
+                    handle = os.fdopen(file_descriptor, "wb")
+                with handle:
+                    if descriptor is not None:
+                        os.fchmod(handle.fileno(), snapshot.mode)
+                    handle.write(snapshot.content)
+                    handle.flush()
+                    os.fsync(handle.fileno())
         except OSError as exc:
             raise InstallError(
                 f"cannot install {skill.name}/{snapshot.relative_path}: {exc}"
@@ -513,7 +595,7 @@ def _write_reserved_skill(destination: Path, skill: SkillSnapshot) -> None:
 
 
 def _rollback_inventory(
-    path: Path, expected: SkillSnapshot
+    path: Path, expected: SkillSnapshot, guards: ExitStack
 ) -> tuple[list[tuple[Path, FileSnapshot]], list[Path]]:
     """Inventory every entry before rollback; ignored source artifacts are not ignored here."""
     _assert_existing_path_chain_is_direct(path, label="rollback package path")
@@ -526,6 +608,7 @@ def _rollback_inventory(
 
     while pending:
         directory = pending.pop()
+        guards.enter_context(_directory_guard(directory))
         _assert_directory(directory, label="rollback package directory")
         try:
             entries = sorted(
@@ -574,49 +657,58 @@ def _rollback_inventory(
 
 
 def _remove_owned_package(path: Path, expected: SkillSnapshot) -> None:
-    actual_files, directories = _rollback_inventory(path, expected)
-    # Unpublish first, then remove only files observed with their expected bytes.
-    actual_files.sort(
-        key=lambda item: (
+    with ExitStack() as guards:
+        guards.enter_context(_directory_guard(path))
+        actual_files, directories = _rollback_inventory(path, expected, guards)
+        # Unpublish first. On Windows the inventory guards pin all directories
+        # until file deletion is complete; on POSIX unlink through no-follow fds.
+        actual_files.sort(key=lambda item: (
             item[1].relative_path != "SKILL.md",
             -len(Path(item[1].relative_path).parts),
             item[1].relative_path.casefold(),
-        )
-    )
-    for file_path, observed in actual_files:
-        current = _read_regular_file(file_path, observed.relative_path)
-        if current.sha256 != observed.sha256:
-            raise InstallError(
-                f"rollback found a modified file: {observed.relative_path}"
-            )
-        try:
-            file_path.unlink()
-        except OSError as exc:
-            raise InstallError(
-                f"cannot remove rollback file {observed.relative_path}: {exc}"
-            ) from exc
-
+        ))
+        for file_path, observed in actual_files:
+            with _directory_guard(file_path.parent) as descriptor:
+                if descriptor is None:
+                    current = _read_regular_file(file_path, observed.relative_path)
+                    if current.sha256 != observed.sha256:
+                        raise InstallError(f"rollback found a modified file: {observed.relative_path}")
+                    file_path.unlink()
+                else:
+                    opened = os.open(file_path.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=descriptor)
+                    with os.fdopen(opened, "rb") as handle:
+                        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                            raise InstallError(f"rollback found a non-regular file: {observed.relative_path}")
+                        digest = hashlib.sha256(handle.read(MAX_FILE_BYTES + 1)).hexdigest()
+                    if digest != observed.sha256:
+                        raise InstallError(f"rollback found a modified file: {observed.relative_path}")
+                    os.unlink(file_path.name, dir_fd=descriptor)
+    # Release Windows delete-denying directory handles before removing empties.
+    # Each removal still pins its parent and never follows the final component.
     for directory in sorted(directories, key=lambda item: len(item.parts), reverse=True):
-        try:
-            directory.rmdir()
-        except OSError as exc:
-            raise InstallError(
-                f"rollback directory is not empty or changed: {directory}: {exc}"
-            ) from exc
+        with _directory_guard(directory.parent) as descriptor:
+            if descriptor is None:
+                directory.rmdir()
+            else:
+                os.rmdir(directory.name, dir_fd=descriptor)
 
 
 def _remove_created_directories(created: list[Path]) -> list[str]:
     failures: list[str] = []
     for directory in reversed(created):
         try:
-            directory.rmdir()
-        except OSError as exc:
+            with _directory_guard(directory.parent) as descriptor:
+                if descriptor is None:
+                    directory.rmdir()
+                else:
+                    os.rmdir(directory.name, dir_fd=descriptor)
+        except (OSError, InstallError) as exc:
             # Non-empty directories are preserved; this may include concurrent user work.
             failures.append(f"{directory}: {exc}")
     return failures
 
 
-def install_skills(plan: InstallPlan) -> InstallPlan:
+def _install_skills_pinned(plan: InstallPlan) -> InstallPlan:
     # Re-run all non-mutating checks immediately before creating any destination.
     current_plan = build_plan(plan.source_root, plan.target_root)
     if tuple(skill.name for skill in current_plan.skills) != tuple(
@@ -627,7 +719,6 @@ def install_skills(plan: InstallPlan) -> InstallPlan:
         _assert_matches(expected, current, label=f"source package {expected.name}")
 
     target = plan.target_root
-    created_directories = _ensure_direct_directory(target)
     created_packages: list[tuple[Path, SkillSnapshot]] = []
     rollback_failures: list[str] = []
     try:
@@ -654,7 +745,6 @@ def install_skills(plan: InstallPlan) -> InstallPlan:
                 _remove_owned_package(destination, skill)
             except Exception as rollback_exc:  # preserve user-modified data over cleanup
                 rollback_failures.append(f"{destination}: {rollback_exc}")
-        rollback_failures.extend(_remove_created_directories(created_directories))
         if rollback_failures:
             detail = " | ".join(rollback_failures)
             raise InstallError(
@@ -666,6 +756,25 @@ def install_skills(plan: InstallPlan) -> InstallPlan:
         if isinstance(exc, InstallError):
             raise
         raise InstallError(f"installation failed: {exc}") from exc
+
+
+def install_skills(plan: InstallPlan) -> InstallPlan:
+    # Validate before any target creation, then hold the target chain across every
+    # reservation/write/rollback. _mkdir_direct also protects missing ancestors.
+    current = build_plan(plan.source_root, plan.target_root)
+    if tuple(skill.name for skill in current.skills) != tuple(skill.name for skill in plan.skills):
+        raise InstallError("source skill inventory changed after planning")
+    for expected, observed in zip(plan.skills, current.skills, strict=True):
+        _assert_matches(expected, observed, label=f"source package {expected.name}")
+    created = _ensure_direct_directory(plan.target_root)
+    try:
+        with _directory_guard(plan.target_root):
+            return _install_skills_pinned(plan)
+    except BaseException as exc:
+        failures = _remove_created_directories(created)
+        if failures:
+            raise InstallError(f"installation failed; created directories preserved for manual inspection: {' | '.join(failures)}; original error: {exc}") from exc
+        raise
 
 
 def _payload(

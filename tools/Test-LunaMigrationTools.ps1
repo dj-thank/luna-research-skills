@@ -250,6 +250,14 @@ try {
             $chainRejected = $_.Exception.Message -match 'reparse point|symlink|junction'
         }
         Assert-True -Condition $chainRejected -Message 'Discovery followed a parent-chain junction.'
+        $installerChainRejected = $false
+        try {
+            & $installer -Source (Join-Path $chainJunction 'skills') | Out-Null
+        } catch {
+            $installerChainRejected = $_.Exception.Message -match 'Source path contains a reparse point'
+        }
+        Assert-True -Condition $installerChainRejected `
+            -Message 'Installer followed a source parent-chain junction before reading contents.'
         [IO.Directory]::Delete($chainJunction, $false)
 
         $stageProfile = Join-Path $testRoot ('luna-skills-test-profile-' + [guid]::NewGuid().ToString('N'))

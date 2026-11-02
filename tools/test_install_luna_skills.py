@@ -4,6 +4,7 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -38,6 +39,119 @@ class LunaSkillInstallerTests(unittest.TestCase):
             f"# {name}\n", encoding="utf-8"
         )
         return package
+
+    @unittest.skipUnless(os.name == "nt", "Windows junction support")
+    def test_reserved_package_replaced_with_junction_denied_before_write(self) -> None:
+        self.make_skill("alpha")
+        outside = self.root / "outside"
+        outside.mkdir()
+        plan = installer.build_plan(self.source, self.target)
+        reserve = installer._reserve_destination
+        destination = self.target / "alpha"
+
+        def replace_with_junction(path):
+            reserve(path)
+            path.rmdir()
+            subprocess.run(["cmd", "/c", "mklink", "/J", str(path), str(outside)],
+                           check=True, capture_output=True)
+
+        try:
+            with mock.patch.object(installer, "_reserve_destination", side_effect=replace_with_junction):
+                with self.assertRaisesRegex(installer.InstallError, "reparse|pin"):
+                    installer.install_skills(plan)
+            self.assertEqual(list(outside.iterdir()), [])
+        finally:
+            if os.path.lexists(destination):
+                os.rmdir(destination)  # Remove the fixture junction itself only.
+
+    @unittest.skipUnless(os.name == "nt", "Windows namespace locking")
+    def test_target_root_cannot_be_replaced_after_reservation(self) -> None:
+        self.make_skill("alpha")
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "alpha").mkdir()
+        plan = installer.build_plan(self.source, self.target)
+        reserve = installer._reserve_destination
+        attempted = []
+
+        def replace(destination):
+            reserve(destination)
+            attempted.append(True)
+            # This rename must fail while the destination chain is pinned.
+            self.target.rename(self.root / "parked")
+            os.symlink(outside, self.target, target_is_directory=True)
+
+        with mock.patch.object(installer, "_reserve_destination", side_effect=replace):
+            with self.assertRaises(installer.InstallError):
+                installer.install_skills(plan)
+        self.assertTrue(attempted)
+        self.assertEqual(list((outside / "alpha").iterdir()), [])
+        self.assertFalse((self.root / "parked").exists())
+        self.assertFalse((self.target / "alpha" / "SKILL.md").exists())
+
+    @unittest.skipUnless(os.name == "nt", "Windows namespace locking")
+    def test_parent_remains_pinned_between_check_and_file_open(self) -> None:
+        self.make_skill("alpha")
+        plan = installer.build_plan(self.source, self.target)
+        original_open = Path.open
+        blocked = []
+
+        def try_replace(path, mode="r", *args, **kwargs):
+            if mode == "xb":
+                try:
+                    path.parent.rename(path.parent.with_name(path.parent.name + "-moved"))
+                except OSError:
+                    blocked.append(path)
+                else:
+                    self.fail("destination directory could be replaced before open")
+            return original_open(path, mode, *args, **kwargs)
+
+        with mock.patch.object(Path, "open", try_replace):
+            installer.install_skills(plan)
+        self.assertEqual(len(blocked), 2)
+        installer.verify_installation(self.source, self.target)
+
+    @unittest.skipIf(os.name == "nt", "POSIX descriptor-relative writes")
+    def test_posix_file_creation_does_not_follow_swapped_parent(self) -> None:
+        self.make_skill("alpha")
+        outside = self.root / "outside"
+        (outside / "alpha" / "references").mkdir(parents=True)
+        plan = installer.build_plan(self.source, self.target)
+        original_open = os.open
+        swapped = []
+        attempted = []
+
+        def replace_before_open(path, flags, *args, **kwargs):
+            if flags & os.O_CREAT and not attempted:
+                attempted.append(True)
+                try:
+                    self.target.rename(self.root / "parked")
+                except OSError:
+                    # Some POSIX-backed Windows mounts deny rename while the
+                    # directory fd is open, providing stronger namespace pinning.
+                    pass
+                else:
+                    self.target.symlink_to(outside, target_is_directory=True)
+                    swapped.append(True)
+            return original_open(path, flags, *args, **kwargs)
+
+        try:
+            failure = None
+            with mock.patch.object(os, "open", side_effect=replace_before_open):
+                try:
+                    installer.install_skills(plan)
+                except installer.InstallError as exc:
+                    failure = exc
+            self.assertTrue(attempted)
+            if swapped:
+                self.assertIsNotNone(failure)
+            else:
+                self.assertIsNone(failure)
+                installer.verify_installation(self.source, self.target)
+            self.assertEqual(list(outside.rglob("*.md")), [])
+        finally:
+            if self.target.is_symlink():
+                self.target.unlink()
 
     def test_default_source_supports_repository_and_plugin_layouts(self) -> None:
         repository = self.root / "repository"
