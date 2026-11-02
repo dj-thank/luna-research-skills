@@ -38,7 +38,7 @@ Replace `python` in subsequent examples with the command for Python 3.11 or newe
 | Write a first request | [Research and implementation examples](#step-4-send-your-first-request) |
 | Install or update for another project | [Cross-platform installation and Windows migration](docs/INSTALLATION.md) |
 | Inspect dispatch, dependencies and retries | [Swarm operation and Planner 1.2](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md) |
-| Try evaluation without starting agents | [Reproduce the three comparisons](#reproduce-the-comparisons) |
+| Try evaluation without starting agents | [Reproduce the comparisons](#reproduce-the-comparisons) |
 | Contribute changes | [Development and verification](CONTRIBUTING.md) |
 
 ## Start with these three choices
@@ -376,7 +376,7 @@ For larger tasks, a coordinator may delegate further when its actual tools suppo
 | OS CI | Windows, macOS and Linux with Python 3.11–3.13; Windows migration checks also cover PowerShell 5.1/7 | Success in every user environment or with every current model |
 | Installation and packaging | Existing-copy protection, isolated installation/readback, reproducible ZIPs | Automatic updates to a user's installed copies |
 | Ledger and planner | Dependencies, ownership conflicts, budgets, deadlines, retries and acceptance records | Process termination or enforced filesystem locks |
-| Known-answer comparisons | The four tools below retain outcomes and unsuccessful comparison policies | LLM reasoning gains or real task speed/cost savings |
+| Known-answer comparisons | The tools below retain outcomes and unsuccessful comparison policies | LLM reasoning gains or real task speed/cost savings |
 | Actual agent records | Published examples identify their date, model and evidence | Unconditional transfer to another environment or model |
 
 ### Reproduce the comparisons
