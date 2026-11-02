@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Export deterministic review evidence from actual scorer attempts, excluding cache hits and preserving failed attempts in refusal audits. Bind the input fixture before evaluation, retain source fingerprints with backward-compatible comparison schema 2, and document the source-only producer/packaged-consumer workflow.
+
 - Add a read-only comparison report checker with separately pinned evidence, independent answer labels, per-case losses and calibration-inclusive call counts. Include a portable example, CLI regression tests and English/Japanese README navigation; a consistent rejected-policy report remains valid evidence.
 
 - Keep checker help, version and validation commands free of sibling bytecode-cache writes under default Python settings, without changing an importing process's bytecode policy. Test the packaged scripts with CI cache-suppression variables ignored.
