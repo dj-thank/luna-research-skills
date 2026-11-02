@@ -1201,6 +1201,126 @@
           "INVALID_LEDGER"
         ]
       }
+    },
+    {
+      "id": "R-C1-exact-deadline-root-only",
+      "description": "A deadline equality expires; D root-only cannot be delegated; dependants wait.",
+      "row_overrides": {
+        "A": {
+          "deadline": "2026-01-01T00:20:00Z"
+        },
+        "D": {
+          "access_mode": "root_only"
+        }
+      },
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {
+          "A": [
+            "DEADLINE_EXPIRED"
+          ],
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED"
+          ],
+          "D": [
+            "ROOT_ONLY_WORK"
+          ]
+        }
+      },
+      "oracle_note": "Full blocked-code map independently expanded from contract before first exact-scoring run; original subset labels and first outputs retained unchanged."
+    },
+    {
+      "id": "R-C2-future-plan-overlap",
+      "description": "Future A owns same subtree as ready D but is not live; D may start.",
+      "row_overrides": {
+        "A": {
+          "planned_at": "2026-01-01T00:21:00Z",
+          "ownership": [
+            "fixture/shared"
+          ]
+        },
+        "D": {
+          "ownership": [
+            "fixture/shared/child"
+          ]
+        }
+      },
+      "expected": {
+        "selected_attempt_ids": [
+          "D"
+        ],
+        "blocked_reasons": {
+          "A": [
+            "PLANNED_AT_FUTURE"
+          ],
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED"
+          ]
+        }
+      },
+      "oracle_note": "Full blocked-code map independently expanded from contract before first exact-scoring run; original subset labels and first outputs retained unchanged."
+    },
+    {
+      "id": "R-C3-sol-no-receipt-inference",
+      "description": "Explicit Sol permits unstarted work; future A not admitted, D fills only ready slot.",
+      "specialist_model": "gpt-6.1-sol",
+      "open_children": 1,
+      "row_overrides": {
+        "A": {
+          "planned_at": "2026-01-01T00:21:00Z"
+        }
+      },
+      "expected": {
+        "selected_attempt_ids": [
+          "D"
+        ],
+        "blocked_reasons": {
+          "A": [
+            "PLANNED_AT_FUTURE"
+          ],
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ]
+        }
+      },
+      "oracle_note": "Full blocked-code map independently expanded from contract before first exact-scoring run; original subset labels and first outputs retained unchanged."
     }
   ],
   "communication": {
