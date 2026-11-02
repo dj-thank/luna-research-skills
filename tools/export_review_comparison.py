@@ -11,6 +11,13 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import sys
+
+# A script invocation owns its interpreter. Set this before sibling imports so
+# the CLI is read-only even when Python -E ignores cache-suppression variables.
+# Do not introduce a process-wide policy change for library imports here.
+if __name__ == '__main__':
+    sys.dont_write_bytecode = True
 
 import benchmark_review as R
 import check_comparison as C

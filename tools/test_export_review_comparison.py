@@ -2,6 +2,7 @@
 import copy
 import hashlib
 import json
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -151,6 +152,18 @@ class ExportTests(unittest.TestCase):
             with self.subTest(mutation=mutation),self.assertRaises(ValueError): self.summarize(changed)
         legacy=dict(evidence,schema_version=1); del legacy['source']
         self.assertEqual(self.summarize(legacy)['schema_version'],1)
+
+    def test_cli_default_bytecode_policy_does_not_write_sibling_caches(self):
+        self.one('duplicate-valid-answer'); raw,pin=self.encode()
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for module in (E,E.R,E.R.B,E.C):
+                shutil.copyfile(module.__file__,root/Path(module.__file__).name)
+            cases=root/'cases.json'; cases.write_bytes(raw)
+            snapshot={p.name:p.read_bytes() for p in root.iterdir()}
+            run=subprocess.run([sys.executable,'-E',str(root/'export_review_comparison.py'),'--cases',str(cases),'--sha256',pin],capture_output=True,text=True,encoding='utf-8',timeout=30)
+            self.assertEqual(run.returncode,0,run.stdout+run.stderr)
+            self.assertEqual(snapshot,{str(p.relative_to(root)):p.read_bytes() for p in root.rglob('*') if p.is_file()})
 
 
 if __name__ == '__main__':
