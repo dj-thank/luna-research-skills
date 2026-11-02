@@ -134,8 +134,12 @@ class DispatchBudgetTests(unittest.TestCase):
     def test_non_exec_custom_tool_source_is_not_executed(self):
         self.assertEqual(self.wrapped_counts('+await tools.collaboration.spawn_agent({});', name='apply_patch')['total'], 0)
 
-    def test_benign_template_expression_is_not_dispatch(self):
-        self.assertEqual(self.wrapped_counts('text(`count=${results.length}`);')['total'], 0)
+    def test_template_interpolation_requires_direct_native_calls(self):
+        for source in ('text(`count=${results.length}`);',
+                       'const source="tools.spawn_agent({})"; text(`${eval(source)}`);'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'template interpolation'):
+                self.wrapped_counts(source)
+        self.assertEqual(self.wrapped_counts(r'text(`example=\${not_an_expression}`);')['total'], 0)
 
     def test_ambiguous_slash_cannot_mask_a_dispatch(self):
         for source in (
@@ -159,10 +163,23 @@ class DispatchBudgetTests(unittest.TestCase):
             'const run = (() => {})["constructor"]("return tools.spawn_agent({})"); run();',
             'const run = (() => {})["con" + "structor"]("return tools.spawn_agent({})"); run();',
             'const key = "constructor"; const run = (() => {})[key]; run("tools.spawn_agent({})")();',
+            'const F = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(()=>{}), "constructor").value; F("return tools.spawn_agent({})")();',
+            'const F = Object["getOwnPropertyDescriptors"](()=>{});',
         ):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
                 self.wrapped_counts(source)
         self.assertEqual(self.wrapped_counts('text(result.content[0]); text(result["content"]);')['total'], 0)
+
+    def test_method_and_getter_calls_cannot_reuse_one_dispatch_site(self):
+        for source in (
+            'const o={run(){return tools.spawn_agent({});}}; o.run(); o.run();',
+            'const o={"run"(){return tools.spawn_agent({});}}; o.run(); o.run();',
+            'const o={["run"](){return tools.spawn_agent({});}}; o.run(); o.run();',
+            'const o={get x(){return tools.spawn_agent({});}}; const a=o.x, b=o.x;',
+            'class Task { result=tools.spawn_agent({}); } new Task(); new Task();',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'dynamic wrapper'):
+                self.wrapped_counts(source)
 
 
 if __name__ == '__main__':

@@ -15,6 +15,9 @@ MAX_ATTEMPTS = 12
 MAX_WAVE = 3
 
 DISPATCH_NAMES = {'spawn_agent', 'followup_task'}
+DYNAMIC_CODE_NAMES = {'eval', 'Function', 'AsyncFunction', 'GeneratorFunction',
+                      'AsyncGeneratorFunction', 'constructor', 'globalThis', 'Reflect',
+                      'getOwnPropertyDescriptor', 'getOwnPropertyDescriptors', 'getPrototypeOf'}
 TOOL_REFERENCE = re.compile(r'\btools(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)+')
 
 
@@ -52,6 +55,8 @@ def _visible_wrapper_code(source: str) -> str:
             while index < len(source):
                 if source[index] == '\\':
                     index += 2
+                elif quote == '`' and source.startswith('${', index):
+                    raise ValueError('cannot count dispatch inside template interpolation')
                 elif source[index] == quote:
                     index += 1
                     break
@@ -59,9 +64,6 @@ def _visible_wrapper_code(source: str) -> str:
                     index += 1
             else:
                 raise ValueError('cannot count dispatch in an unterminated string')
-            if quote == '`' and '${' in source[start:index]:
-                if re.search(r'\btools\b|(?:spawn_agent|followup_task)\b', source[start:index]):
-                    raise ValueError('cannot count dispatch inside template interpolation')
             regex_allowed = False
             previous_token = 'literal'
         elif character == '/' and regex_allowed:
@@ -121,7 +123,7 @@ def _visible_wrapper_code(source: str) -> str:
         literal_key = re.fullmatch(r"([\"'])([A-Za-z0-9_]+)\1", key)
         if key.isdecimal():
             continue
-        if literal_key and literal_key.group(2) not in {'constructor', 'eval', 'Function', 'AsyncFunction', 'GeneratorFunction', 'AsyncGeneratorFunction'}:
+        if literal_key and literal_key.group(2) not in DYNAMIC_CODE_NAMES:
             continue
         raise ValueError('cannot count dispatch through a dynamic executable property')
     return visible
@@ -136,7 +138,7 @@ def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
     visible = _visible_wrapper_code(source)
     # Dynamic code can invoke a native tool without a visible literal call site.
     # Reject it even when the eventual dispatch count would otherwise be zero.
-    if re.search(r'\b(?:eval|Function|AsyncFunction|GeneratorFunction|AsyncGeneratorFunction|constructor|globalThis|Reflect)\b|\\', visible):
+    if re.search(r'\b(?:' + '|'.join(sorted(DYNAMIC_CODE_NAMES)) + r')\b|\\', visible):
         raise ValueError('cannot count dispatch through dynamic code execution')
     calls = []
     spans = []
@@ -160,7 +162,7 @@ def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
         if token.group().split('__')[-1] in DISPATCH_NAMES:
             if not any(start <= token.start() < end for start, end in spans):
                 raise ValueError('cannot count dispatch through an indirect native reference')
-    if calls and re.search(r'\b(?:for|while|do|if|switch|function|eval)\b|=>|\?|&&|\|\|', visible):
+    if calls and re.search(r'\b(?:for|while|do|if|switch|function|class|get|set|try|catch|finally)\b|=>|\?|&&|\|\||\)\s*\{', visible):
         raise ValueError('cannot count dispatch in dynamic wrapper; use direct native calls')
     return calls
 

@@ -48,7 +48,7 @@ spend the protected reserve only on required verification.
 Direct function calls and literal exec-wrapper calls share the same attempt
 counter. Multiple calls in one wrapper consume separate attempts; duplicate
 receipts of that wrapper are counted once. Comments and quoted task examples
-are ignored. Wrappers with dynamic control flow or dispatch inside template
+are ignored. Wrappers with dynamic control flow or any template
 interpolation cannot establish an exact count and block new dispatch; use
 direct native calls for those cases. Receipt verification uses the same scan
 to detect unauthorized leaf spawns and unleased coordinator edges.
@@ -64,6 +64,9 @@ native calls when a wrapper falls outside this supported receipt syntax.
 Slash is accepted only for comments or unambiguous regex literals; division
 and automatic-semicolon-insertion ambiguities block new dispatch. The parser
 does not infer arbitrary JavaScript execution from a wrapper's source text.
+Function, method, getter and class bodies containing dispatch are unsupported:
+one call site can execute repeatedly. Object reflection helpers that recover
+executable functions are rejected even without a literal dispatch call site.
 
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger
