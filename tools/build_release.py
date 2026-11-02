@@ -159,8 +159,8 @@ def build(root: Path, output: Path) -> dict[str, Path]:
             plugin_entries.append(("skills/" + name[len(".agents/skills/"):], data))
         elif name in {"README.md", "README.en.md"}:
             # Repository and plugin skill roots differ; keep rendered local links usable.
-            plugin_entries.append((name, data.replace(b"](.agents/skills/", b"](skills/")))
-        elif name.startswith("docs/") or name in {
+            plugin_entries.append((name, re.sub(rb"(\]\((?:\.\./)*)\.agents/skills/", rb"\1skills/", data)))
+        elif name.startswith("docs/") or name.startswith("tools/fixtures/") or name in {
             "CHANGELOG.md",
             "CONTRIBUTING.md",
             "LICENSE",
@@ -168,6 +168,8 @@ def build(root: Path, output: Path) -> dict[str, Path]:
             "tools/MIGRATION.md",
             "tools/install_luna_skills.py",
         }:
+            if name.endswith(".md"):
+                data = re.sub(rb"(\]\((?:\.\./)*)\.agents/skills/", rb"\1skills/", data)
             plugin_entries.append((name, data))
     plugin_archive = output / plugin_name
     write_archive(plugin_archive, plugin_entries)

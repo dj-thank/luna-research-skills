@@ -5,19 +5,41 @@
 [![Validate Luna skills](https://github.com/dj-thank/luna-research-skills/actions/workflows/validate.yml/badge.svg)](https://github.com/dj-thank/luna-research-skills/actions/workflows/validate.yml)
 [![Latest release](https://img.shields.io/github/v/release/dj-thank/luna-research-skills)](https://github.com/dj-thank/luna-research-skills/releases)
 
-Luna Research & Project Skills helps Codex divide research among agents, with each agent responsible for a different perspective.
+**Codex skills for delegating research and implementation, checking evidence, and integrating verified results.**
 
-When you explore an unfamiliar field, you may not yet know what questions to ask. These skills start with an overview, then split the investigation into perspectives such as technical background, implementation examples, and limitations. When needed, a specialist can delegate narrower questions to further subagents for deeper research and verification.
+Research investigates primary sources, alternatives and counterevidence. Project divides implementation ownership, integrates changes and verifies the result. The parent Codex agent manages completion criteria, the shared attempt budget and acceptance. Small tasks stay with the parent.
 
-**Run GPT-6 Luna in parallel. Explore more perspectives and reach conclusions backed by sources.**
-
-Evidence returns through the agents responsible for each perspective to the parent Codex agent. The parent checks the original sources and brings the findings together.
-
-The default specialist model is **GPT-6 Luna / low**. Different specialists investigate official documentation, alternatives, counterevidence, and gaps. The parent keeps the model you selected. Sol specialists are available when explicitly requested.
+The public skills default to **GPT-6 Luna / low** and support **GPT-6.1 Sol / low** when explicitly selected. The parent keeps your chosen model. These are working instructions and verification tools, not a standalone background service.
 
 This README describes the **main branch**. Release ZIPs contain the version fixed at each release. To try the current behavior, get main using the steps below. See the [changelog](CHANGELOG.md).
 
 For an actual example, read the [quantum-sensor research findings](docs/quantum-sensors-research-2026-10-14.md) and the [six-Luna delegation and verification record](docs/luna-research-e2e-2026-10-14.md). Those detailed reports are currently in Japanese; this README explains the workflow and results in English.
+
+## Quick start
+
+Use Git, Python 3.11 or newer, and a Codex environment with access to subagents and the selected specialist model.
+
+```sh
+git clone https://github.com/dj-thank/luna-research-skills.git
+cd luna-research-skills
+```
+
+Open this folder in Codex and request `$run-diverse-luna-research` or `$run-diverse-luna-project`, with your goal and completion criteria. Trying the skills inside this repository does not require a user-scope installation.
+
+| OS | Check Python | Check readiness |
+|---|---|---|
+| Windows (PowerShell) | `py -3 --version` | `py -3 .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-role default --allow-generic-worker` |
+| macOS / Linux | `python3 --version` | `python3 .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-role default --allow-generic-worker` |
+
+Replace `python` in subsequent examples with the command for Python 3.11 or newer on your system. If readiness fails, follow [Step 3](#step-3-check-readiness). `READY` describes preparation; it does not prove that a child has run.
+
+| Goal | Start here |
+|---|---|
+| Write a first request | [Research and implementation examples](#step-4-send-your-first-request) |
+| Install or update for another project | [Cross-platform installation and Windows migration](docs/INSTALLATION.md) |
+| Inspect dispatch, dependencies and retries | [Swarm operation and Planner 1.2](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md) |
+| Try evaluation without starting agents | [Reproduce the three comparisons](#reproduce-the-comparisons) |
+| Contribute changes | [Development and verification](CONTRIBUTING.md) |
 
 ## Start with these three choices
 
@@ -45,7 +67,7 @@ flowchart TD
 
 ## Why use Luna for parallel research?
 
-The main benefit is **investigating different perspectives at the same time**. Give lower-cost Luna specialists bounded research questions and have them return findings and sources. The parent removes duplication, considers counterevidence, and decides what the evidence supports.
+The main benefit is **investigating different perspectives at the same time**. Give specialists bounded research questions and have them return findings and sources. The parent removes duplication, considers counterevidence, and decides what the evidence supports.
 
 ```mermaid
 flowchart TD
@@ -65,19 +87,9 @@ flowchart TD
 
 This diagram illustrates a possible division of work. Choose perspectives that fit the field. A specialist that needs to delegate receives child attempts and a permitted depth from the **same overall budget**. If the specialist cannot use delegation tools, the parent takes over the remaining work. Start at most three attempts in one batch. Multiple agents reading the same article do not create independent corroboration.
 
-### The cost basis for exploring more perspectives
+### Check usage and cost
 
-The official **additional-credit rates at Standard speed**, checked on October 14, 2026, were as follows. Values are credits per one million tokens.
-
-| Model | Input | Cached input | Output |
-|---|---:|---:|---:|
-| GPT-6 Luna | 2.5 | 0.25 | 12.5 |
-| GPT-6.1 Sol | 50 | 2.5 | 250 |
-| GPT-6 Astra | 250 | 25 | 1,250 |
-
-For equal amounts of non-cached input and output tokens, Luna's rates are **1/20 of Sol's** and **1/100 of Astra's**. This difference motivates the use of more investigation angles. See the [official rate table](https://learn.chatgpt.com/docs/pricing#token-rates).
-
-Included plan limits are calculated separately and also depend on token volume, reasoning effort, speed settings, and tool use. Tokens are still consumed. Parallel work does not make usage zero, and total usage includes the parent's synthesis. The published Luna guidance for Plus / Standard Business is 350–3,000 local messages per five hours; this is an estimate, not a guaranteed allowance. See the [official usage limits](https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan).
+Compare total work, including parent investigation and integration, retries and verification. This repository's synthetic benchmarks do not establish real speed, cost or quota savings. Check current conditions in the [official pricing](https://learn.chatgpt.com/docs/pricing#token-rates) and [plan limits](https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan).
 
 ### Explicitly choosing Sol
 
@@ -99,7 +111,7 @@ Research specialists return evidence. When research supports implementation, the
 You need:
 
 1. A Codex environment that supports local skills and subagents.
-2. An account and workspace with access to GPT-6 Luna.
+2. An account and workspace with access to GPT-6 Luna, or explicitly selected GPT-6.1 Sol.
 3. **Python 3.11 or later**, for the configuration and runtime-record checkers.
 4. Git, if you clone the repository.
 5. Search and page-fetch tools, with permission to use them, for web research.
@@ -294,6 +306,8 @@ Pin dependency revisions, assign disjoint edits, and identify shared-device owne
 
 The bundled `plan_swarm.py` reads a flat Project v2 ledger and returns a proposed next batch plus review, dependency, ownership, capacity and integration blockers as JSON. It does not modify the ledger or start agents. See [planner usage](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md#inspect-the-next-batch).
 
+Planner 1.2 adds `dependency_replacement_hints` when a consumer still depends on a failed attempt with an accepted retry. The parent checks the artifact and consumer contract before updating that dependency. Hints leave deadline, capacity and access restrictions in place; they never replace an input automatically.
+
 Feed actual dispatch and verified results back into the ledger. Run `python tools/benchmark_swarm.py` against predeclared answers and follow the [swarm evaluation and improvement procedure](docs/swarm-experiments.md) for communication experiments and native repair trials. For an explicitly selected Sol run, pass `--specialist-model gpt-6.1-sol` to the planner as well.
 
 ### Turn research into improvements
@@ -357,6 +371,34 @@ For larger tasks, a coordinator may delegate further when its actual tools suppo
 
 ## What has been verified?
 
+| Evidence | Current scope | What it does not establish |
+|---|---|---|
+| OS CI | Windows, macOS and Linux with Python 3.11–3.13; Windows migration checks also cover PowerShell 5.1/7 | Success in every user environment or with every current model |
+| Installation and packaging | Existing-copy protection, isolated installation/readback, reproducible ZIPs | Automatic updates to a user's installed copies |
+| Ledger and planner | Dependencies, ownership conflicts, budgets, deadlines, retries and acceptance records | Process termination or enforced filesystem locks |
+| Known-answer comparisons | The three tools below retain outcomes and unsuccessful comparison policies | LLM reasoning gains or real task speed/cost savings |
+| Actual agent records | Published examples identify their date, model and evidence | Unconditional transfer to another environment or model |
+
+### Reproduce the comparisons
+
+Run from the repository or source ZIP root. The plugin ZIP includes the answer fixtures but not the evaluation scripts. These local evaluations use synthetic inputs; they do not start child agents or operate external services.
+
+```sh
+python tools/benchmark_swarm.py
+python tools/benchmark_review.py
+python tools/benchmark_communication.py
+```
+
+| Command | Comparison |
+|---|---|
+| `benchmark_swarm.py` | Next assignments and blocker reasons for 18 states, plus communication recipients |
+| `benchmark_review.py` | Critique, minority proposals and duplicate evaluation reuse on 12 cases with the same two-call ceiling |
+| `benchmark_communication.py` | Run identity, epoch and recipient input contracts on 14 delivery cases |
+
+Each emits JSON and exits nonzero when results disagree with the frozen expectations. An alternative policy's incorrect answer can itself be an expected experimental result. The [evaluation and adoption guide](docs/swarm-experiments.md) explains fixed answers, preserved failures and reopening actual artifacts.
+
+### Actual model execution
+
 The checker distinguishes the current Luna route from an explicitly selected Sol route by comparing configuration, runtime records, and parent dispatch records. Public regression tests and CI check model mix-ups, acceptance of Sol without explicit selection, and concurrency-limit violations.
 
 The [six-agent quantum-sensor record](docs/luna-research-e2e-2026-10-14.md) covers actual research, independent verification, and synthesis. The [Luna policy verification](docs/luna-first-2026-10-14.md) records the runtime observations made when the model policy was updated. The [unfamiliar-field and child-delegation check](docs/unknown-field-research-2026-10-14.md) records a Luna specialist starting a Luna child and collecting evidence. The [earlier Sol compatibility check](docs/compatibility-2026-10-14.md) and [September 5, 2026 evaluation](docs/research-evaluation-2026-09-05.md) remain records of the models used at those times. Historical success does not prove execution with a different model.
@@ -382,7 +424,8 @@ The Python installer, runtime checkers, and regression tests use the standard li
 | [Quantum-sensor findings](docs/quantum-sensors-research-2026-10-14.md) — Japanese | Read a real investigation with sources |
 | [Six-agent delegation and verification](docs/luna-research-e2e-2026-10-14.md) — Japanese | See the actual execution sequence and tested scope |
 | [Installation and updates](docs/INSTALLATION.md) | Use another project, Windows migration, Cloud, or a plugin |
-| [Compatibility verification](docs/compatibility-2026-10-14.md) — Japanese | Compare observed results with untested boundaries |
+| [Historical compatibility verification](docs/compatibility-2026-10-14.md) — Japanese | Compare observed results with untested boundaries at that time |
+| [Swarm evaluation and improvement](docs/swarm-experiments.md) | Inspect comparison assumptions, failed policies and adoption conditions |
 | [Development and verification](CONTRIBUTING.md) | Change code or skills |
 | [Changelog](CHANGELOG.md) | Understand differences between main and releases |
 | [Official subagent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents) | Check Codex settings, model resolution, and permissions |

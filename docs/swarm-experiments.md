@@ -9,7 +9,8 @@ enough to promote it.
 
 ## Reproduce the known-answer benchmark
 
-From the repository root, run:
+From the repository or source ZIP root, run (the plugin ZIP contains the answer
+fixtures for reading, but does not include the benchmark scripts):
 
 ```text
 python tools/benchmark_swarm.py
@@ -117,6 +118,33 @@ acceptance and writer reassignment. Deduplicate repeated results, reject superse
 epochs and require the receiver to verify actual bytes. Retain the initial independent
 assessment before exposing another agent's conclusion. This protocol permits a
 short repair exchange without making debate or consensus an acceptance criterion.
+
+### Bind the handoff to the artifact being consumed
+
+Keep the expected identity in the root's accepted ledger or integration record,
+separate from the sender's claim. A matching sender-provided digest and file can
+both describe the wrong result. Conversely, an old passing receipt can refer to a
+file that has since changed or disappeared.
+
+1. Root selects the accepted run, producer/attempt, epoch, consumer contract and
+   artifact revision or digest from reopened evidence. A consumer does not create
+   this expected identity from the arriving message.
+2. After checking actual writer release, use the frozen candidate or a private
+   snapshot. Reopen its bytes and compare their digest with both the recorded
+   expectation and the handoff. A missing file, different bytes or different scope
+   leaves the dependency unsatisfied.
+3. Preserve the checked snapshot through consumption and integration. For code,
+   bind test/CI receipts to the tested commit or tree and compare it with the tree
+   being integrated. A hash check followed by an uncontrolled write is insufficient.
+4. Revalidate changed contracts, epochs and artifacts. Matching bytes do not prove
+   functional correctness, successful tests, authorization or the sender's model;
+   those still require their own acceptance and runtime evidence.
+
+This distinction is also discussed in Ghosh's
+[PCM v1](https://arxiv.org/html/2610.39109v1), section 13.1, read on 2026-11-02:
+evidence of a past event does not by itself establish the file's current state.
+The handoff procedure above uses root-reviewed records; it does not implement
+PCM's signing service, transparency log, authority grants or security guarantees.
 
 For a bounded critique comparison, freeze the independent proposals, one critic
 proposal and correctness labels before running any policy. Include a correct

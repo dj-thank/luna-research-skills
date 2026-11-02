@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -34,7 +35,14 @@ class ReleaseBuilderTests(unittest.TestCase):
                 ".agents/skills/demo/scripts/plan_swarm.py": b"# advisory planner\n",
                 ".agents/skills/demo/scripts/test_plan_swarm.py": b"# planner tests\n",
                 "docs/assets/teams.png": b"\x89PNG\r\n\x1a\nfixture",
-                "docs/evaluation.md": b"bounded evaluation",
+                "docs/evaluation.md": (
+                    b"[Skill](../.agents/skills/demo/SKILL.md#demo)\n"
+                    b"[Answer](../tools/fixtures/example.json)\n"
+                    b"Code: .agents/skills/demo\n"
+                    b"[External](https://example.com/.agents/skills/demo)\n"
+                ),
+                "docs/nested/guide.md": b"[Skill](../../.agents/skills/demo/SKILL.md)\n",
+                "tools/fixtures/example.json": b'{"expected": true}\n',
                 "tools/MIGRATION.md": b"migration procedure",
                 "tools/install_luna_skills.py": (
                     Path(__file__).with_name("install_luna_skills.py").read_bytes()
@@ -67,9 +75,22 @@ class ReleaseBuilderTests(unittest.TestCase):
                 self.assertIn("[English](README.en.md)", plugin.read("README.md").decode("utf-8"))
                 self.assertIn("[日本語](README.md)", plugin.read("README.en.md").decode("utf-8"))
                 self.assertIn("[Research](skills/demo/SKILL.md)", plugin.read("README.en.md").decode("utf-8"))
+                self.assertIn(b"[Skill](../skills/demo/SKILL.md#demo)", plugin.read("docs/evaluation.md"))
+                self.assertIn(b"[Skill](../../skills/demo/SKILL.md)", plugin.read("docs/nested/guide.md"))
+                self.assertIn(b"Code: .agents/skills/demo", plugin.read("docs/evaluation.md"))
+                self.assertIn(b"https://example.com/.agents/skills/demo", plugin.read("docs/evaluation.md"))
+                self.assertEqual(plugin.read("tools/fixtures/example.json"), files["tools/fixtures/example.json"])
                 self.assertNotIn(".codex/agents/demo.toml", plugin.namelist())
                 extracted = Path(temp) / "extracted-plugin"
                 plugin.extractall(extracted)
+
+            for document in extracted.rglob("*.md"):
+                for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", document.read_text(encoding="utf-8")):
+                    target = target.split("#", 1)[0]
+                    if target and "://" not in target:
+                        self.assertTrue((document.parent / target).exists(), (document, target))
+            with zipfile.ZipFile(outputs["archive"]) as source:
+                self.assertEqual(source.read("docs/evaluation.md"), files["docs/evaluation.md"])
 
             target = Path(temp) / "profile" / ".agents" / "skills"
             command = [
@@ -105,6 +126,7 @@ class ReleaseBuilderTests(unittest.TestCase):
             self.assertTrue((target / "demo/scripts/test_plan_swarm.py").is_file())
             self.assertEqual((root / "README.md").read_text(encoding="utf-8"), readme)
             self.assertEqual((root / "README.en.md").read_text(encoding="utf-8"), english_readme)
+            self.assertEqual((root / "docs/evaluation.md").read_bytes(), files["docs/evaluation.md"])
 
     def test_reproducible_archive_and_inventory(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

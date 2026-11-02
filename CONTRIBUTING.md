@@ -12,11 +12,12 @@ Keep the repository source-first and read-only by default. The `.agents/skills/`
 
 Before opening a pull request, inspect the Markdown files as UTF-8, check that all referenced local files exist, run both packaged checker suites and Skill validators, and review the diff for stale model, schema, privacy, installation, release-metadata, and licensing claims.
 
-From the repository root, the release gate is:
+From the repository root, run these portable checks with Python 3.11 or newer.
+Use `py -3` on Windows or `python3` on macOS/Linux if `python` does not select that
+interpreter. Run each command separately and stop on a nonzero exit status; a
+shell's final exit code can hide an earlier native-command failure.
 
-```powershell
-$env:PYTHONUTF8 = '1'
-$env:PYTHONDONTWRITEBYTECODE = '1'
+```sh
 python .agents/skills/run-diverse-luna-research/scripts/test_check_setup.py
 python .agents/skills/run-diverse-luna-project/scripts/test_check_setup.py
 python .agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py
@@ -25,13 +26,25 @@ python .agents/skills/run-diverse-luna-research/scripts/test_plan_swarm.py
 python .agents/skills/run-diverse-luna-project/scripts/test_plan_swarm.py
 python tools/benchmark_swarm.py
 python tools/benchmark_review.py
+python tools/benchmark_communication.py
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/validate_repository.py
 python tools/release_metadata.py
-pwsh -NoProfile -File tools/Test-LunaMigrationTools.ps1 -Source (Resolve-Path '.agents/skills').Path
 python tools/build_release.py --output release-check
 python tools/stress_contracts.py --iterations 25
 ```
+
+On Windows, also run the migration tests with PowerShell 7:
+
+```powershell
+pwsh -NoProfile -File tools/Test-LunaMigrationTools.ps1 -Source (Resolve-Path '.agents/skills').Path
+```
+
+CI repeats the Python checks on Windows, macOS and Linux with Python 3.11–3.13,
+and runs migration checks with both PowerShell 7 and Windows PowerShell 5.1.
+The three benchmark CLIs use fixed synthetic answers and make no agent/tool-service
+calls. Inspect their case outcomes as well as their exit status: unsuccessful
+comparison policies are intentionally retained. See [the experiment guide](docs/swarm-experiments.md).
 
 Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behavior, `SKILL.md`-last publication, fail-closed path handling, no-overwrite semantics, and rollback tests for partial writes, concurrent destination creation, and user-modified content. Run its unit tests on Windows, macOS, and Linux through the existing Python matrix.
 
