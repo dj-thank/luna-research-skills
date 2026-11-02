@@ -63,6 +63,11 @@ exact target SHA. The [offline CI evidence checker](docs/ci-evidence.md) can ver
 an independently specified required name/app policy. Its example is synthetic;
 it does not discover the repository policy or replace GitHub's merge protections.
 
+Changes to the comparison recovery inspector must keep the caller's independent
+pin, mandatory report validation, negative-comparison support, explicit staged
+versus published states and read-only behavior. Never infer completion from a
+directory, select between ambiguous copies, or add automatic recovery mutations.
+
 Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behavior, `SKILL.md`-last publication, fail-closed path handling, no-overwrite semantics, and rollback tests for partial writes, concurrent destination creation, and user-modified content. Run its unit tests on Windows, macOS, and Linux through the existing Python matrix.
 
 Also run the bundled Skill Creator `quick_validate.py` against both Skill directories, validate the generated plugin manifest/archive, rebuild release assets twice and compare their SHA-256, and run `git diff --check`. Keep `release-check`, Python caches, runtime rollouts, discovery reports containing machine paths, and migration journals out of commits.
