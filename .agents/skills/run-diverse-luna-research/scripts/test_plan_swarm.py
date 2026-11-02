@@ -235,6 +235,79 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(proc.stderr, "")
         return proc.returncode, json.loads(proc.stdout)
 
+    def recovery_fixture(self):
+        rows = [row("O", status="timed_out", epoch=1, dedup_key="work", retry_owner="root"),
+                row("N", status="completed", wave=2, epoch=2, retry_of="O", dedup_key="work", retry_owner="root",
+                    started_at="2026-01-01T00:06:00Z", finished_at="2026-01-01T00:12:00Z"),
+                row("B", wave=3, dependencies=["O"]), row("V", "verifier", wave=4)]
+        return ledger(rows)
+
+    def test_retry_hint_requires_explicit_rebinding_and_preserves_input(self):
+        value = self.recovery_fixture()
+        before = copy.deepcopy(value)
+        code, result = self.cli(value)
+        self.assertEqual(code, 0)
+        self.assertNotIn("B", result["selected_attempt_ids"])
+        self.assertIn("DEPENDENCY_FAILED", self.codes(result, "B"))
+        self.assertEqual(result["dependency_replacement_hints"], [dict(
+            attempt_id="B", dependency_attempt_id="O", requires_root_review=True,
+            candidates=[dict(attempt_id="N", requires_ledger_reordering=False)])])
+        self.assertEqual(value, before)
+        value["assignments"][2]["dependencies"] = ["N"]
+        result = self.run_plan(value)
+        self.assertIn("B", result["selected_attempt_ids"])
+        self.assertEqual(result["dependency_replacement_hints"], [])
+
+    def test_retry_hint_filters_unaccepted_future_and_unrelated_attempts(self):
+        changes = [dict(acceptance_status="pending"), dict(acceptance_status="rejected"),
+                   dict(execution_status="failed", acceptance_status="excluded"),
+                   dict(execution_status="started", acceptance_status="pending", finished_at=None),
+                   dict(finished_at="2026-01-01T00:25:00Z"), dict(retry_of=None)]
+        for change in changes:
+            with self.subTest(change=change):
+                value = self.recovery_fixture()
+                value["assignments"][1].update(change)
+                result = self.run_plan(value)
+                self.assertEqual(result["dependency_replacement_hints"], [])
+                self.assertNotIn("B", result["selected_attempt_ids"])
+        value = self.recovery_fixture()
+        self.assertTrue(self.run_plan(value, now="2026-01-01T00:12:00Z")["dependency_replacement_hints"])
+
+    def test_retry_hint_marks_later_rows_without_reordering_or_duplicate_hints(self):
+        value = self.recovery_fixture()
+        rows = value["assignments"]
+        rows[1], rows[2] = rows[2], rows[1]
+        rows[1]["dependencies"] = ["O", "O"]
+        before = copy.deepcopy(value)
+        result = self.run_plan(value)
+        self.assertEqual(len(result["dependency_replacement_hints"]), 1)
+        self.assertEqual(result["dependency_replacement_hints"][0]["candidates"],
+                         [dict(attempt_id="N", requires_ledger_reordering=True)])
+        self.assertEqual(value, before)
+        # Editing the ID alone would violate ledger order; the hint grants no repair authority.
+        rows[1]["dependencies"] = ["N"]
+        self.assertIn("errors", P.plan(value, 0, P.timestamp(NOW)))
+
+    def test_transitive_retry_hints_keep_all_legacy_candidates_for_root_review(self):
+        value = self.recovery_fixture()
+        value["retry_limit"] = 2
+        rows = value["assignments"]
+        rows[1].pop("epoch")  # Legacy records do not prove newer-generation invalidation.
+        successor = row("NN", status="completed", wave=3, retry_of="N", dedup_key="work", retry_owner="root",
+                        started_at="2026-01-01T00:13:00Z", finished_at="2026-01-01T00:17:00Z",
+                        thread_uuid="55555555-5555-4555-8555-555555555555",
+                        runtime_turn="66666666-6666-4666-8666-666666666666")
+        rows.insert(2, successor)
+        rows[3]["wave"], rows[4]["wave"] = 4, 5
+        result = self.run_plan(value)
+        hint = result["dependency_replacement_hints"][0]
+        self.assertEqual([c["attempt_id"] for c in hint["candidates"]], ["N", "NN"])
+        self.assertTrue(hint["requires_root_review"])
+        self.assertNotIn("B", result["selected_attempt_ids"])
+        rows[1].update(execution_status="failed", acceptance_status="excluded")
+        result = self.run_plan(value)
+        self.assertEqual([c["attempt_id"] for c in result["dependency_replacement_hints"][0]["candidates"]], ["NN"])
+
     def test_explicit_sol_profile_and_repeat_call_isolation(self):
         value = ledger()
         value["assignments"][0]["runtime_model"] = "gpt-6.1-sol"
