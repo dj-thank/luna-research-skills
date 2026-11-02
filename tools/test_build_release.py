@@ -31,6 +31,8 @@ class ReleaseBuilderTests(unittest.TestCase):
                 ),
                 ".agents/skills/demo/scripts/check_dispatch_budget.py": b"# budget checker\n",
                 ".agents/skills/demo/scripts/test_dispatch_budget.py": b"# budget tests\n",
+                ".agents/skills/demo/scripts/plan_swarm.py": b"# advisory planner\n",
+                ".agents/skills/demo/scripts/test_plan_swarm.py": b"# planner tests\n",
                 "docs/assets/teams.png": b"\x89PNG\r\n\x1a\nfixture",
                 "docs/evaluation.md": b"bounded evaluation",
                 "tools/MIGRATION.md": b"migration procedure",
@@ -99,6 +101,8 @@ class ReleaseBuilderTests(unittest.TestCase):
             self.assertTrue((target / "demo" / "SKILL.md").is_file())
             self.assertTrue((target / "demo/scripts/check_dispatch_budget.py").is_file())
             self.assertTrue((target / "demo/scripts/test_dispatch_budget.py").is_file())
+            self.assertTrue((target / "demo/scripts/plan_swarm.py").is_file())
+            self.assertTrue((target / "demo/scripts/test_plan_swarm.py").is_file())
             self.assertEqual((root / "README.md").read_text(encoding="utf-8"), readme)
             self.assertEqual((root / "README.en.md").read_text(encoding="utf-8"), english_readme)
 

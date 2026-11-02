@@ -18,6 +18,8 @@ CHECKER_TESTS = (
     ROOT / ".agents/skills/run-diverse-luna-project/scripts/test_check_setup.py",
     ROOT / ".agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py",
     ROOT / ".agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py",
+    ROOT / ".agents/skills/run-diverse-luna-research/scripts/test_plan_swarm.py",
+    ROOT / ".agents/skills/run-diverse-luna-project/scripts/test_plan_swarm.py",
 )
 UNITTEST_COUNT = re.compile(r"Ran\s+(\d+)\s+tests?\b")
 

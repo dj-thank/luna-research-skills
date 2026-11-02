@@ -292,6 +292,8 @@ Run an API workstream and an independent documentation workstream together. Once
 
 Pin dependency revisions, assign disjoint edits, and identify shared-device owners. After a timeout, verify that the previous writer can no longer affect the resource before handing it over. The ledger checks ownership conflicts and retry ordering; it cannot prove that a process stopped or that delivery became faster. See the [practical swarm coordination example](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md) for readiness and stale-result handling.
 
+The bundled `plan_swarm.py` reads a flat Project v2 ledger and returns a proposed next batch plus review, dependency, ownership, capacity and integration blockers as JSON. It does not modify the ledger or start agents. See [planner usage](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md#inspect-the-next-batch).
+
 ### Turn research into improvements
 
 ```text

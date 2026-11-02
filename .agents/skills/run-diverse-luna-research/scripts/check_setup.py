@@ -31,7 +31,7 @@ DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
 EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
 SUPPORTED_SPECIALIST_MODELS = (DEFAULT_SPECIALIST_MODEL, "gpt-6.1-sol")
 EXPECTED_REASONING_EFFORT = "low"
-CHECKER_CONTRACT_VERSION = "2026-11-02.3"
+CHECKER_CONTRACT_VERSION = "2026-11-02.4"
 MIN_CONCURRENT_THREADS = 2
 MAX_CONCURRENT_THREADS = 6
 MAX_ATTEMPT_BUDGET = 12
@@ -1401,6 +1401,9 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
             elif isinstance(prior.get("retry_owner"), str) and row["retry_owner"] != prior["retry_owner"]:
                 errors.append(f"{pfx}: retry must keep the same retry_owner")
         allowed_accept = {"planned": {"pending"}, "not_dispatched": {"excluded"}, "started": {"pending"}, "completed": {"accepted", "rejected"}, "failed": {"excluded"}, "timed_out": {"excluded"}, "abandoned": {"excluded"}}
+        if project:
+            # A completed candidate may await independent review and root acceptance.
+            allowed_accept["completed"].add("pending")
         if "acceptance_status" not in row:
             errors.append(f"{pfx}.acceptance_status is required")
         acceptance = row.get("acceptance_status")
@@ -2049,6 +2052,8 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
         if live:
             errors.append(f"project closure has {len(live)} unfinished assignment(s)")
         if closure_status == "complete":
+            if any(row.get("acceptance_status") == "pending" for row in assignments if isinstance(row, dict)):
+                errors.append("complete project closure cannot contain pending acceptance")
             if root_integration != "completed" or not isinstance(root_receipt, str) or not root_receipt.strip():
                 errors.append(
                     "complete project closure requires completed root integration "

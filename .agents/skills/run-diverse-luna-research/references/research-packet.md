@@ -124,6 +124,11 @@ Maintain one row per assignment attempt:
 
 For lifecycle validation, `planned/pending` has not started. Close a root-only gap or unused planned assignment as `not_dispatched/excluded`, with null `started_at`, a decision timestamp in `finished_at`, no child receipt, and an explicit reason. Actual child work uses `started` followed by `completed`, `failed`, `timed_out`, or `abandoned`. Every terminal row has `finished_at` or `timeout_at`. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
+The packaged `scripts/plan_swarm.py` helper is for flat Project v2 ledgers only;
+it does not plan research quotas or recursive subteams. The Project v2
+`completed/pending` review handoff added in checker `2026-11-02.4` does not change
+Research's lifecycle or v1 state rules.
+
 Keep the machine-readable ledger as UTF-8 JSON with this shape:
 
 Checker `2026-11-02.3` validates supplied v2 recovery metadata: positive integer

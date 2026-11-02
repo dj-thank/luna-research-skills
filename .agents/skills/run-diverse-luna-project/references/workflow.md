@@ -92,6 +92,13 @@ python <skill-dir>/scripts/check_setup.py --agent-role <worker-or-default> --all
 
 Draw dependencies between workstreams. Dispatch only ready nodes with usable, revision-pinned inputs; a failed terminal dependency is not an accepted build input. Use [swarm coordination](swarm-coordination.md) for readiness, shared-resource release and recovery. Merge cells that would inspect the same evidence or edit the same files. Preserve the full `V=max(1,ceil(.15*N))` reservation for independent critics, contradiction checks, or verifiers; combine or remove lower-value cells before spending that reservation.
 
+For flat project v2 runs, `scripts/plan_swarm.py` can explain a candidate next
+batch and its blockers using the validated ledger and observed open-child count.
+It is advisory and does not replace trace preflight or current receipt/resource
+checks. Keep finished candidates `completed/pending` while a reviewer inspects
+them; accepted builder inputs must have that review before downstream build work.
+The final verifier checks the later integrated candidate.
+
 Completion criterion: every workstream has one bounded outcome, unique ownership or viewpoint, dependencies, and a checkable completion criterion; no two concurrent builders own the same file; planned non-verifier starts are at most `N-V`.
 
 ## 4. Dispatch bounded waves

@@ -6,6 +6,7 @@
 
 ### Fixed
 
+- Allow finished Project v2 candidates to wait for review as `completed/pending` while rejecting pending acceptance at complete closure and preserving the integrated-result gate; Research and v1 rules are unchanged.
 - Reject conflicting active writer ownership, retries started before their predecessor ends, and integration of unaccepted results in project ledgers. Normalize lexical path aliases and allow recorded sequential handoffs.
 - Validate supplied v2 recovery fields, increasing retry epochs and stable logical-work keys; reject stale accepted ancestors after a newer retry starts while preserving legacy records without recovery fields.
 - Correct the copyable project planning ledger's concurrency/wave limits and unobserved spawn-call fields, and exercise both documented planning ledgers through both packaged checkers.
@@ -34,6 +35,7 @@
 
 ### Added
 
+- Add a read-only advisory planner for flat Project v2 ledgers: propose a bounded nonconflicting next batch, expose dependency/ownership/time/reserve/integration blockers, and keep actual dispatch and writer release under root control. Both standalone packages, OS CI, Cloud smoke and stress tests cover it.
 - Add a practical swarm coordination procedure for rolling ready-work dispatch, revision-pinned handoffs, shared-resource release and late-result handling, with Japanese and English README entry points.
 - Add optional `check_setup.py --json` results with separate static, schema, ledger, runtime, provenance, and receipt-validation stages; text output remains the default.
 - Add bounded first-request examples, a research-to-implementation handoff, and an illustrative comparison with incompatible measurement conditions.

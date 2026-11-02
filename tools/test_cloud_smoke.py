@@ -54,10 +54,10 @@ class CloudSmokeTests(unittest.TestCase):
         ).stdout.strip()
         return root, head
 
-    def test_command_plan_includes_setup_and_dispatch_suites(self) -> None:
+    def test_command_plan_includes_setup_dispatch_and_planning_suites(self) -> None:
         commands = [command for command, _ in cloud_smoke._commands(Path("."), Path("fixture-temp"), 1)]
         for lane in ("research", "project"):
-            for suite in ("test_check_setup.py", "test_dispatch_budget.py"):
+            for suite in ("test_check_setup.py", "test_dispatch_budget.py", "test_plan_swarm.py"):
                 path = f".agents/skills/run-diverse-luna-{lane}/scripts/{suite}"
                 self.assertTrue(any(path in command for command in commands), path)
 

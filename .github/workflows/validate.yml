@@ -41,6 +41,10 @@ jobs:
         run: python .agents/skills/run-diverse-luna-research/scripts/test_dispatch_budget.py
       - name: Check project dispatch budget
         run: python .agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py
+      - name: Check research packaged swarm planner
+        run: python .agents/skills/run-diverse-luna-research/scripts/test_plan_swarm.py
+      - name: Check project swarm planner
+        run: python .agents/skills/run-diverse-luna-project/scripts/test_plan_swarm.py
       - name: Run repository, release, and route-manifest tests
         run: python -m unittest discover -s tools -p 'test_*.py'
       - name: Plan cross-platform user-scope install
