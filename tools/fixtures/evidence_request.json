@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "source_sha256": "4f956e7d2970168e7ba74230d0d87a7356ab21776ee28ca11a3f43d6afcd90ce",
+  "max_source_bytes": 65536,
+  "max_result_bytes": 4096,
+  "selections": [
+    {
+      "id": "summary",
+      "purpose": "answer",
+      "pointer": "/summary"
+    },
+    {
+      "id": "status",
+      "purpose": "guard",
+      "pointer": "/acceptance_status"
+    },
+    {
+      "id": "revision",
+      "purpose": "guard",
+      "pointer": "/revision"
+    },
+    {
+      "id": "limits",
+      "purpose": "guard",
+      "pointer": "/limits"
+    }
+  ]
+}

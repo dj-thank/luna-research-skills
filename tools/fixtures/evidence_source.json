@@ -1,0 +1,7 @@
+{
+  "summary": "Illustrative candidate: verify the proposed change before integration.",
+  "acceptance_status": "pending",
+  "revision": "example-candidate-1",
+  "limits": ["Local illustration only", "Root review and final verification remain pending"],
+  "other_work": {"description": "Unrequested details remain available in the original file; omission from a view is not approval."}
+}

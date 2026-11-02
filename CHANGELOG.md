@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Added a read-only, independently pinned on-demand JSON evidence view with mandatory guard fields, explicit read/result budgets and decimal precision checks; documented measured context reduction and unchanged source read cost.
+
 - Add a read-only comparison recovery inspector that verifies an independent evidence pin, sidecar and mandatory report, distinguishes published/staged/incomplete/conflicting runs, and retains valid negative comparisons. Package it with explicit recovery-state documentation and CLI regressions.
 
 - Stage the documented comparison bundle until its evidence, pin and report are checked, then publish it under a fresh `accepted` directory. Retain interrupted artifacts and refusal audits, with subprocess regressions for partial writes and lost publication acknowledgements.
