@@ -5,6 +5,11 @@ approved for one question, including its required qualifications. It ships in
 the source archive and plugin, uses Python 3.11+, and performs no network calls,
 model calls, writes, publication or automatic acceptance.
 
+If evidence is already organized into subject/requirement records, the optional
+[requirement selector](requirement-selection.md) retrieves all matching records
+and detects missing, unknown or conflicting required values. It still requires
+a root-reviewed question contract; it does not discover semantic guards for you.
+
 Use a scoped view when the full evidence is large and the next decision is narrow.
 For a small packet, returning the whole file can be simpler and smaller. Keep the
 original evidence: a partial view is not a replacement for it.
