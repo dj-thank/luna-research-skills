@@ -37,7 +37,7 @@ Every row requires:
 - non-empty `ownership`; concurrent dispatched builders/operators may not share a normalized ownership path or its descendants, even before acceptance. Planned reservations may overlap; root serializes them before dispatch. Recorded sequential handoff is allowed, but root must separately verify actual writer release;
 - `dependencies`, referencing only earlier attempt IDs; root checks accepted, revision-pinned inputs before builder/final-verifier dispatch, while diagnostic reviewers may deliberately inspect failed inputs;
 - assignment `deadline`, `acceptance_criteria`, and an exact `evidence_locator`;
-- `execution_status` and `acceptance_status` using the research state machine: `planned/pending`, terminal root-only `not_dispatched/excluded`, or actual child work ending in `completed`, `failed`, `timed_out`, or `abandoned`;
+- `execution_status` and `acceptance_status` using the research state machine: `planned/pending`, terminal root-only `not_dispatched/excluded`, or actual child work ending in `completed`, `failed`, `timed_out`, or `abandoned`. In v2, `completed/pending` is a finished candidate awaiting review/root acceptance; it must be resolved before complete closure and cannot be integrated;
 - `integration_status`: `not_applicable`, `pending`, `integrated`, or `rejected`. `integrated` requires `completed/accepted`; `rejected` records an excluded candidate and never satisfies accepted-writer closure.
 
 ### Recovery validation and compatibility
@@ -93,6 +93,10 @@ Evidence-lane rows use source plane enum `public_web|local|internal_session|conn
 | child/result/runtime fields | planned/collected IDs, thread/turn receipts | acceptance requires exact completed turn and parent provenance |
 
 ## Minimal planning example
+
+This illustrative plan separates candidate review (P-02) from final integrated
+verification (P-03), avoiding a dependency cycle around builder acceptance.
+Replace the example identities and historical timestamps for a real run.
 
 ```json
 {
@@ -169,7 +173,51 @@ Evidence-lane rows use source plane enum `public_web|local|internal_session|conn
       "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110",
       "root_parent_call_id": null,
       "depth": 1,
-      "wave": 1,
+      "wave": 2,
+      "planned_at": "2026-08-16T17:00:00+09:00",
+      "started_at": null,
+      "finished_at": null,
+      "retry_of": null,
+      "descendant_budget": 0,
+      "planned_child_attempt_ids": [],
+      "collected_result_ids": [],
+      "may_spawn_descendants": false,
+      "ttl_seconds": 1800,
+      "epoch": 1,
+      "retry_owner": "root",
+      "dedup_key": "candidate-review",
+      "cancel_reason": null,
+      "kind": "reviewer",
+      "role": "reviewer",
+      "objective": "Review the completed candidate before root acceptance",
+      "ownership": ["read-only"],
+      "dependencies": ["P-01"],
+      "deadline": "2026-08-16T17:40:00+09:00",
+      "execution_status": "planned",
+      "acceptance_status": "pending",
+      "acceptance_criteria": ["candidate meets the supplied acceptance checks"],
+      "evidence_locator": "pending:P-02",
+      "integration_status": "not_applicable",
+      "thread_uuid": null,
+      "child_thread_uuid": null,
+      "runtime_turn": null,
+      "agent_role": null,
+      "runtime_model": null,
+      "runtime_effort": null,
+      "parent_thread_uuid": null,
+      "parent_call_id": null,
+      "spawn_kind": null,
+      "safety_enforcement": "unknown",
+      "runtime_verified": false
+    },
+    {
+      "attempt_id": "P-03",
+      "parent_attempt_id": null,
+      "delegated_by": {"parent_attempt_id": null, "parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110", "parent_call_id": null},
+      "root_parent_thread_uuid": "550e8400-e29b-41d4-a716-446655440110",
+      "root_parent_call_id": null,
+      "depth": 1,
+      "wave": 3,
       "planned_at": "2026-08-16T17:00:00+09:00",
       "started_at": null,
       "finished_at": null,
@@ -187,12 +235,12 @@ Evidence-lane rows use source plane enum `public_web|local|internal_session|conn
       "role": "verifier",
       "objective": "Verify the integrated result against the contract",
       "ownership": ["read-only"],
-      "dependencies": ["P-01"],
+      "dependencies": ["P-01", "P-02"],
       "deadline": "2026-08-16T17:50:00+09:00",
       "execution_status": "planned",
       "acceptance_status": "pending",
       "acceptance_criteria": ["all criteria have exact evidence or a blocker"],
-      "evidence_locator": "pending:P-02",
+      "evidence_locator": "pending:P-03",
       "integration_status": "not_applicable",
       "thread_uuid": null,
       "child_thread_uuid": null,

@@ -5,6 +5,56 @@ exchange results or take turns using a shared resource. The root owns the ledger
 dispatch decisions and integration. This is a procedure for the existing native
 tools and v2 ledger, not an automatic scheduler or distributed lock service.
 
+## Inspect the next batch
+
+For a **flat project v2 ledger**, use the optional advisory planner before the
+existing dispatch preflight. Obtain the current open-child count from the native
+agent inventory and pass it explicitly:
+
+```text
+python <skill-dir>/scripts/plan_swarm.py --ledger-json work/project-ledger.json --open-children 1
+```
+
+It reads the ledger once, validates those same bytes with the packaged checker,
+and emits JSON without modifying the ledger or starting agents. Unsupported
+research/v1/hierarchical ledgers and malformed inputs fail with exit 2 and no
+selected attempts. A valid plan exits 0 even if all work is blocked. The planner
+is included in both standalone packages, but its scope remains project v2.
+
+| Output | Use |
+|---|---|
+| `selected_attempt_ids` | One deterministic candidate batch in ledger order, bounded by available C/W/N and the unfulfilled final-verifier reserve |
+| `blocked` | Unselected planned attempts, reason codes and causal attempt IDs; distinguish dependency, ownership, time, capacity and integration waits |
+| `active_attempt_ids`, `active_alerts` | Active work and expired deadline/TTL alerts; expiry does not release a writer or a slot |
+| `integration_pending_attempt_ids` | Accepted writer candidates awaiting root integration |
+| `capacity`, `next_wave` | Ledger-derived spend, remaining reserve and conservative available slots; use the larger of recorded and observed active counts |
+| `required_checks` | Checks root must still perform before dispatch; `advisory_only` is always true |
+
+Refresh the ledger and live inventory when a result arrives, then rerun the
+planner. Selected candidates do not establish runtime identity, current input
+bytes, authority, actual writer release or trace-backed attempt spend. Complete
+those checks and the original `check_dispatch_budget.py` preflight before any
+spawn. Do not reuse a plan after its inputs or live ownership change.
+
+The default clock is current UTC. `--now <timezone-aware ISO timestamp>` supports
+reproducible simulations; a historical override is not a live deadline check.
+The planner does not rewrite wave assignments, wait, retry or repair invalid
+ledgers. Root records any approved plan change before executing its suggestion.
+
+## Pass candidates through review without a cycle
+
+In v2, `completed/pending` means the child finished and returned a candidate, but
+root has not accepted it. An ordinary reviewer may inspect such a completed
+candidate. A dependent builder and the final verifier still require accepted
+inputs. Failed or rejected dependencies need an explicit root diagnostic decision.
+
+Record the reviewer's completed-turn receipt and result, then accept or reject
+the candidate. This satisfies the existing requirement that an accepted builder
+has a subsequent accepted reviewer/verifier dependency. Do not label a candidate
+rejected merely to represent a review wait. `completed/pending` cannot be marked
+integrated or left unresolved at complete closure; it supplies no accepted-result
+evidence. v1's state rules are unchanged.
+
 ## Release ready work as results arrive
 
 A wave is a numbered dispatch batch, not a barrier that every child must cross.
@@ -77,19 +127,23 @@ operation rather than inventing another child attempt.
 |---|---|---|---|
 | A: API | `src/api` | pinned baseline | first batch, with D |
 | D: guide | `docs/guide.md` | pinned public interface | first batch, with A |
-| B: UI | `src/ui` | accepted API revision from A | after A is verified, even if D is still running |
+| R: API reviewer | read-only | completed candidate from A | after A finishes, even while its acceptance is pending and D is running |
+| B: UI | `src/ui` | accepted API revision from A | after R and root accept A, even if D is still running |
+| S: UI/guide reviewer | read-only | completed candidates from B and D | after both candidates finish |
 | V: verifier | read-only | root-integrated A/B/D candidate | after integration and its required checks |
 
-After A returns, root verifies A and supplies its exact revision to B's isolated
-checkout before dispatching B. D may continue because its ownership and inputs
-are independent. When B and D return, root integrates, freezes the candidate and
-starts V. Four attempts are used; two credits remain unspent, not automatically
-assigned to extra agents.
+After A returns, R reviews its fixed candidate. Root checks the receipts and
+accepts A before supplying its exact revision to B's isolated checkout. D may
+continue because its ownership and inputs are independent. S reviews B and D;
+root accepts and integrates their candidates, freezes the result and starts V.
+This builder/reviewer example uses all six attempts. Reviews count toward N;
+they are not free callbacks or implicit permission to exceed the budget.
 
 If A times out while its writer is still active, B and A's replacement stay
-blocked; D can continue. Once release is verified, one counted retry can supply
-B's input. If the budget is exhausted, root completes mandatory remaining work
-and reports which independent verification was not obtained.
+blocked; D can continue. Once release is verified, root may replan unused
+assignments within the same N or complete the repair itself. There is no spare
+retry credit in this six-attempt example. If the budget is exhausted, root
+completes mandatory remaining work and reports any missing independent check.
 
 ## Measure coordination rather than agent count
 

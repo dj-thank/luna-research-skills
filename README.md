@@ -288,6 +288,8 @@ API担当と説明書担当を並行して動かし、APIの成果を親が受�
 
 依存する成果の版、編集範囲、共有機器の担当を明確にし、タイムアウト時は前の担当が書き込めなくなったことを確認してから引き継ぎます。台帳のチェックは所有権の衝突や再試行の順序を検査しますが、実プロセスの停止や性能向上を証明するものではありません。[具体的なスウォーム運用例](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md)に、待たずに進める条件と古い成果を採用しない手順をまとめています。
 
+付属の `plan_swarm.py` は、flatなProject v2台帳から次の実行候補と待ち理由をJSONで返します。レビュー待ち・依存待ち・担当衝突・枠不足・統合待ちを確認でき、台帳の変更やエージェントの起動は行いません。[使い方](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md#inspect-the-next-batch)
+
 ### 調査した改善案を実装へつなぐ
 
 ```text

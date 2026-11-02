@@ -13,8 +13,8 @@ class StressContractTests(unittest.TestCase):
         with mock.patch.object(stress.subprocess, "run", return_value=result) as run:
             with contextlib.redirect_stdout(io.StringIO()):
                 summary = stress.run(2, command_timeout=0.5)
-        self.assertEqual(summary["cases"], 40)
-        self.assertEqual(run.call_count, 10)
+        self.assertEqual(summary["cases"], 56)
+        self.assertEqual(run.call_count, 14)
         self.assertTrue(all(call.kwargs["timeout"] == 0.5 for call in run.call_args_list))
 
     def test_timeout_reports_iteration_suite_and_partial_output(self):
@@ -54,6 +54,6 @@ class StressContractTests(unittest.TestCase):
     def test_case_count_drift_remains_an_error(self):
         first = subprocess.CompletedProcess([], 0, "Ran 4 tests", "")
         changed = subprocess.CompletedProcess([], 0, "Ran 5 tests", "")
-        with mock.patch.object(stress.subprocess, "run", side_effect=[first] * 5 + [changed] * 5):
+        with mock.patch.object(stress.subprocess, "run", side_effect=[first] * 7 + [changed] * 7):
             with contextlib.redirect_stdout(io.StringIO()), self.assertRaisesRegex(RuntimeError, "count drifted"):
                 stress.run(2)

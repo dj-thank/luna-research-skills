@@ -9,6 +9,7 @@ Checker contract `2026-10-13.1` separates planning from observed dispatch proven
 - **Attempt ID:** the root-reserved ledger assignment ID; include it in the spawn message. Root adds completed-turn and parent-call provenance after the result returns.
 - **Project outcome:** the overall result this workstream supports.
 - **Assignment kind:** builder, evidence lane, reviewer, verifier, or operator.
+- **Acceptance handoff:** reviewers may inspect a finished `completed/pending` v2 candidate. Builders and final verifiers consume accepted inputs. Keep candidate review and final integrated verification distinct, and count both attempts.
 - **Bounded objective:** one deliverable, decision, question, or verification boundary.
 - **Inputs:** exact files, artifacts, URLs, commands, or prior decisions to use.
 - **Ownership:** files or modules the agent may edit; write `read-only` when it must not edit. This is a behavioral boundary, not proof of an enforced read-only sandbox.

@@ -10,6 +10,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_AGENT_KEYS = ("name", "description", "developer_instructions")
+PACKAGED_SCRIPTS = (
+    "check_setup.py", "test_check_setup.py",
+    "check_dispatch_budget.py", "test_dispatch_budget.py",
+    "plan_swarm.py", "test_plan_swarm.py",
+)
 SKILL_FRONTMATTER = re.compile(r"\A---\s*\n(?P<body>.*?)\n---\s*\n", re.DOTALL)
 MARKDOWN_LINK = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 MAX_FILES = 5000
@@ -122,12 +127,8 @@ def validate_skills(root: Path = ROOT) -> list[dict[str, str]]:
         if yaml is not None:
             _validate_openai_yaml(yaml_path, yaml, root, errors)
             implicit[name] = _implicit_policy(yaml)
-        for required in (
-            path.parent / "scripts" / "check_setup.py",
-            path.parent / "scripts" / "test_check_setup.py",
-            path.parent / "scripts" / "check_dispatch_budget.py",
-            path.parent / "scripts" / "test_dispatch_budget.py",
-        ):
+        for filename in PACKAGED_SCRIPTS:
+            required = path.parent / "scripts" / filename
             if not required.is_file():
                 errors.append(_error("skill_contract_file", required, "missing required checker contract file", root))
     expected_implicit = {
@@ -275,7 +276,7 @@ def validate_repository(root: Path = ROOT) -> list[dict[str, str]]:
                             errors.append(_error("unpinned_action", path, f"GitHub Action ref is not a full commit SHA: {reference}", root))
     research_scripts = root / ".agents" / "skills" / "run-diverse-luna-research" / "scripts"
     project_scripts = root / ".agents" / "skills" / "run-diverse-luna-project" / "scripts"
-    for filename in ("check_setup.py", "test_check_setup.py", "check_dispatch_budget.py", "test_dispatch_budget.py"):
+    for filename in PACKAGED_SCRIPTS:
         research_file = research_scripts / filename
         project_file = project_scripts / filename
         if research_file.is_file() and project_file.is_file():
