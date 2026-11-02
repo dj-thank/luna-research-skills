@@ -71,3 +71,17 @@ remains action-specific. An approved host-side installation may be unreadable to
 sandbox account; diagnose the exact boundary and run the authorized validation in
 the matching surface. Do not reinstall globally, replace the validator with a mock,
 or claim success until the real validator passes.
+
+## Machine-readable diagnostics
+
+Add `--json` to `scripts/check_setup.py` when consuming its result from another tool. Default text output and exit codes are unchanged; `--help`, `--version`, and argument-syntax errors retain argparse output. JSON stdout contains one object with `schema_version: 1`, `checker_version`, `status` (`PASS` or `FAIL`), `errors`, `warnings`, and `checked`.
+
+`checked` has `static`, `schema`, `ledger`, `runtime`, `spawn_provenance`, and `ledger_receipts`. Each is `passed`, `failed`, `not_requested`, or `not_run` (requested, but an earlier prerequisite prevented it). A static-only PASS has `runtime: not_requested`; it is not a runtime receipt. A successful provenance check does not by itself mean the child's runtime check passed. Inspect the overall result and every stage required by your task.
+
+```text
+python scripts/check_setup.py --agent-role default --allow-generic-worker --json
+```
+
+Run from the installed Skill directory, or replace the script path with the selected package's absolute path. Add the existing runtime and provenance flags only when those receipts are available. The JSON diagnostics make no new routing or permission guarantee.
+
+The dispatch preflight already emits JSON. Its `schema_version: 1` errors preserve `status: BLOCK_NEW_DISPATCH` and `reason`, and add `reason_code`: `INVALID_CONFIG`, `INVALID_STATE`, `INVALID_ROLLOUT`, `TRACE_VALIDATION_FAILED`, `DISPATCH_LIMIT`, or `STATE_WRITE_FAILED`. A rejected malformed input leaves the state unchanged. Fix the indicated input or continue required work at the parent; do not reset the objective budget to bypass rejection.

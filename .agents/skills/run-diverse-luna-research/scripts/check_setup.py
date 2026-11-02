@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import importlib.util
+import io
 from datetime import datetime
 import json
 import math
@@ -28,7 +30,7 @@ DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
 EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
 SUPPORTED_SPECIALIST_MODELS = (DEFAULT_SPECIALIST_MODEL, "gpt-6.1-sol")
 EXPECTED_REASONING_EFFORT = "low"
-CHECKER_CONTRACT_VERSION = "2026-11-02.1"
+CHECKER_CONTRACT_VERSION = "2026-11-02.2"
 MIN_CONCURRENT_THREADS = 2
 MAX_CONCURRENT_THREADS = 6
 MAX_ATTEMPT_BUDGET = 12
@@ -84,6 +86,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate a skill-local GPT-6 Luna/low subagent route."
     )
+    parser.add_argument("--json", action="store_true", help="Emit one JSON result with explicit verification stages.")
     parser.add_argument(
         "--specialist-model",
         choices=SUPPORTED_SPECIALIST_MODELS,
@@ -3380,9 +3383,8 @@ def validate_ledger_receipts(
     return errors, warnings
 
 
-def main(argv: list[str] | None = None) -> int:
+def _run_checks(args: argparse.Namespace, checked: dict[str, str], diagnostics: dict[str, Any]) -> int:
     global EXPECTED_MODEL
-    args = parse_args(argv)
     EXPECTED_MODEL = args.specialist_model
     codex_home = args.codex_home.expanduser().resolve()
     workspace = args.workspace.expanduser().resolve()
@@ -3397,11 +3399,15 @@ def main(argv: list[str] | None = None) -> int:
             elif position > 0:
                 raise ValueError(f"config overlay was not found: {resolved}")
     except ValueError as exc:
+        checked["static"] = "failed"
+        diagnostics["errors"] = [str(exc)]
         print(f"ERROR: {exc}")
         return 2
 
     errors, warnings = validate_static_base(config)
-    if args.require_v2 and config.get("features", {}).get("multi_agent_v2") is not True:
+    diagnostics.update(errors=errors, warnings=warnings)
+    features = config.get("features")
+    if args.require_v2 and (not isinstance(features, dict) or features.get("multi_agent_v2") is not True):
         errors.append("saved configuration must explicitly enable features.multi_agent_v2 for this V2 run")
     definitions, role_warnings = load_role_definitions(
         workspace, codex_home, args.agent_role
@@ -3417,6 +3423,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     errors.extend(override_errors)
     warnings.extend(override_warnings)
+    checked["static"] = "failed" if errors else "passed"
 
     if args.spawn_schema_json:
         schema_errors, schema_warnings = validate_spawn_schema(
@@ -3424,6 +3431,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         errors.extend(schema_errors)
         warnings.extend(schema_warnings)
+        checked["schema"] = "failed" if schema_errors else "passed"
     if args.ledger_json:
         configured_cap = None
         configured_agents = config.get("agents")
@@ -3437,6 +3445,7 @@ def main(argv: list[str] | None = None) -> int:
         )
         errors.extend(ledger_errors)
         warnings.extend(ledger_warnings)
+        checked["ledger"] = "failed" if ledger_errors else "passed"
         if args.verify_ledger_receipts and not ledger_errors:
             receipt_errors, receipt_warnings = validate_ledger_receipts(
                 args.ledger_json.expanduser().resolve(), codex_home,
@@ -3446,9 +3455,12 @@ def main(argv: list[str] | None = None) -> int:
             )
             errors.extend(receipt_errors)
             warnings.extend(receipt_warnings)
+            checked["ledger_receipts"] = "failed" if receipt_errors else "passed"
     elif args.verify_ledger_receipts:
         errors.append("--verify-ledger-receipts requires --ledger-json")
+        checked["ledger_receipts"] = "failed"
 
+    runtime_error_start = len(errors)
     runtime_path: Path | None = None
     if args.runtime_rollout:
         runtime_path = args.runtime_rollout.expanduser().resolve()
@@ -3473,7 +3485,10 @@ def main(argv: list[str] | None = None) -> int:
         errors.append("--runtime-turn requires --runtime-thread or --runtime-rollout")
     if args.require_read_only and runtime_path is None:
         errors.append("--require-read-only requires a runtime rollout or thread")
+    if checked["runtime"] != "not_requested":
+        checked["runtime"] = "failed" if len(errors) > runtime_error_start else "passed"
 
+    provenance_error_start = len(errors)
     provenance_requested = args.require_spawn_provenance or args.parent_rollout is not None
     if provenance_requested and runtime_path is None:
         errors.append(
@@ -3504,6 +3519,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             errors.extend(provenance_errors)
             warnings.extend(provenance_warnings)
+    if provenance_requested:
+        checked["spawn_provenance"] = "failed" if len(errors) > provenance_error_start else "passed"
 
     for warning in sorted(set(warnings)):
         print(f"WARNING: {warning}")
@@ -3535,6 +3552,31 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print("VERIFIED: this completed child matched the selected model/effort metadata.")
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    requested = {
+        "static": True,
+        "schema": bool(args.spawn_schema_json),
+        "ledger": bool(args.ledger_json),
+        "runtime": bool(args.runtime_rollout or args.runtime_thread or args.runtime_turn or args.require_read_only),
+        "spawn_provenance": bool(args.require_spawn_provenance or args.parent_rollout),
+        "ledger_receipts": args.verify_ledger_receipts,
+    }
+    checked = {name: "not_run" if enabled else "not_requested" for name, enabled in requested.items()}
+    diagnostics: dict[str, Any] = {"errors": [], "warnings": []}
+    if not args.json:
+        return _run_checks(args, checked, diagnostics)
+    # Validators retain their existing text API; JSON mode owns stdout.
+    with contextlib.redirect_stdout(io.StringIO()):
+        code = _run_checks(args, checked, diagnostics)
+    print(json.dumps({
+        "schema_version": 1, "checker_version": CHECKER_CONTRACT_VERSION,
+        "status": "PASS" if code == 0 else "FAIL", "checked": checked,
+        "errors": diagnostics["errors"], "warnings": sorted(set(diagnostics["warnings"])),
+    }, ensure_ascii=False))
+    return code
 
 
 if __name__ == "__main__":

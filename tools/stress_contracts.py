@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 from pathlib import Path
 import re
@@ -29,9 +30,19 @@ def parse_unittest_count(output: str) -> int:
     return int(match.group(1))
 
 
-def run(iterations: int) -> dict[str, float | int]:
+def failure_detail(index, iterations, command, reason, stdout="", stderr="") -> str:
+    def decode(value):
+        return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else (value or "")
+    tail = (decode(stdout) + "\n" + decode(stderr)).strip()[-2000:]
+    return (f"iteration={index}/{iterations} command={subprocess.list2cmdline(command)}: "
+            f"{reason}" + (f"\nOutput tail:\n{tail}" if tail else ""))
+
+
+def run(iterations: int, command_timeout: float = 180.0) -> dict[str, float | int]:
     if iterations < 1 or iterations > 100:
         raise ValueError("iterations must be in the range 1..100")
+    if not math.isfinite(command_timeout) or command_timeout <= 0:
+        raise ValueError("command timeout must be a finite positive number of seconds")
     environment = os.environ.copy()
     environment["PYTHONUTF8"] = "1"
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -44,16 +55,23 @@ def run(iterations: int) -> dict[str, float | int]:
         ]
         observed_cases = 0
         for command in commands:
-            result = subprocess.run(
-                command,
-                cwd=ROOT,
-                env=environment,
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            observed_cases += parse_unittest_count(result.stdout + "\n" + result.stderr)
+            try:
+                result = subprocess.run(
+                    command, cwd=ROOT, env=environment, check=False,
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True, encoding="utf-8", errors="replace", timeout=command_timeout,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise RuntimeError(failure_detail(index, iterations, command,
+                    f"timed out after {command_timeout:g}s", exc.stdout, exc.stderr)) from exc
+            if result.returncode:
+                raise RuntimeError(failure_detail(index, iterations, command,
+                    f"exit code {result.returncode}", result.stdout, result.stderr))
+            try:
+                observed_cases += parse_unittest_count(result.stdout + "\n" + result.stderr)
+            except ValueError as exc:
+                raise RuntimeError(failure_detail(index, iterations, command,
+                    str(exc), result.stdout, result.stderr)) from exc
         if cases_per_iteration is None:
             cases_per_iteration = observed_cases
         elif observed_cases != cases_per_iteration:
@@ -73,11 +91,17 @@ def run(iterations: int) -> dict[str, float | int]:
     }
 
 
-def main() -> int:
+def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--iterations", type=int, default=25)
-    args = parser.parse_args()
-    summary = run(args.iterations)
+    parser.add_argument("--command-timeout", type=float, default=180.0,
+                        help="Maximum seconds for each suite (default: 180).")
+    args = parser.parse_args(argv)
+    try:
+        summary = run(args.iterations, args.command_timeout)
+    except (ValueError, RuntimeError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
     print(
         "PASS stress "
         f"iterations={summary['iterations']} cases={summary['cases']} "

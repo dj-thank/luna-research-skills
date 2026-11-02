@@ -76,8 +76,11 @@ For conclusion-grade claims, the root can use this compact working table (not a 
 | Claim | Support / counterevidence | Family and version/date | Root-opened locator/time | Verdict and decision impact |
 |---|---|---|---|---|
 | Feature is documented in a release | Official reference / older release lacks it | One vendor; exact release | Section and retrieval time | Documented; current task execution still unverified |
+| Illustrative: A is faster than B | A reports 10 ms on dataset X; B reports 15 ms on dataset Y and different hardware | Two original reports; record their versions | Reopen each methods section | Ranking unresolved: report each value with its conditions; a matched measurement is needed |
 
 Keep unsupported, inaccessible, stale, and scope-mismatched evidence distinguishable. This table is for reasoning about the answer; machine-readable runtime acceptance remains in the existing ledger.
+
+The timing row is fictional and applies only to numeric comparisons. Different source families do not make incompatible methods comparable. Select the relevant conditions for the question rather than imposing a benchmark checklist on every domain.
 
 ## 4. Scout self-check
 

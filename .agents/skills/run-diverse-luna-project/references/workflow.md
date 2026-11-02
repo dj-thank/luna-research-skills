@@ -34,7 +34,7 @@ Record:
 
 Resolve small ambiguities with visible assumptions. Ask only when a missing choice changes the product, safety boundary, or irreversible result.
 
-Use one objective-wide N=6 by default, never more than N=12, and C<=6 (also no greater than live/config capacity). W is total spawn/followup starts per wave: normally W=1-2, at most W=3 and W<=min(C,N). Every coordinator, leaf, failed start, probe, retry, verifier and followup_task call consumes the same N. Keep ordinary starts within N-V and V=max(1,ceil(.15*N)). Use flat leaves unless root explicitly leases coordinator credits. Do not allocate new budgets by splitting lanes, adding levels or resuming a goal. Run the trace preflight in [parent efficiency](parent-efficiency.md#dispatch-limits-and-trace-preflight) before each dispatch batch. When child dispatch is exhausted, the parent continues all required implementation, evidence checks and fixes.
+Keep the budget and reserve from the [operating hierarchy](#operating-hierarchy-normative); this contract does not create another allocation.
 
 Completion criterion: every deliverable has an observable acceptance check, every mutation is covered by user authority, and `N` is fixed.
 
