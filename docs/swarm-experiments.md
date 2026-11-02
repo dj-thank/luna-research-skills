@@ -49,6 +49,36 @@ deliveries and require exact agreement: fewer messages that lose required eviden
 are a failure. This is a simulation of routing rules, not a deployed message bus;
 its digest strings do not authenticate actual artifacts or establish sender trust.
 
+### Compare run and consumer-contract scope
+
+Run `python tools/benchmark_communication.py`. Its separate
+[14-case fixture](../tools/fixtures/communication_benchmark.json) fixes required
+deliveries before comparing the existing epoch/digest policy, a run-only filter,
+and a run plus consumer-contract filter. Each policy sees the same event stream.
+The last policy checks run identity, current sender epoch and each recipient's
+required contract before recording a duplicate. Its duplicate key also includes
+the recipient and contract: identical bytes can legitimately serve different
+contracts without one delivery hiding another.
+
+The fixture includes wrong-run and wrong-contract messages arriving before valid
+messages with the same digest, missing scope, old epochs in both arrival orders,
+fan-out, no consumers and distinct payloads. The policies match 7, 10 and 14 cases,
+respectively. Run-only filtering still makes four wrong deliveries and misses two
+required ones. The full scope check recovers seven baseline failures, with no lost
+baseline successes or extra/missing deliveries on these injected cases. Message
+counts are 16, 14 and 12; these are simulated deliveries, not measured token or
+latency savings. The CLI exits 1 for an answer/comparison mismatch and 2 for an
+invalid fixture; duplicate event IDs or incomplete consumer contracts are invalid.
+
+This experiment is motivated by Xue et al.,
+[AECP](https://arxiv.org/html/2610.06481v1), sections 3.2, D.4 and E, read on
+2026-11-02: interface revisions require affected consumers to revisit their
+contracts. Run identity is an additional assumption in this experiment. This
+snapshot comparison does not implement AECP's harness, static interface checks or
+consumer acknowledgements, and it does not inherit the paper's performance claims.
+Scope labels are trusted fixture inputs, not signatures or proof of actual bytes.
+No native transport, dispatch, acceptance, or installed skill policy changes.
+
 ## Research hypotheses, including counterevidence
 
 The following primary papers were opened on 2026-11-02. Version-pinned snapshots
