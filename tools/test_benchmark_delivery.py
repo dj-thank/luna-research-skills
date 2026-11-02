@@ -2,14 +2,42 @@
 import copy
 from contextlib import closing
 import json
+import multiprocessing
 from pathlib import Path
 import sqlite3
 import subprocess
 import sys
 import tempfile
+import time
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 import benchmark_delivery as D
+
+
+def receive_overlapping(database, envelope, payload, start, empty_read, results):
+    """Force the check-then-insert gap, but never block inside a transaction."""
+    connect = sqlite3.connect
+
+    class OverlapConnection(sqlite3.Connection):
+        def execute(self, sql, parameters=()):
+            cursor = super().execute(sql, parameters)
+            if sql.startswith('SELECT payload FROM inbox') and not self.in_transaction:
+                row = cursor.fetchone()
+                cursor.close()
+                if row is None:
+                    empty_read.wait(timeout=10)
+                return SimpleNamespace(fetchone=lambda: row)
+            return cursor
+
+    try:
+        start.wait(timeout=10)
+        with patch.object(D.sqlite3, 'connect', lambda db: connect(db, factory=OverlapConnection)):
+            ack = D.receive(database, envelope, payload, envelope, dedup=True)
+        results.put({'ack': ack, 'error': None})
+    except Exception as exc:
+        results.put({'ack': None, 'error': repr(exc)})
 
 
 class DeliveryTests(unittest.TestCase):
@@ -63,6 +91,71 @@ class DeliveryTests(unittest.TestCase):
                 self.assertEqual(D.receive(db, envelope, payload, envelope, dedup=True), envelope)
             with closing(sqlite3.connect(db)) as con:
                 self.assertEqual(con.execute('SELECT count(*) FROM effects').fetchone()[0], 2)
+
+    def test_two_processes_claim_receipts_without_duplicate_effects(self):
+        ctx = multiprocessing.get_context('spawn')
+        payload = self.doc['payload'].encode('utf-8')
+        for scenario in ('same_empty', 'same_seeded', 'distinct', 'one_corrupt'):
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temp:
+                db = Path(temp) / 'receiver.sqlite'
+                envelopes = [dict(self.doc['envelope']) for _ in range(2)]
+                bodies = [payload, payload]
+                if scenario == 'distinct':
+                    envelopes[1]['delivery_id'] += '-second'
+                if scenario == 'one_corrupt':
+                    bodies[1] += b'corrupt'
+                # Isolate receipt contention from first-time schema creation.
+                with closing(sqlite3.connect(db)) as con, con:
+                    con.execute('CREATE TABLE inbox (identity TEXT PRIMARY KEY, payload BLOB NOT NULL)')
+                    con.execute('CREATE TABLE effects (payload BLOB NOT NULL)')
+                    if scenario == 'same_seeded':
+                        con.execute('INSERT INTO inbox VALUES (?,?)', (json.dumps(envelopes[0], sort_keys=True), payload))
+                        con.execute('INSERT INTO effects VALUES (?)', (payload,))
+                start = ctx.Barrier(2)
+                gap = ctx.Barrier(1 if scenario == 'one_corrupt' else 2)
+                results = ctx.Queue()
+                processes = [ctx.Process(target=receive_overlapping,
+                    args=(db, envelopes[i], bodies[i], start, gap, results)) for i in range(2)]
+                try:
+                    deadline = time.monotonic() + 30
+                    for process in processes:
+                        process.start()
+                    for process in processes:
+                        process.join(timeout=max(0, deadline - time.monotonic()))
+                    self.assertTrue(all(not p.is_alive() for p in processes), 'receiver timeout')
+                    self.assertEqual([p.exitcode for p in processes], [0, 0])
+                    received = [results.get(timeout=2) for _ in processes]
+                    self.assertEqual([r['error'] for r in received], [None, None], received)
+                    acks = [r['ack'] for r in received if r['ack'] is not None]
+                    expected = envelopes[:1] if scenario == 'one_corrupt' else envelopes
+                    self.assertCountEqual(acks, expected)
+                finally:
+                    for process in processes:
+                        if process.pid is not None:
+                            if process.is_alive():
+                                process.terminate()
+                                process.join(5)
+                            process.close()
+                    results.close()
+                    results.join_thread()
+                count = 2 if scenario == 'distinct' else 1
+                with closing(sqlite3.connect(db)) as con:
+                    self.assertEqual(con.execute('SELECT payload FROM inbox').fetchall(), [(payload,)] * count)
+                    self.assertEqual(con.execute('SELECT payload FROM effects').fetchall(), [(payload,)] * count)
+                    identities = [json.loads(row[0]) for row in con.execute('SELECT identity FROM inbox')]
+                    self.assertCountEqual(identities, envelopes if scenario == 'distinct' else envelopes[:1])
+
+    def test_conflicting_stored_payload_is_not_acknowledged_or_replaced(self):
+        with tempfile.TemporaryDirectory() as temp:
+            db = Path(temp) / 'receiver.sqlite'
+            envelope, payload = self.doc['envelope'], self.doc['payload'].encode('utf-8')
+            self.assertEqual(D.receive(db, envelope, payload, envelope, dedup=True), envelope)
+            with closing(sqlite3.connect(db)) as con, con:
+                con.execute('UPDATE inbox SET payload=?', (b'conflicting bytes',))
+            self.assertIsNone(D.receive(db, envelope, payload, envelope, dedup=True))
+            with closing(sqlite3.connect(db)) as con:
+                self.assertEqual(con.execute('SELECT payload FROM inbox').fetchall(), [(b'conflicting bytes',)])
+                self.assertEqual(con.execute('SELECT payload FROM effects').fetchall(), [(payload,)])
 
     def test_case_names_do_not_control_filesystem_paths(self):
         case = dict(self.doc['cases'][0], id='../../outside')

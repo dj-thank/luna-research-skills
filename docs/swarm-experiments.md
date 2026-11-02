@@ -115,9 +115,30 @@ The identity/retry/uncertainty distinction follows Birrell and Nelson,
 sections 3.1–3.2 (1984), read on 2026-11-02. The bounded retry policy and SQLite
 model are this experiment's choices; the paper's performance is not transferred.
 Connections are closed/reopened, not processes killed or devices powered off.
-The effect is a local database row inside the receipt transaction. These tests do
-not establish concurrent-writer behavior, authenticated transport or exactly-once
-file writes, external tool calls, payments, or other out-of-transaction effects.
+The effect is a local database row inside the receipt transaction. The 18-case
+comparison runs serially; it does not establish authenticated transport or
+exactly-once file writes, external tool calls, payments, or other effects outside
+the transaction.
+
+Separate concurrency regressions run two local Python processes against one
+preinitialized SQLite database. The receiver claims an identity with
+`INSERT OR IGNORE` before looking up a duplicate, and writes an effect only when
+that claim inserts a new receipt. This uses SQLite's
+[serialized writes](https://www.sqlite.org/isolation.html) and
+[conflict handling](https://www.sqlite.org/lang_conflict.html); a duplicate must
+still match the stored payload before it receives an ACK.
+
+With both processes forced past an empty nontransactional lookup, the old
+check-then-insert implementation returns one ACK and one uniqueness error. The
+atomic claim returns two ACKs with one receipt and one effect. Seeded duplicates,
+distinct delivery IDs and one corrupted payload are controls. All four scenarios
+matched their fixed answers in three repetitions per implementation. Run the
+public regressions with `python -m unittest discover -s tools -p test_benchmark_delivery.py`.
+The test synchronizes process starts and any empty lookup outside a transaction;
+it does not suspend a reader holding a write transaction. This is a controlled
+interleaving, not a throughput measurement. Lock timeouts, process crashes,
+first-time schema contention and external effects remain outside this comparison;
+SQLite errors are not turned into successful acknowledgements.
 
 For a real handoff, preserve the delivery identity across bounded retries, bind
 the acknowledgement to the expected artifact/consumer, and reconcile an uncertain
