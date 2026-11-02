@@ -65,7 +65,9 @@ without opening the owned paths and do not install filesystem locks.
 
 For an evidence lane, also include `source_plane`, `access_mode`, and `safety_enforcement`. `prompt_only_public` is valid only for `public_web`. `connector_private` and `provider` remain `root_only` while external tool permissions cannot be mechanically proven. A root-only row closes without child runtime metadata as `not_dispatched/excluded`, with a terminal timestamp and explicit gap. Work may not start after its assignment or overall deadline, and a late completion may not be accepted.
 
-Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, `agent_role`, `runtime_model=gpt-6-luna`, `runtime_effort=low`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
+Every accepted child row also requires `thread_uuid`, exact `runtime_turn`, actual native `agent_role`, `runtime_model` matching the selected specialist profile (`gpt-6-luna` by default, or explicitly selected `gpt-6.1-sol`), `runtime_effort=low`, `safety_enforcement`, `runtime_verified=true`, `parent_thread_uuid`, `parent_call_id`, and `spawn_kind=spawn_agent`. Follow-up turns are not accepted production receipts.
+
+Logical `kind`/`role` (`builder`, `reviewer`, `verifier`) identifies the ledger duty; `agent_role` identifies the actual native role such as `worker` or `default`. Do not copy the logical duty into runtime metadata unless that is the observed native role. Use the same explicit `--specialist-model gpt-6.1-sol` selection on profile-aware planner/checker invocations when opting in; omission retains the public Luna default.
 
 The exact parent `spawn_agent` call output must contain the child thread UUID. A matching task name is diagnostic only and cannot bind provenance.
 
@@ -265,5 +267,7 @@ Run at planning, immediately before integration, and again at closure:
 ```text
 python <skill-dir>/scripts/check_setup.py --agent-role <selected-role> --ledger-json <project-ledger.json>
 ```
+
+Retain the selected specialist profile on every checker invocation. Before each live spawn, preserve the current planner snapshot and complete the trace-backed dispatch-budget preflight; neither a selected ID nor a fixture receipt establishes runtime provenance. Follow the [live selection and benchmark procedure](swarm-coordination.md).
 
 At integration and closure, add `--verify-ledger-receipts`. It reopens every accepted child turn and its unique parent `spawn_agent` request. Complete closure requires no unfinished row, at least the reserved number of accepted verifiers, completed root integration with a receipt, every accepted builder/operator marked integrated, and the target evidence gate present in the verified contiguous prefix.

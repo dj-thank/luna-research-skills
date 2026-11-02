@@ -235,6 +235,36 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(proc.stderr, "")
         return proc.returncode, json.loads(proc.stdout)
 
+    def test_explicit_sol_profile_and_repeat_call_isolation(self):
+        value = ledger()
+        value["assignments"][0]["runtime_model"] = "gpt-6.1-sol"
+        before = copy.deepcopy(value)
+        self.assertIn("errors", P.plan(value, 0, P.timestamp(NOW)))
+        result = P.plan(value, 0, P.timestamp(NOW), specialist_model="gpt-6.1-sol")
+        self.assertEqual(result["selected_attempt_ids"], ["B"])
+        self.assertIn("errors", P.plan(value, 0, P.timestamp(NOW)))
+        self.assertNotIn("errors", P.plan(ledger(), 0, P.timestamp(NOW)))
+        self.assertEqual(P.CHECK.EXPECTED_MODEL, "gpt-6-luna")
+        self.assertEqual(value, before)
+        self.assertEqual(self.cli(value)[0], 2)
+        self.assertEqual(self.cli(value, "--specialist-model", "gpt-6.1-sol")[0], 0)
+
+    def test_explicit_profile_rejects_mixed_mismatch_and_effort(self):
+        for model, effort in [("gpt-6-luna", "low"), ("gpt-6.1-sol", "high")]:
+            value = ledger()
+            value["assignments"][0].update(runtime_model=model, runtime_effort=effort)
+            self.assertIn("errors", P.plan(value, 0, P.timestamp(NOW), specialist_model="gpt-6.1-sol"))
+        value = ledger([row("A", status="completed", runtime_model="gpt-6.1-sol"),
+                        row("D", status="completed"), row("V", "verifier", wave=2)])
+        self.assertIn("errors", P.plan(value, 0, P.timestamp(NOW), specialist_model="gpt-6.1-sol"))
+        with self.assertRaises(ValueError):
+            P.plan(ledger(), 0, P.timestamp(NOW), specialist_model="unsupported")
+        code, output = self.cli(ledger(), "--specialist-model", "unsupported")
+        self.assertEqual(code, 2)
+        self.assertEqual(output["errors"][0]["code"], "INVALID_INPUT")
+        self.assertNotIn("selected_attempt_ids", output)
+        self.assertNotIn("errors", P.plan(ledger(), 0, P.timestamp(NOW)))
+
     def test_cli_determinism_and_unchanged_input(self):
         a = self.cli(ledger())
         b = self.cli(ledger())

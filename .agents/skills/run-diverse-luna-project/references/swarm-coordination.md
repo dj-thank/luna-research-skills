@@ -43,6 +43,37 @@ with an alert; a future finish cannot release a slot early.
 The planner does not rewrite wave assignments, wait, retry or repair invalid
 ledgers. Root records any approved plan change before executing its suggestion.
 
+## Execute one live selection
+
+Keep the planner JSON with the exact ledger/input revision and observed inventory
+used to produce it. Root chooses only a currently selected attempt, runs the
+objective's trace-backed dispatch-budget preflight, then makes the native
+`spawn_agent` call. A plan is advisory; it never authorizes a spawn by itself.
+Record the actual call ID, returned child thread ID, parent edge and exact
+completed runtime turn from runtime evidence. A task label, requested model or
+hand-written receipt cannot substitute for these observations.
+
+Use one explicit specialist profile throughout a run. Public default remains
+`gpt-6-luna`/`low`; the opt-in `--specialist-model gpt-6.1-sol` selects
+`gpt-6.1-sol`/`low` for profile-aware planner and checker invocations. Retain that
+selection when checking receipts; do not relabel a mismatching runtime turn.
+The dispatch-budget preflight still checks actual trace spend, independent of
+this profile selection. Logical ledger `kind`/`role` values such as `builder`,
+`reviewer` and `verifier` describe duties. `agent_role` records the actual native
+role (`worker`, `default`, or an explicitly supported custom role), never an
+invented mapping from those duties. Confirm the currently supported fresh-context
+spawn schema before dispatch.
+
+The live sequence is: planner snapshot -> native candidate selection -> trace
+preflight -> real spawn and runtime provenance -> `completed/pending` candidate
+-> accepted review -> root acceptance and integration -> final verifier of the
+frozen integrated revision. Root performs the actual ledger acceptance and
+integration writes. The final verifier has no authority to invent missing
+receipts, accept its own inputs or perform root integration. Root closes only
+after checking the verifier's exact criterion results and receipts. A writable
+runtime with prompt-only limits remains `prompt_only`, including for a logical
+read-only reviewer; the assignment does not create a filesystem sandbox.
+
 ## Pass candidates through review without a cycle
 
 In v2, `completed/pending` means the child finished and returned a candidate, but
@@ -154,3 +185,22 @@ ownership collisions, blocked-input time, stale results rejected and rework.
 Compare only matched tasks and evidence gates. More messages, more agents or a
 passing synthetic ledger do not demonstrate faster delivery, lower cost or better
 answers. Keep runtime observations separate from tests of this protocol.
+
+## Define the benchmark before observing results
+
+Before each benchmark run, freeze its input ledger, clock and observed open-child
+count, then record the expected selected IDs and blocked IDs with reason codes.
+Compare the planner output against that declared answer; report unexpected
+selection, missing blocks and unexpected blocks separately. Include cases for a
+completed/pending candidate becoming reviewable, dependent builder acceptance
+waits, final-verifier integration waits, and a receipt whose runtime model
+mismatches the explicitly selected profile. A profile mismatch must fail receipt
+acceptance, even when structural planning succeeds.
+
+Hand-labelled known-answer fixtures test the intended contract. They are not live
+observations and must not be described as measured runtime success. For a live
+run, retain the actual planner snapshots, trace preflights, native call/turn
+provenance, candidate revisions, review decisions, root integration receipt and
+final criterion results separately. Report the observed selected/blocked set at
+each transition against the predeclared expectation. Missing runtime evidence
+remains unverified even if every fixture passes.
