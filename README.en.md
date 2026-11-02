@@ -411,6 +411,8 @@ For a narrow decision over large evidence, use the [on-demand handoff](docs/on-d
 
 For evidence organized by subject and requirement, try [requirement-driven selection](docs/requirement-selection.md). Root reviews the question's answer requirements and guards; the reader returns every matching observation with its qualifiers. Missing, unknown or conflicting evidence is insufficient, and successful records for another subject cannot fill a gap. Root still checks the meaning and completeness of the requirement set.
 
+Optionally declare [relationships between requirements](docs/requirement-selection.md#optional-relationships-between-requirements) to check matching revisions/artifacts and coverage of required targets. These checks add context bytes, so include the relationships needed for the decision.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution
