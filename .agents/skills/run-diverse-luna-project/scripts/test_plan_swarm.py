@@ -149,6 +149,19 @@ class PlannerTests(unittest.TestCase):
         result = self.run_plan(ledger(rows, attempt_budget_N=4))
         self.assertIn("VERIFIER_RESERVE_PROTECTED", self.codes(result, "B"))
 
+    def test_candidate_reviewer_does_not_spend_final_verifier_reserve(self):
+        rows = [row("R", "reviewer", "completed", ownership=["read-only"]),
+                row("F", "verifier", "failed"), row("A", wave=2), row("B", wave=2)]
+        result = self.run_plan(ledger(rows, attempt_budget_N=4))
+        self.assertEqual(result["capacity"]["verifier_reserve_remaining"], 1)
+        self.assertEqual(result["selected_attempt_ids"], ["A"])
+        self.assertIn("VERIFIER_RESERVE_PROTECTED", self.codes(result, "B"))
+
+    def test_hierarchical_mode_with_only_root_leaves_is_still_unsupported(self):
+        result = P.plan(ledger(mode="hierarchical"), 0, P.timestamp(NOW))
+        self.assertIn("errors", result)
+        self.assertNotIn("selected_attempt_ids", result)
+
     def test_integration_before_final_verifier_and_future_verifier_not_required(self):
         rows = [row("A", status="completed"), row("V", "verifier", wave=2),
                 row("V2", "verifier", wave=2)]

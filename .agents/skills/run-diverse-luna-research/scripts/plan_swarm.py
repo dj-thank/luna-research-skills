@@ -17,7 +17,8 @@ sys.dont_write_bytecode = True
 VERSION = "1.0"
 TERMINAL = {"completed", "failed", "timed_out", "abandoned", "not_dispatched"}
 WRITERS = {"builder", "operator"}
-RESERVE = {"verifier", "reviewer"}
+# Candidate reviewers do not satisfy Project's final-verifier closure reserve.
+RESERVE = {"verifier"}
 _spec = importlib.util.spec_from_file_location("swarm_setup", Path(__file__).with_name("check_setup.py"))
 assert _spec and _spec.loader
 CHECK = importlib.util.module_from_spec(_spec)
@@ -38,6 +39,9 @@ def validate(ledger):
         return ["ledger must be an object"], []
     if ledger.get("ledger_type") != "project" or type(ledger.get("version")) is not int or ledger["version"] != 2:
         return ["only project version 2 is supported"], []
+    settings = ledger.get("tree", ledger)
+    if not isinstance(settings, dict) or settings.get("mode", "flat") != "flat":
+        return ["only flat project mode is supported"], []
     rows, errors = CHECK._resolve_assignment_rows(ledger)
     if errors:
         return errors, []
