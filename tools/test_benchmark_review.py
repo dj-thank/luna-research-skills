@@ -69,13 +69,15 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual((budget.calls, budget.hits), (1, 0))
 
     def test_wrong_expectation_or_label_fails_without_rewriting_oracle(self):
-        for key in ('expected', 'label'):
+        for key in ('expected', 'label', 'calls'):
             with self.subTest(key=key):
                 doc = copy.deepcopy(self.doc)
                 if key == 'expected':
                     doc['cases'][0]['expected']['unique_critique'] = None
-                else:
+                elif key == 'label':
                     doc['valid_labels']['good'] = False
+                else:
+                    doc['cases'][0]['expected_calls']['unique_critique'] = 1
                 frozen = copy.deepcopy(doc)
                 report = R.run_benchmark(doc)
                 self.assertLess(report['passed'], report['total'])
