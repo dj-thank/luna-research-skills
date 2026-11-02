@@ -1,0 +1,14 @@
+{
+  "expected_head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "required_checks": [
+    {
+      "app_id": 42,
+      "name": "unit tests"
+    },
+    {
+      "app_id": 42,
+      "name": "lint"
+    }
+  ],
+  "schema_version": 1
+}

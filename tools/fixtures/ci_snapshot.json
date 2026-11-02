@@ -1,0 +1,25 @@
+{
+  "check_runs": [
+    {
+      "app": {
+        "id": 42
+      },
+      "conclusion": "success",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "id": 1,
+      "name": "unit tests",
+      "status": "completed"
+    },
+    {
+      "app": {
+        "id": 42
+      },
+      "conclusion": "success",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "id": 2,
+      "name": "lint",
+      "status": "completed"
+    }
+  ],
+  "total_count": 2
+}
