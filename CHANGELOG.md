@@ -6,6 +6,7 @@
 
 ### Fixed
 
+- Keep checker help, version and validation commands free of sibling bytecode-cache writes under default Python settings, without changing an importing process's bytecode policy. Test the packaged scripts with CI cache-suppression variables ignored.
 - Repair plugin documentation links to relocated skill files and include referenced benchmark answer fixtures. Check nested links, preserve source documents and leave code examples/external URLs unchanged.
 - Reject repeated blocked-attempt identities in benchmark scoring, retaining all reported reasons so a later entry cannot hide a contradiction.
 - Allow finished Project v2 candidates to wait for review as `completed/pending` while rejecting pending acceptance at complete closure and preserving the integrated-result gate; Research and v1 rules are unchanged.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -2750,6 +2751,68 @@ class V2ActivationTests(unittest.TestCase):
                 p=Path(d)/"child.jsonl"; write_jsonl(p,[value])
                 errors,_=CHECK.validate_runtime_rollout(p,"default",require_initial_turn=True)
                 self.assertTrue(any("expected object" in e for e in errors))
+
+
+class ReadOnlyCommandTests(unittest.TestCase):
+    def package(self, root):
+        scripts = root / "package/scripts"
+        scripts.mkdir(parents=True)
+        for name in ("check_setup.py", "check_dispatch_budget.py"):
+            (scripts / name).write_bytes(SCRIPT_PATH.with_name(name).read_bytes())
+        return scripts / "check_setup.py"
+
+    def snapshot(self, root):
+        return {p.relative_to(root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None
+                for p in root.rglob("*")}
+
+    def test_cli_preserves_package_with_default_bytecode_behavior(self):
+        for mode in ("--help", "--version", "--json"):
+            with self.subTest(mode=mode), tempfile.TemporaryDirectory() as d:
+                root = Path(d)
+                script = self.package(root)
+                home = root / "codex"
+                home.mkdir()
+                (home / "config.toml").write_text(
+                    '[agents]\nenabled=true\nmax_concurrent_threads_per_session=6\n',
+                    encoding="utf-8")
+                before = self.snapshot(root)
+                args = [mode]
+                if mode == "--json":
+                    args += ["--codex-home", str(home), "--workspace", str(root),
+                             "--agent-role", "default", "--allow-generic-worker"]
+                # Ignore CI's PYTHONDONTWRITEBYTECODE and any cache prefix so
+                # the regression exercises an ordinary user's interpreter.
+                result = subprocess.run([sys.executable, "-E", "-X", "utf8", str(script), *args],
+                                        cwd=root, capture_output=True, text=True,
+                                        encoding="utf-8", timeout=30)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertEqual(result.stderr, "")
+                if mode == "--json":
+                    self.assertEqual(json.loads(result.stdout)["status"], "PASS")
+                elif mode == "--version":
+                    self.assertEqual(result.stdout.strip(),
+                                     "check_setup.py " + CHECK.CHECKER_CONTRACT_VERSION)
+                else:
+                    self.assertIn("--ledger-json", result.stdout)
+                self.assertEqual(self.snapshot(root), before)
+
+    def test_loading_preserves_caller_bytecode_policy(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            script = self.package(root)
+            before = self.snapshot(root)
+            probe = (
+                'import runpy, sys; '
+                'assert not sys.dont_write_bytecode; '
+                'runpy.run_path(sys.argv[1], run_name="checker_consumer"); '
+                'assert not sys.dont_write_bytecode'
+            )
+            result = subprocess.run([sys.executable, "-E", "-X", "utf8", "-c", probe, str(script)],
+                                    cwd=root, capture_output=True, text=True,
+                                    encoding="utf-8", timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stdout + result.stderr, "")
+            self.assertEqual(self.snapshot(root), before)
 
 
 class JsonDiagnosticsTests(unittest.TestCase):

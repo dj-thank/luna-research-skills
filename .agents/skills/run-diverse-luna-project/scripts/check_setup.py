@@ -18,14 +18,14 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
-# Load by file location so standalone packages and importlib-based consumers
-# share the same dispatch recognition without modifying the process sys.path.
-_DISPATCH_SPEC = importlib.util.spec_from_file_location(
-    'luna_dispatch_budget', Path(__file__).with_name('check_dispatch_budget.py')
-)
+# Load the sibling source directly: diagnostic commands must not create a
+# bytecode cache, even with default Python settings. Keep the caller's sys.path
+# and process-wide bytecode policy unchanged for importlib-based consumers.
+_DISPATCH_PATH = Path(__file__).with_name('check_dispatch_budget.py')
+_DISPATCH_SPEC = importlib.util.spec_from_file_location('luna_dispatch_budget', _DISPATCH_PATH)
 assert _DISPATCH_SPEC is not None and _DISPATCH_SPEC.loader is not None
 _DISPATCH = importlib.util.module_from_spec(_DISPATCH_SPEC)
-_DISPATCH_SPEC.loader.exec_module(_DISPATCH)
+exec(compile(_DISPATCH_PATH.read_bytes(), str(_DISPATCH_PATH), 'exec'), _DISPATCH.__dict__)
 
 DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
 EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
