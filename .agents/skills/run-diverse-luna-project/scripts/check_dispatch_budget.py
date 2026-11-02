@@ -129,6 +129,54 @@ def _visible_wrapper_code(source: str) -> str:
     return visible
 
 
+def _reject_destructuring(visible: str) -> None:
+    """Reject binding patterns, whose literal property names are masked.
+
+    Match delimiters before inspecting assignment/iteration targets and formal
+    parameters. This rejects the syntax class, not a list of dangerous keys;
+    ordinary object arguments and numeric/literal data accesses remain usable.
+    """
+    stack = []
+    pairs = {}
+    for index, character in enumerate(visible):
+        if character in '([{':
+            stack.append((character, index))
+        elif character in ')]}':
+            if not stack or stack[-1][0] != {')': '(', ']': '[', '}': '{'}[character]:
+                raise ValueError('cannot count dispatch in an unbalanced wrapper')
+            _, start = stack.pop()
+            pairs[start] = index
+    if stack:
+        raise ValueError('cannot count dispatch in an unbalanced wrapper')
+    binding_suffix = re.compile(r'\s*(?:=(?!=|>)|(?:in|of)\b)')
+    parameter_suffix = re.compile(r'\s*(?:\{|=>)')
+    for start, stop in pairs.items():
+        if visible[start] in '[{':
+            if binding_suffix.match(visible, stop + 1):
+                raise ValueError('cannot count dispatch through destructuring')
+        elif parameter_suffix.match(visible, stop + 1):
+            # A function/method/catch/arrow parameter list can extract a hidden
+            # executable property too. Inspect only parameter starts, skipping
+            # complete nested expressions so object-valued defaults stay valid.
+            index = start + 1
+            parameter_start = True
+            while index < stop:
+                character = visible[index]
+                if character.isspace():
+                    index += 1
+                    continue
+                if parameter_start and visible.startswith('...', index):
+                    index += 3
+                    continue
+                if parameter_start and character in '[{':
+                    raise ValueError('cannot count dispatch through destructuring')
+                if character == ',':
+                    parameter_start = True
+                else:
+                    parameter_start = False
+                index = pairs.get(index, index) + 1
+
+
 def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
     """Return dispatch names and opening-parenthesis ends for literal calls.
 
@@ -136,9 +184,10 @@ def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
     them rather than allowing a zero count to authorize further delegation.
     """
     visible = _visible_wrapper_code(source)
+    _reject_destructuring(visible)
     # Dynamic code can invoke a native tool without a visible literal call site.
     # Reject it even when the eventual dispatch count would otherwise be zero.
-    if re.search(r'\b(?:' + '|'.join(sorted(DYNAMIC_CODE_NAMES)) + r')\b|\\', visible):
+    if re.search(r'\b(?:' + '|'.join(sorted(DYNAMIC_CODE_NAMES)) + r'|import)\b|\\', visible):
         raise ValueError('cannot count dispatch through dynamic code execution')
     calls = []
     spans = []

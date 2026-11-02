@@ -156,6 +156,7 @@ class DispatchBudgetTests(unittest.TestCase):
 
     def test_dynamic_code_rejected_even_without_literal_dispatch(self):
         for source in (
+            'await import("data:text/javascript,tools.spawn_agent({})");',
             'await eval("tools.multi_agent_v1__spawn_agent({})");',
             'await eval("tools.multi_agent_v1__followup_task({})");',
             'await globalThis["eval"]("tools.multi_agent_v1__spawn_agent({})");',
@@ -169,6 +170,60 @@ class DispatchBudgetTests(unittest.TestCase):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
                 self.wrapped_counts(source)
         self.assertEqual(self.wrapped_counts('text(result.content[0]); text(result["content"]);')['total'], 0)
+
+    def test_destructuring_extraction_fails_closed_as_a_syntax_class(self):
+        patterns = (
+            'const {"constructor": F} = Object;',
+            'const {["constructor"]: F} = Object;',
+            'const {["con" + "structor"]: F} = Object;',
+            'const {[`constructor`]: F} = Object;',
+            'const { /* key */ "constructor": F} /* binding */ = Object;',
+            r'const {"constr\u0075ctor": F} = Object;',
+            'let F; ({"constructor": F} = Object);',
+            'let unused, {"constructor": F} = Object;',
+            'const {nested: {"constructor": F}} = {nested: Object};',
+            'const {"constructor": F = Object} = Object;',
+            'const {...rest} = Object;',
+            'const [F] = [Object];',
+            'let F; [F] = [Object];',
+            'for (const {"constructor": F} of [Object]) {}',
+            'for ({"constructor": F} in {}) {}',
+            'function run({"constructor": F}) {}',
+            'const run = ({"constructor": F}) => F;',
+            'const run = async ([F]) => F;',
+            'const o = {run(a, {"constructor": F}) {}};',
+            'const o = {"run"({["constructor"]: F}) {}};',
+            'try {throw Object;} catch ({"constructor": F}) {}',
+        )
+        for pattern in patterns:
+            source = pattern + ' F("return tools.spawn_agent({})")();'
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+        # The same family must not authorize a hidden followup or zero-dispatch
+        # extraction merely because no literal dispatch name survived lexing.
+        for source in ('const {"constructor": F} = Object; F("return tools.followup_task({})")();',
+                       'const {"content": value} = result;'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_unbalanced_receipt_delimiters_fail_closed(self):
+        for source in ('const {"constructor": F = Object;',
+                       'text([1, 2);', 'await tools.spawn_agent({}); }'):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_literal_objects_and_arrays_are_not_binding_patterns(self):
+        for source, count in (
+            ('const data = {"content": result}; text(data["content"]);', 0),
+            ('const data = [result]; text(data[0]);', 0),
+            ('text({"example": "const {constructor: F} = Object"});', 0),
+            ('function harmless(value = {"content": 1}, array = [1]) {}', 0),
+            ('await tools.spawn_agent({"message": "example", items: [1, 2]});', 1),
+            ('const a = await tools.spawn_agent({message: "a"}); '
+             'await tools.followup_task({target: a.id, message: "b"});', 2),
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(self.wrapped_counts(source)['total'], count)
 
     def test_method_and_getter_calls_cannot_reuse_one_dispatch_site(self):
         for source in (

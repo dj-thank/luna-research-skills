@@ -57,7 +57,7 @@ dispatch evidence. Computed tool access, aliases, and ambiguous slash contexts
 also fail closed. Spawn provenance reads literal top-level argument properties,
 rejecting spreads, duplicate keys and computed routing fields; comments or
 nested message examples cannot establish model or history-isolation settings.
-Dynamic evaluation (`eval`, function constructors, reflective/global access)
+Dynamic evaluation (`eval`, dynamic `import`, function constructors, reflective/global access)
 is rejected even without a visible dispatch call. Computed member access is
 limited to numeric indexes and simple non-executable literal keys; use direct
 native calls when a wrapper falls outside this supported receipt syntax.
@@ -67,6 +67,12 @@ does not infer arbitrary JavaScript execution from a wrapper's source text.
 Function, method, getter and class bodies containing dispatch are unsupported:
 one call site can execute repeatedly. Object reflection helpers that recover
 executable functions are rejected even without a literal dispatch call site.
+Object/array destructuring declarations, assignments, iteration targets and
+formal parameters are unsupported even for benign keys: masked literal keys
+can otherwise extract executable functions without a visible call site.
+Malformed delimiter nesting also blocks new dispatch. Ordinary literal object
+arguments, array values and object-valued parameter defaults remain supported.
+This is a conservative receipt subset, not a JavaScript sandbox or evaluator.
 
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger
