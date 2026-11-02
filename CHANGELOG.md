@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Repair plugin documentation links to relocated skill files and include referenced benchmark answer fixtures. Check nested links, preserve source documents and leave code examples/external URLs unchanged.
+- Reject repeated blocked-attempt identities in benchmark scoring, retaining all reported reasons so a later entry cannot hide a contradiction.
 - Allow finished Project v2 candidates to wait for review as `completed/pending` while rejecting pending acceptance at complete closure and preserving the integrated-result gate; Research and v1 rules are unchanged.
 - Reject conflicting active writer ownership, retries started before their predecessor ends, and integration of unaccepted results in project ledgers. Normalize lexical path aliases and allow recorded sequential handoffs.
 - Validate supplied v2 recovery fields, increasing retry epochs and stable logical-work keys; reject stale accepted ancestors after a newer retry starts while preserving legacy records without recovery fields.
@@ -26,6 +28,8 @@
 
 ### Changed
 
+- Align Japanese and English main-branch READMEs around a quick start, OS-specific Python commands, Planner 1.2 and all three reproducible comparisons. Separate CI, synthetic evaluation and dated native evidence; replace stale pricing figures with current official references.
+- Complete the contributor gate with the scoped-communication benchmark and separate portable Python checks from Windows migration checks.
 - GPT-6 Luna の多角的な並行調査を README の中心に据え、公式 Standard クレジット単価の比較と利用枠との違いを追加。
 - checker に `--specialist-model` を追加し、モデルの実行記録と親の起動記録を同じ明示プロファイルで検査する。
 
@@ -35,6 +39,9 @@
 
 ### Added
 
+- Planner 1.2 adds read-only accepted-retry hints for blocked dependencies, including required ledger reordering. Root must reopen artifacts and explicitly rebind inputs; existing dispatch restrictions remain in force.
+- Add known-answer swarm planning, bounded review and scoped-communication benchmarks. Preserve unsuccessful alternatives, exact expectations and limits instead of claiming model, cost or latency improvements from simulations.
+- Clarify artifact handoffs: bind the root-selected run, producer, epoch, contract and revision/digest to reopened bytes, and retain separate acceptance and runtime evidence.
 - Add a read-only advisory planner for flat Project v2 ledgers: propose a bounded nonconflicting next batch, expose dependency/ownership/time/reserve/integration blockers, and keep actual dispatch and writer release under root control. Both standalone packages, OS CI, Cloud smoke and stress tests cover it.
 - Add a practical swarm coordination procedure for rolling ready-work dispatch, revision-pinned handoffs, shared-resource release and late-result handling, with Japanese and English README entry points.
 - Add optional `check_setup.py --json` results with separate static, schema, ledger, runtime, provenance, and receipt-validation stages; text output remains the default.

@@ -5,19 +5,41 @@
 [![Validate Luna skills](https://github.com/dj-thank/luna-research-skills/actions/workflows/validate.yml/badge.svg)](https://github.com/dj-thank/luna-research-skills/actions/workflows/validate.yml)
 [![Latest release](https://img.shields.io/github/v/release/dj-thank/luna-research-skills)](https://github.com/dj-thank/luna-research-skills/releases)
 
-Codexで観点ごとにエージェントを分けて調査する「Luna Research & Project Skills」です。
+**Codexで調査・実装を分担し、根拠と検証結果を確かめて一つの成果へ統合するスキル集です。**
 
-何かを調べるとき、特に自分が知らない分野では、何を調べればよいか自体が分からないことがあります。そこで、技術の背景、実装例、問題点などの観点で担当を分け、必要に応じて各担当がさらにサブエージェントを呼び、深く調査・検証できるようにしました。
+Researchは一次資料・代替案・反証を調べ、Projectは担当範囲を分けて実装・統合・検証を進めます。依頼を受けた親のCodexが、完成条件、分業予算、成果の受入を管理します。小さな作業は親が直接進めます。
 
-**GPT-6 Lunaを並列に。調査の視野を広げ、出典付きの結論へ。**
-
-最初に分野の全体像を調べ、調査に必要な観点を見つけます。担当が集めた根拠は、各観点の担当を通じて親の Codex に戻り、親が原典を確かめて結論へまとめます。
-
-標準の担当モデルは **GPT-6 Luna / low** です。公式資料・代替案・反証・未確認の点を別々の担当が調べ、親の Codex が原典を確かめて統合します。親にはユーザーが選んだモデルを使います。Sol の担当は、明示して選んだ場合に利用できます。
+公開スキルの標準担当は **GPT-6 Luna / low**、明示選択では **GPT-6.1 Sol / low** を使えます。親はユーザーが選んだモデルを維持します。スキルは手順と検証ツールを提供し、独立した常駐サービスとして動くものではありません。
 
 この README は **main ブランチの仕様**を説明します。Release の ZIP は、それぞれの公開時点を固定した版です。最新の仕様を試す場合は、下の手順で main を取得してください。[変更履歴](CHANGELOG.md)
 
 実際の例を見るなら、[量子センサーの調査結果](docs/quantum-sensors-research-2026-10-14.md)と[6体のLunaによる分担・再委任・検証](docs/luna-research-e2e-2026-10-14.md)を読めます。実際の流れは下の調査例にも図で掲載しています。
+
+## すぐに使う
+
+GitとPython 3.11以上、および利用する担当モデルとサブエージェントを使えるCodex環境を用意します。
+
+```sh
+git clone https://github.com/dj-thank/luna-research-skills.git
+cd luna-research-skills
+```
+
+このフォルダーをCodexで開き、`$run-diverse-luna-research` または `$run-diverse-luna-project` と、目的・完成条件を伝えます。リポジトリ内で試すだけなら、ユーザースコープへのコピーは不要です。
+
+| OS | Pythonの確認 | 準備チェック |
+|---|---|---|
+| Windows（PowerShell） | `py -3 --version` | `py -3 .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-role default --allow-generic-worker` |
+| macOS / Linux | `python3 --version` | `python3 .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-role default --allow-generic-worker` |
+
+以下の例の `python` は、その環境のPython 3.11以上を指すコマンドへ置き換えます。準備チェックが通らない場合は[ステップ3](#ステップ3準備状態を確認する)へ進みます。`READY` は準備状態であり、子が実際に動いた証明ではありません。
+
+| 目的 | 入口 |
+|---|---|
+| 最初の依頼を書く | [調査・実装の依頼例](#ステップ4最初の依頼を送る) |
+| 他のプロジェクトへ導入・更新する | [OS共通の導入とWindows移行](docs/INSTALLATION.md) |
+| 担当選択・依存待ち・再試行を確認する | [スウォームの運用とPlanner 1.2](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md) |
+| エージェントを起動せず評価ツールを試す | [3つの比較を再現する](#比較を自分で再現する) |
+| 変更に参加する | [開発・検証手順](CONTRIBUTING.md) |
 
 ## まず、この3つだけ
 
@@ -45,7 +67,7 @@ flowchart TD
 
 ## なぜ Luna で並行調査するのか
 
-一つの担当に全部を調べさせる代わりに、**異なる観点を同時に進められる**ことが中心の価値です。低単価の Luna に範囲を絞った調査を分担し、親には結論と出典だけを戻します。親は重複した情報を整理し、反証も含めて判断します。
+中心の価値は、**異なる観点を同時に進められる**ことです。担当に範囲を絞った調査を分担し、親には結論と出典を戻します。親は重複した情報を整理し、反証も含めて判断します。
 
 ```mermaid
 flowchart TD
@@ -65,19 +87,9 @@ flowchart TD
 
 図は分け方の例です。観点は分野に合わせて選びます。再委任が必要な担当には、同じ全体予算の中から子の枠と深さを割り当てます。再委任ツールを使えない担当の残作業は、親が引き取ります。担当数は目的と実行環境に合わせ、起動を最大3件ずつに分けます。同じ記事を複数の担当が見ても、独立した裏付けが増えたとは数えません。
 
-### 利用量の余裕を説明できる根拠
+### 利用量と費用を確認する
 
-2026年10月14日に確認した公式の **追加クレジット・Standard速度の単価**は次のとおりです。単位は100万トークン当たりのクレジットです。
-
-| モデル | 入力 | キャッシュ入力 | 出力 |
-|---|---:|---:|---:|
-| GPT-6 Luna | 2.5 | 0.25 | 12.5 |
-| GPT-6.1 Sol | 50 | 2.5 | 250 |
-| GPT-6 Astra | 250 | 25 | 1,250 |
-
-同じ非キャッシュ入力・出力トークン量なら、Luna の単価は Sol の **20分の1**、Astra の **100分の1**です。この差が、観点を増やす設計を選ぶ理由になります。[公式料金表](https://learn.chatgpt.com/docs/pricing#token-rates)
-
-プランに含まれる利用枠は別の条件で計算され、トークン量・推論強度・速度設定・ツール利用でも変わります。トークン消費はあり、並列化しただけで利用量がゼロにはなりません。実際の総消費には親の統合も含めて確認します。Plus / Standard Business の Luna の目安は5時間で350〜3,000ローカルメッセージですが、固定の保証値ではありません。[公式の利用枠](https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan)
+利用量は、担当だけでなく親の調査・統合、再試行、検証も含めて比較します。このリポジトリの合成ベンチマークから、実際の速度・費用・利用枠の削減率は判断できません。現在の条件は[公式料金表](https://learn.chatgpt.com/docs/pricing#token-rates)と[プランの利用枠](https://learn.chatgpt.com/docs/pricing#what-are-the-usage-limits-for-my-plan)で確認してください。
 
 ### Sol を明示して使う場合
 
@@ -99,7 +111,7 @@ Research の担当は証拠を返します。調査と実装を組み合わせ�
 必要なものは次のとおりです。
 
 1. ローカルスキルとサブエージェントを利用できる Codex 環境
-2. GPT-6 Luna を使えるアカウント・ワークスペース
+2. GPT-6 Luna、または明示選択するGPT-6.1 Solを使えるアカウント・ワークスペース
 3. **Python 3.11 以上**（設定・実行記録のチェッカーに使用）
 4. Git（リポジトリを取得する場合）
 5. Web 調査では、検索・ページ取得ツールとその利用権限
@@ -290,6 +302,8 @@ API担当と説明書担当を並行して動かし、APIの成果を親が受�
 
 付属の `plan_swarm.py` は、flatなProject v2台帳から次の実行候補と待ち理由をJSONで返します。レビュー待ち・依存待ち・担当衝突・枠不足・統合待ちを確認でき、台帳の変更やエージェントの起動は行いません。[使い方](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md#inspect-the-next-batch)
 
+Planner 1.2は、古い失敗した試行への依存が残るとき、受理済み再試行を `dependency_replacement_hints` に示します。親が成果物と入力条件を確認して依存先を更新します。候補が見つかっても期限・容量・権限などの制約は残り、自動で別の成果へ切り替えません。
+
 実際の担当選択と検証結果を台帳へ戻しながら改善できます。`python tools/benchmark_swarm.py` で事前に定義した正解と比較し、通信方式の実験と実エージェントでの修復確認は[スウォームの評価・改善手順](docs/swarm-experiments.md)に沿って記録します。Solを明示選択した実行では、プランナーにも `--specialist-model gpt-6.1-sol` を指定します。
 
 ### 調査した改善案を実装へつなぐ
@@ -352,6 +366,34 @@ python .agents/skills/run-diverse-luna-research/scripts/check_setup.py --agent-r
 
 ## どこまで確認したか
 
+| 確認の種類 | 現在の範囲 | そこからは言えないこと |
+|---|---|---|
+| OS別CI | Windows・macOS・Linux、Python 3.11–3.13。WindowsはPowerShell 5.1/7の移行試験も実行 | 任意の利用者環境や最新モデルでの実行成功 |
+| 導入・配布 | 既存コピーの保護、隔離先での導入・照合、再現可能なZIP生成 | 利用者の導入済みコピーが自動更新されたこと |
+| 台帳・プランナー | 依存、担当衝突、予算、期限、再試行、受入記録を検査 | 実プロセスの停止やファイルロックの強制 |
+| 既知の正解による比較 | 下記3つの評価ツール。各結果と失敗した比較候補を保持 | LLMの推論性能、実タスクの高速化・費用削減 |
+| 実エージェントの記録 | 日付・モデル・根拠を指定した公開例 | 別の環境やモデルへの無条件の一般化 |
+
+### 比較を自分で再現する
+
+リポジトリまたはsource ZIPのルートで実行します。plugin ZIPには評価用の正解データを含みますが、評価スクリプトは含みません。これらは合成入力のローカル評価で、子エージェントの起動や外部サービスの操作は行いません。
+
+```sh
+python tools/benchmark_swarm.py
+python tools/benchmark_review.py
+python tools/benchmark_communication.py
+```
+
+| コマンド | 比較するもの |
+|---|---|
+| `benchmark_swarm.py` | 18状態の次担当・停止理由と、通信の配信先 |
+| `benchmark_review.py` | 12ケース、同じ2回の評価上限での批評・少数意見・重複評価の再利用 |
+| `benchmark_communication.py` | 14ケース、run ID・epoch・受信側の入力契約を用いた配信 |
+
+JSONで結果を返し、固定した期待結果と一致しなければ非ゼロで終了します。比較対象の方式が不正解になること自体は、保存された実験結果です。[評価の前提と採用条件](docs/swarm-experiments.md)には、正解の固定、失敗例の保持、実際の成果物を開いて確かめる手順をまとめています。
+
+### 実際のモデル実行の確認
+
 現在の Luna 経路と、Sol を明示して選ぶ経路は、設定・実行記録・親の起動記録を照合する checker で区別します。公開版の回帰テストと CI は、モデルの取り違え・明示選択なしの Sol 受理・同時上限超過を検査します。
 
 [量子センサー例の6体による実行記録](docs/luna-research-e2e-2026-10-14.md)に、実際の調査から独立検証とまとめまでの確認を記録しています。[Luna 方針と確認範囲](docs/luna-first-2026-10-14.md)には、モデル方針の更新時の実測を記録します。[未知分野の手順と再委任の実行確認](docs/unknown-field-research-2026-10-14.md)には、Luna の担当から Luna の子を呼び、根拠を戻した範囲を記録しています。[前の Sol 経路の確認](docs/compatibility-2026-10-14.md)と[2026年9月5日の評価](docs/research-evaluation-2026-09-05.md)は、その時点のモデルの記録として保持します。過去の成功を、別のモデルの実行証明に使いません。
@@ -377,7 +419,8 @@ Python の導入器・実行記録チェッカー・回帰テストは標準ラ�
 | [量子センサーの調査結果](docs/quantum-sensors-research-2026-10-14.md) | 出典付きの実際の調査例を読みたい |
 | [6体の分担・再委任・検証](docs/luna-research-e2e-2026-10-14.md) | 調査がどの順番で動き、どこまで確認したか知りたい |
 | [導入と更新](docs/INSTALLATION.md) | 別プロジェクト・Windows 移行・Cloud・plugin で使いたい |
-| [今回の確認範囲](docs/compatibility-2026-10-14.md) | 実測と未検証の境界を確認したい |
+| [過去の互換性確認](docs/compatibility-2026-10-14.md) | その時点の実測と未検証の境界を確認したい |
+| [スウォームの評価・改善](docs/swarm-experiments.md) | 比較実験の正解・失敗例・採用条件を確認したい |
 | [開発・検証手順](CONTRIBUTING.md) | コードやスキルを変更したい |
 | [変更履歴](CHANGELOG.md) | main と Release の違いを確認したい |
 | [公式サブエージェント仕様](https://learn.chatgpt.com/docs/agent-configuration/subagents) | Codex 側の設定・モデル解決・権限を確認したい |
