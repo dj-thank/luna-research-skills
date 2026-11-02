@@ -2905,6 +2905,11 @@ def _parse_wrapped_spawn_arguments(value: object) -> dict[str, Any] | None:
     """
     if not isinstance(value, str):
         return None
+    try:
+        if _DISPATCH.dispatch_names({"type": "custom_tool_call", "input": value}) != ["spawn_agent"]:
+            return None
+    except ValueError:
+        return None
     call_matches = list(
         re.finditer(r"\btools\.[A-Za-z_][A-Za-z0-9_.]*spawn_agent\s*\(", value)
     )

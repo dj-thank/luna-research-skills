@@ -793,6 +793,13 @@ class RuntimeReceiptTests(unittest.TestCase):
             )
         self.assertEqual(errors, [])
 
+    def test_wrapped_provenance_requires_a_literal_executable_call(self) -> None:
+        call = 'await tools.multi_agent_v1__spawn_agent({agent_type: "default", message: "task"});'
+        for source in ('/* ' + call + ' */', '`' + call + '`',
+                       'if (false) { ' + call + ' }'):
+            with self.subTest(source=source):
+                self.assertIsNone(CHECK._parse_wrapped_spawn_arguments(source))
+
     def test_parent_full_history_spawn_is_rejected(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]
