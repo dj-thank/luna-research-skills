@@ -14,7 +14,7 @@ import sys
 # Sibling imports must not create cache files in a read-only advisory command.
 sys.dont_write_bytecode = True
 
-VERSION = "1.0"
+VERSION = "1.1"
 TERMINAL = {"completed", "failed", "timed_out", "abandoned", "not_dispatched"}
 WRITERS = {"builder", "operator"}
 # Candidate reviewers do not satisfy Project's final-verifier closure reserve.
@@ -33,8 +33,15 @@ def reason(code, related=()):
     return {"code": code, "related_attempt_ids": list(related)}
 
 
-def validate(ledger):
+def validate(ledger, specialist_model=CHECK.DEFAULT_SPECIALIST_MODEL):
     """Use the checker's in-memory v2 entry points; never reopen the input."""
+    if specialist_model not in CHECK.SUPPORTED_SPECIALIST_MODELS:
+        raise ValueError("unsupported specialist_model: " + repr(specialist_model))
+    # Each validation owns its checker policy. Never mutate the shared default
+    # module or derive the selected profile from untrusted ledger receipts.
+    check = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(check)
+    check.EXPECTED_MODEL = specialist_model
     if not isinstance(ledger, dict):
         return ["ledger must be an object"], []
     if ledger.get("ledger_type") != "project" or type(ledger.get("version")) is not int or ledger["version"] != 2:
@@ -42,18 +49,18 @@ def validate(ledger):
     settings = ledger.get("tree", ledger)
     if not isinstance(settings, dict) or settings.get("mode", "flat") != "flat":
         return ["only flat project mode is supported"], []
-    rows, errors = CHECK._resolve_assignment_rows(ledger)
+    rows, errors = check._resolve_assignment_rows(ledger)
     if errors:
         return errors, []
     if any(not isinstance(r, dict) for r in rows):
         return ["attempts must be objects"], []
     if any(r.get("parent_attempt_id") is not None or r.get("depth") != 1
-           or CHECK._logical_coordinator(r) or r.get("may_spawn_descendants")
+           or check._logical_coordinator(r) or r.get("may_spawn_descendants")
            or r.get("descendant_budget", 0) != 0 for r in rows):
         return ["only flat leaf attempts without descendant grants are supported"], []
     with contextlib.redirect_stdout(io.StringIO()):
-        errors, warnings = CHECK._validate_tree_ledger(ledger, project=True)
-        errors.extend(CHECK._validate_project_v2_contract(ledger))
+        errors, warnings = check._validate_tree_ledger(ledger, project=True)
+        errors.extend(check._validate_project_v2_contract(ledger))
     for row in rows:
         if "planned_at" in row and timestamp(row["planned_at"]) is None:
             errors.append(f"{row.get('attempt_id')}: planned_at must have timezone")
@@ -67,12 +74,12 @@ def overlaps(a, b):
                for x in paths(a) for y in paths(b))
 
 
-def plan(ledger, open_children, now):
+def plan(ledger, open_children, now, *, specialist_model=CHECK.DEFAULT_SPECIALIST_MODEL):
     if type(open_children) is not int or open_children < 0:
         raise ValueError("open_children must be a non-negative integer")
     if not isinstance(now, datetime) or now.tzinfo is None or now.utcoffset() is None:
         raise ValueError("now must have timezone")
-    errors, warnings = validate(ledger)
+    errors, warnings = validate(ledger, specialist_model)
     if errors:
         return {"schema_version": 1, "advisory_only": True,
                 "errors": [{"code": "INVALID_LEDGER", "message": e} for e in errors]}
@@ -201,11 +208,14 @@ def main(argv=None):
         parser.add_argument("--ledger-json", type=Path, required=True)
         parser.add_argument("--open-children", type=int, required=True)
         parser.add_argument("--now")
+        parser.add_argument("--specialist-model", choices=CHECK.SUPPORTED_SPECIALIST_MODELS,
+                            default=CHECK.DEFAULT_SPECIALIST_MODEL,
+                            help="Explicit terminal profile; Luna by default, both profiles use low effort.")
         args = parser.parse_args(argv)
         now = timestamp(args.now) if args.now else datetime.now(timezone.utc)
         # One read: validation and planning use the same parsed bytes.
         ledger = json.loads(args.ledger_json.read_bytes().decode("utf-8"))
-        output = plan(ledger, args.open_children, now)
+        output = plan(ledger, args.open_children, now, specialist_model=args.specialist_model)
     except (OSError, UnicodeError, ValueError, TypeError, KeyError, AttributeError, RecursionError, OverflowError) as exc:
         output = {"schema_version": 1, "advisory_only": True,
                   "errors": [{"code": "INVALID_INPUT", "message": str(exc)}]}
