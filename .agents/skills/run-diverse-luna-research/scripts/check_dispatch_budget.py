@@ -85,14 +85,14 @@ def _visible_wrapper_code(source: str) -> str:
                 raise ValueError('cannot count dispatch in an unterminated regex')
             regex_allowed = False
             previous_token = 'literal'
-        elif character == '/' and previous_token in {')', '}', '++', '--'}:
+        elif character == '/':
             raise ValueError('cannot count dispatch after an ambiguous slash; use direct native calls')
         elif character.isalpha() or character in '_$':
             index += 1
             while index < len(source) and (source[index].isalnum() or source[index] in '_$'):
                 index += 1
             previous_token = source[start:index]
-            regex_allowed = previous_token in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'else', 'do', 'in', 'instanceof', 'of', 'extends', 'break', 'continue', 'debugger'}
+            regex_allowed = previous_token in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'else', 'do', 'in', 'instanceof', 'extends', 'break', 'continue', 'debugger'}
             continue
         elif source[index:index + 2] in {'++', '--'}:
             previous_token = source[index:index + 2]

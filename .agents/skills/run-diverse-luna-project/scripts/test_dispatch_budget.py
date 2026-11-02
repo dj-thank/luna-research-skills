@@ -142,10 +142,12 @@ class DispatchBudgetTests(unittest.TestCase):
             "{} /'/; await tools.multi_agent_v1__spawn_agent({}); // '",
             "if (true) /'/; await tools.multi_agent_v1__spawn_agent({}); // '",
             'value++ / 2; await tools.collaboration.spawn_agent({});',
+            "let foo\n/'/; await tools.multi_agent_v1__spawn_agent({}); // '",
+            'const x = value / 2; await tools.collaboration.spawn_agent({});',
+            'const of=4; of / 2; await tools.spawn_agent({}); const x=3; x / 1;',
         ):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'ambiguous slash'):
                 self.wrapped_counts(source)
-        self.assertEqual(self.wrapped_counts('const x = value / 2; await tools.collaboration.spawn_agent({});')['total'], 1)
 
     def test_dynamic_code_rejected_even_without_literal_dispatch(self):
         for source in (

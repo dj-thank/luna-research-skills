@@ -61,6 +61,9 @@ Dynamic evaluation (`eval`, function constructors, reflective/global access)
 is rejected even without a visible dispatch call. Computed member access is
 limited to numeric indexes and simple non-executable literal keys; use direct
 native calls when a wrapper falls outside this supported receipt syntax.
+Slash is accepted only for comments or unambiguous regex literals; division
+and automatic-semicolon-insertion ambiguities block new dispatch. The parser
+does not infer arbitrary JavaScript execution from a wrapper's source text.
 
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger
