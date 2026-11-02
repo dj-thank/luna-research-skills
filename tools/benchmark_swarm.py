@@ -31,8 +31,14 @@ def materialize(document, case):
 
 def score(expected, actual):
     selected = actual.get('selected_attempt_ids', [])
-    reasons = {row['attempt_id']: {r['code'] for r in row['reasons']}
-               for row in actual.get('blocked', [])}
+    reasons, duplicate_blocked = {}, set()
+    for row in actual.get('blocked', []):
+        aid = row['attempt_id']
+        if aid in reasons:
+            duplicate_blocked.add(aid)
+        # Preserve every reason for diagnostics; repeated identities are invalid
+        # even when their contents agree. Never let the last report erase one.
+        reasons.setdefault(aid, set()).update(r['code'] for r in row['reasons'])
     errors = {item['code'] for item in actual.get('errors', [])}
     wanted_errors = set(expected.get('errors', []))
     exact_selection = selected == expected['selected_attempt_ids']
@@ -43,13 +49,14 @@ def score(expected, actual):
                      for aid, codes in reasons.items() if codes - wanted_reasons.get(aid, set())}
     missing_reasons = {aid: sorted(codes - reasons.get(aid, set()))
                        for aid, codes in wanted_reasons.items() if codes - reasons.get(aid, set())}
-    reason_match = reasons == wanted_reasons
+    reason_match = not duplicate_blocked and reasons == wanted_reasons
     return dict(passed=exact_selection and reason_match and errors == wanted_errors,
                 selection_correct=exact_selection,
                 unexpected_starts=sorted(set(selected) - set(expected['selected_attempt_ids'])),
                 missed_ready=sorted(set(expected['selected_attempt_ids']) - set(selected)),
                 blocker_reasons_correct=reason_match, error_codes_correct=errors == wanted_errors,
                 unexpected_blocked=unexpected_blocked, missing_blocked=missing_blocked,
+                duplicate_blocked=sorted(duplicate_blocked),
                 unexpected_blocker_reasons=extra_reasons, missing_blocker_reasons=missing_reasons)
 
 

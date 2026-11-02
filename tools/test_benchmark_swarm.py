@@ -67,6 +67,33 @@ class BenchmarkTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             B.materialize(document, bad)
 
+    def test_duplicate_blocked_reports_fail_without_losing_reasons(self):
+        wanted = dict(selected_attempt_ids=['A'], blocked_reasons={'B': ['DEPENDENCY_NOT_ACCEPTED']})
+        correct = dict(attempt_id='B', reasons=[dict(code='DEPENDENCY_NOT_ACCEPTED')])
+        wrong = dict(attempt_id='B', reasons=[dict(code='WRONG_REASON')])
+        # A contradictory report must fail in either arrival order. Identical
+        # duplicates are invalid too, even though set equality would hide them.
+        for rows in ([wrong, correct], [correct, wrong], [correct, correct]):
+            with self.subTest(rows=rows):
+                actual = dict(selected_attempt_ids=['A'], blocked=copy.deepcopy(rows))
+                before = copy.deepcopy(actual)
+                result = B.score(wanted, actual)
+                self.assertFalse(result['passed'])
+                self.assertFalse(result['blocker_reasons_correct'])
+                self.assertEqual(result['duplicate_blocked'], ['B'])
+                self.assertEqual(result['unexpected_blocker_reasons'],
+                                 {'B': ['WRONG_REASON']} if wrong in rows else {})
+                self.assertEqual(actual, before)
+
+    def test_single_report_reason_order_and_distinct_attempts_remain_valid(self):
+        wanted = dict(selected_attempt_ids=[], blocked_reasons={'B': ['ONE', 'TWO'], 'C': ['ONE']})
+        actual = dict(selected_attempt_ids=[], blocked=[
+            dict(attempt_id='C', reasons=[dict(code='ONE')]),
+            dict(attempt_id='B', reasons=[dict(code='TWO'), dict(code='ONE')])])
+        result = B.score(wanted, actual)
+        self.assertTrue(result['passed'])
+        self.assertEqual(result['duplicate_blocked'], [])
+
 
 if __name__ == '__main__':
     unittest.main()

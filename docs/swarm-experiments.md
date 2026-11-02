@@ -22,7 +22,9 @@ Windows, macOS and Linux. The independent expectations live in
 derive them from planner output. Case descriptions, expected selected IDs, required
 blocker reasons and error codes are reviewable before execution. Scoring requires
 the exact set of blocked attempts and reason codes, and reports missing and
-unexpected blocks separately. Fixture UUIDs,
+unexpected blocks separately. Repeated blocked attempt IDs fail, including
+identical repeats; reasons from every occurrence remain visible in diagnostics.
+This prevents a later report from hiding an earlier contradiction. Fixture UUIDs,
 timestamps, receipt locators and artifact digests are synthetic labels.
 
 The first 15 cases cover independent work, capacity, candidate review, rolling
@@ -85,6 +87,17 @@ acceptance and writer reassignment. Deduplicate repeated results, reject superse
 epochs and require the receiver to verify actual bytes. Retain the initial independent
 assessment before exposing another agent's conclusion. This protocol permits a
 short repair exchange without making debate or consensus an acceptance criterion.
+
+For a bounded critique comparison, freeze the independent proposals, one critic
+proposal and correctness labels before running any policy. Include a correct
+minority, a wrong critic, no correct proposal and contradictory duplicate reports
+in both arrival orders. Compare no discussion with unconditional and checked
+critique. Judge final answers using the frozen labels, not the same scorer that
+accepts proposals: otherwise a scorer defect can certify its own false positives.
+Report false acceptance, abstention, missed valid alternatives and repair
+regressions separately, along with deliveries and oracle checks actually used.
+Equal ceilings do not imply equal work, and access to a known-answer oracle does
+not model open-ended reasoning.
 
 ## Promotion and reporting
 
