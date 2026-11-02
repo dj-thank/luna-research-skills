@@ -403,6 +403,8 @@ For your own comparisons, follow the [report checking guide](docs/comparison-rep
 
 Use the [review evidence producer](docs/comparison-reports.md#export-a-review-comparison-without-hand-counting-checks) to export the existing benchmark directly. It counts actual evaluation attempts, distinguishes cache reuse from failures, and refuses a complete export when the run is incomplete.
 
+For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
+
 ### Actual model execution
 
 The checker distinguishes the current Luna route from an explicitly selected Sol route by comparing configuration, runtime records, and parent dispatch records. Public regression tests and CI check model mix-ups, acceptance of Sol without explicit selection, and concurrency-limit violations.
