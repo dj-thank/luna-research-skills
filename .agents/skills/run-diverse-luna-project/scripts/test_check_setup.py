@@ -2838,5 +2838,164 @@ class JsonDiagnosticsTests(unittest.TestCase):
         self.assertEqual(payload["checked"]["ledger_receipts"], "failed")
 
 
+class SwarmContractRegressionTests(unittest.TestCase):
+    def project(self, rows, version=2):
+        return {"ledger_type": "project", "version": version, "phase": "integration",
+                "closure_status": "open", "root_integration_status": "in_progress",
+                "root_integration_receipt": None, "N": len(rows), "verifier_reserve": 1,
+                "overall_deadline": "2026-08-16T12:00:00+09:00", "target_gate": "LOCAL_PASS",
+                "verified_gates": [], "gate_receipts": {}, "external_authority": False,
+                "assignments": rows}
+
+    def project_errors(self, rows, version):
+        ledger = self.project(rows, version)
+        if version == 2:
+            return CHECK._validate_project_v2_contract(ledger)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "project.json"
+            write_json(path, ledger)
+            return CHECK.validate_project_ledger(path)[0]
+
+    def writers(self, left="src/shared.py", right="src/shared.py"):
+        rows = [project_assignment("a", "builder", status="started", ownership=[left]),
+                project_assignment("b", "operator", status="started", ownership=[right]),
+                project_assignment("v", "verifier")]
+        for row in rows[:2]:
+            row["started_at"] = "2026-01-01T00:00:00Z"
+        return rows
+
+    def test_started_pending_writers_reject_aliases_and_ancestor_paths_in_both_versions(self):
+        for version in (1, 2):
+            for left, right in [("src/shared.py", "src/shared.py"),
+                                ("SRC/./nested/../shared.py", "src\\shared.py"),
+                                ("src", "src/child/a.py"), ("src/child/a.py", "src/"),
+                                ("C:/Work/src", "c:\\work\\src\\a.py")]:
+                with self.subTest(version=version, left=left, right=right):
+                    errors = self.project_errors(self.writers(left, right), version)
+                    self.assertTrue(any("ownership overlaps" in e for e in errors), errors)
+
+    def test_ordered_handoff_passes_in_both_versions(self):
+        for version in (1, 2):
+            rows = self.writers("src", "src/a.py")
+            rows[0].update(execution_status="completed", acceptance_status="rejected",
+                           finished_at="2026-01-01T00:01:00Z")
+            rows[1]["started_at"] = "2026-01-01T00:01:00Z"
+            self.assertEqual(self.project_errors(rows, version), [])
+
+    def test_accepted_historical_writers_with_unknown_intervals_conflict(self):
+        rows = self.writers()
+        for row in rows[:2]:
+            row.update(execution_status="completed", acceptance_status="accepted")
+            row.pop("started_at")
+        self.assertTrue(any("ownership overlaps" in e for e in self.project_errors(rows, 2)))
+
+    def test_nonwriters_and_planned_reservations_do_not_lock_paths(self):
+        for version in (1, 2):
+            for kind, status in [("reviewer", "started"), ("builder", "planned"),
+                                 ("builder", "not_dispatched")]:
+                rows = self.writers()
+                rows[1].update(kind=kind, execution_status=status,
+                               acceptance_status="excluded" if status == "not_dispatched" else "pending")
+                self.assertEqual(self.project_errors(rows, version), [])
+
+    def test_sibling_paths_and_distinct_resource_names_do_not_conflict(self):
+        for left, right in [("src/a.py", "src/ab.py"), ("vm:200", "vm:201"),
+                            ("C:/work/a", "D:/work/a"), ("src", "src2/a")]:
+            self.assertEqual(self.project_errors(self.writers(left, right), 2), [])
+
+    def test_integrated_requires_completed_and_accepted_in_both_versions(self):
+        for version in (1, 2):
+            for status, acceptance in [("started", "pending"), ("completed", "rejected"),
+                                       ("failed", "excluded"), ("planned", "pending")]:
+                rows = [project_assignment("a", "builder", status=status, acceptance=acceptance,
+                                           ownership=["src/a"], integration_status="integrated"),
+                        project_assignment("v", "verifier")]
+                errors = self.project_errors(rows, version)
+                self.assertTrue(any("integrated result requires completed/accepted" in e for e in errors), errors)
+            rows[0] = project_assignment("a", "builder", status="completed", acceptance="accepted",
+                                         ownership=["src/a"], integration_status="integrated")
+            self.assertEqual(self.project_errors(rows, version), [])
+
+    def retry_ledger(self, **retry_values):
+        import copy
+        ledger = V5FailureInjectionTests().base()
+        prior = ledger["assignments"][0]
+        prior.update(execution_status="failed", acceptance_status="excluded", retry_owner="root",
+                     started_at="2026-01-01T00:00:00Z", finished_at="2026-01-01T00:01:00Z")
+        retry = copy.deepcopy(prior)
+        retry.update(attempt_id="retry", retry_of="a", wave=3, execution_status="started",
+                     acceptance_status="pending", started_at="2026-01-01T00:01:00Z", finished_at=None,
+                     root_parent_call_id="retry-call")
+        retry["delegated_by"]["parent_call_id"] = "retry-call"
+        retry.update(retry_values)
+        ledger["assignments"].append(retry)
+        return ledger
+
+    def tree_errors(self, ledger):
+        return CHECK._validate_tree_ledger(ledger)[0]
+
+    def test_retry_waits_for_prior_terminal_time(self):
+        for status, end in [("started", None), ("planned", None),
+                            ("failed", "2026-01-01T00:02:00Z"), ("failed", None)]:
+            ledger = self.retry_ledger()
+            ledger["assignments"][0].update(execution_status=status, finished_at=end)
+            errors = self.tree_errors(ledger)
+            self.assertTrue(any("dispatched retry requires prior terminal time" in e for e in errors), errors)
+
+    def test_valid_retry_and_reserved_retry_remain_valid(self):
+        self.assertEqual(self.tree_errors(self.retry_ledger()), [])
+        ledger = self.retry_ledger(execution_status="planned", acceptance_status="pending", started_at=None)
+        ledger["assignments"][0].update(execution_status="started", acceptance_status="pending", finished_at=None)
+        self.assertEqual(self.tree_errors(ledger), [])
+
+    def test_optional_recovery_values_reject_malformed_supplied_fields(self):
+        for key, values in {"epoch": [None, True, 0, -1, 1.5, "1"],
+                            "ttl_seconds": [None, False, 0, -3, 1.5, "60"],
+                            "dedup_key": [None, 3, "", "  "],
+                            "cancel_reason": [False, 3, "", "  "]}.items():
+            for value in values:
+                with self.subTest(key=key, value=value):
+                    ledger = V5FailureInjectionTests().base(**{key: value})
+                    self.assertTrue(any(f".{key} must be" in e for e in self.tree_errors(ledger)))
+        ledger = V5FailureInjectionTests().base(epoch=1, ttl_seconds=60, dedup_key="cell", cancel_reason=None)
+        self.assertEqual(self.tree_errors(ledger), [])
+        ledger["assignments"][0]["cancel_reason"] = "superseded"
+        self.assertEqual(self.tree_errors(ledger), [])
+
+    def test_retry_epochs_increase_and_dedup_keys_stay_stable(self):
+        ledger = self.retry_ledger(epoch=2, dedup_key="cell")
+        ledger["assignments"][0].update(epoch=1, dedup_key="cell")
+        self.assertEqual(self.tree_errors(ledger), [])
+        for epoch in (1, 0):
+            ledger["assignments"][-1]["epoch"] = epoch
+            self.assertTrue(any("epoch" in e for e in self.tree_errors(ledger)))
+        ledger["assignments"][-1].update(epoch=2, dedup_key="different")
+        self.assertTrue(any("retry dedup_key" in e for e in self.tree_errors(ledger)))
+
+    def test_missing_middle_epoch_does_not_hide_stale_retry(self):
+        import copy
+        ledger = self.retry_ledger()
+        ledger["retry_limit"] = 2
+        ledger["assignments"][0]["epoch"] = 4
+        middle = ledger["assignments"][-1]
+        third = copy.deepcopy(middle)
+        third.update(attempt_id="third", retry_of="retry", wave=4, epoch=3,
+                     execution_status="planned", started_at=None, root_parent_call_id="third-call")
+        third["delegated_by"]["parent_call_id"] = "third-call"
+        ledger["assignments"].append(third)
+        self.assertTrue(any("retry epoch must exceed supplied ancestor" in e for e in self.tree_errors(ledger)))
+
+    def test_new_dispatched_epoch_excludes_stale_accepted_predecessor(self):
+        ledger = self.retry_ledger(epoch=2)
+        prior = ledger["assignments"][0]
+        prior.update(epoch=1, execution_status="completed", acceptance_status="accepted")
+        self.assertTrue(any("stale accepted ancestor" in e for e in self.tree_errors(ledger)))
+        ledger["assignments"][-1].update(execution_status="planned", started_at=None)
+        self.assertFalse(any("stale accepted ancestor" in e for e in self.tree_errors(ledger)))
+        ledger["assignments"][-1].update(execution_status="started", started_at="2026-01-01T00:01:00Z")
+        prior["acceptance_status"] = "rejected"
+        self.assertEqual(self.tree_errors(ledger), [])
+
+
 if __name__ == "__main__":
     unittest.main(module=__name__)

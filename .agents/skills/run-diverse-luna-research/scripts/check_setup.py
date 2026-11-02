@@ -10,6 +10,7 @@ import io
 from datetime import datetime
 import json
 import math
+import ntpath
 import os
 import re
 import sys
@@ -30,7 +31,7 @@ DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
 EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
 SUPPORTED_SPECIALIST_MODELS = (DEFAULT_SPECIALIST_MODEL, "gpt-6.1-sol")
 EXPECTED_REASONING_EFFORT = "low"
-CHECKER_CONTRACT_VERSION = "2026-11-02.2"
+CHECKER_CONTRACT_VERSION = "2026-11-02.3"
 MIN_CONCURRENT_THREADS = 2
 MAX_CONCURRENT_THREADS = 6
 MAX_ATTEMPT_BUDGET = 12
@@ -1087,6 +1088,65 @@ def _resolve_assignment_rows(ledger: dict[str, Any]) -> tuple[list[Any], list[st
     return rows, []
 
 
+def _positive_integer(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value > 0
+
+
+def _recovery_field_errors(row: dict[str, Any], prefix: str) -> list[str]:
+    """Supplied recovery metadata is checked; legacy omitted fields stay valid."""
+    errors: list[str] = []
+    for key in ("epoch", "ttl_seconds"):
+        if key in row and not _positive_integer(row[key]):
+            errors.append(f"{prefix}.{key} must be a positive integer")
+    if "dedup_key" in row and (not isinstance(row["dedup_key"], str) or not row["dedup_key"].strip()):
+        errors.append(f"{prefix}.dedup_key must be a non-empty string")
+    if "cancel_reason" in row and row["cancel_reason"] is not None and (
+        not isinstance(row["cancel_reason"], str) or not row["cancel_reason"].strip()
+    ):
+        errors.append(f"{prefix}.cancel_reason must be null or a non-empty string")
+    return errors
+
+
+def _ownership_path(value: str) -> tuple[str, bool, tuple[str, ...]]:
+    # Windows-style lexical normalization also handles POSIX slash spelling.
+    # Never resolve against this machine's filesystem or infer separate checkouts.
+    path = ntpath.normpath(value.strip().replace("/", "\\")).casefold()
+    drive, tail = ntpath.splitdrive(path)
+    return drive, tail.startswith("\\"), tuple(part for part in tail.split("\\") if part and part != ".")
+
+
+def _writer_ownership_errors(rows: list[Any]) -> list[str]:
+    errors: list[str] = []
+    writers: list[tuple[dict[str, Any], list[tuple[str, bool, tuple[str, ...]]]]] = []
+    terminal = {"completed", "failed", "timed_out", "abandoned"}
+
+    def ordered(before: dict[str, Any], after: dict[str, Any]) -> bool:
+        end = _parse_timestamp(before.get("finished_at")) or _parse_timestamp(before.get("timeout_at"))
+        start = _parse_timestamp(after.get("started_at"))
+        before_start = _parse_timestamp(before.get("started_at"))
+        return (before.get("execution_status") in terminal and end is not None
+                and start is not None and end <= start
+                and (before_start is None or before_start <= end))
+
+    for row in rows:
+        if not isinstance(row, dict) or row.get("kind") not in {"builder", "operator"}:
+            continue
+        if row.get("execution_status") in {"planned", "not_dispatched"}:
+            continue
+        ownership = row.get("ownership")
+        if not isinstance(ownership, list):
+            continue
+        paths = [_ownership_path(value) for value in ownership
+                 if isinstance(value, str) and value.strip() and value.strip().casefold() != "read-only"]
+        for previous, previous_paths in writers:
+            overlap = any(a[:2] == b[:2] and (a[2][:len(b[2])] == b[2] or b[2][:len(a[2])] == a[2])
+                          for a in paths for b in previous_paths)
+            if overlap and not (ordered(previous, row) or ordered(row, previous)):
+                errors.append(f"ownership overlaps between writer attempts {previous.get('attempt_id')!r} and {row.get('attempt_id')!r}; non-overlapping terminal/start timestamps required")
+        writers.append((row, paths))
+    return errors
+
+
 def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, configured_cap: int | None = None, allow_mixed_coordinators: bool = False) -> tuple[list[str], list[str]]:
     """Validate the v2 machine-readable root/coordinator/leaf tree contract.
 
@@ -1196,6 +1256,7 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
     for i, row in enumerate(rows):
         if not isinstance(row, dict) or not isinstance(row.get("attempt_id"), str): continue
         aid = row["attempt_id"]; pfx = f"tree attempts[{i}]"
+        errors.extend(_recovery_field_errors(row, pfx))
         if "coordinator_model_policy" in row:
             errors.append(f"{pfx}: coordinator_model_policy must be declared only at ledger top level")
         if (row.get("role") in {"coordinator", "research_coordinator", "luna_project_coordinator"} or row.get("kind") == "coordinator") and not _logical_coordinator(row):
@@ -1303,6 +1364,30 @@ def _validate_tree_ledger(ledger: dict[str, Any], *, project: bool = False, conf
         retry_of = row.get("retry_of")
         if retry_of is not None and retry_of in ids:
             prior = ids[retry_of]
+            if not unstarted:
+                prior_end = _parse_timestamp(prior.get("finished_at")) or _parse_timestamp(prior.get("timeout_at"))
+                if (prior.get("execution_status", prior.get("state")) not in {"completed", "failed", "timed_out", "abandoned", "not_dispatched"}
+                        or prior_end is None or start is None or prior_end > start):
+                    errors.append(f"{pfx}: dispatched retry requires prior terminal time <= retry start")
+            # Walk only known ancestors, bounded by the ledger size, including
+            # legacy rows with no epoch so an omitted middle value cannot hide staleness.
+            ancestor = retry_of
+            visited = {aid}
+            while ancestor in ids and ancestor not in visited:
+                visited.add(ancestor)
+                ancestor_row = ids[ancestor]
+                if (isinstance(row.get("dedup_key"), str) and isinstance(ancestor_row.get("dedup_key"), str)
+                        and row["dedup_key"] != ancestor_row["dedup_key"]):
+                    errors.append(f"{pfx}: retry dedup_key must match supplied ancestor key ({ancestor!r})")
+                if (not unstarted and ancestor_row.get("acceptance_status") == "accepted"
+                        and _positive_integer(row.get("epoch")) and _positive_integer(ancestor_row.get("epoch"))
+                        and row["epoch"] > ancestor_row["epoch"]):
+                    errors.append(f"{pfx}: dispatched newer epoch leaves stale accepted ancestor {ancestor!r}; reject superseded result")
+                if (_positive_integer(row.get("epoch")) and _positive_integer(ancestor_row.get("epoch"))
+                        and row["epoch"] <= ancestor_row["epoch"]):
+                    errors.append(f"{pfx}: retry epoch must exceed supplied ancestor epoch ({ancestor!r})")
+                    break
+                ancestor = ancestor_row.get("retry_of")
             if order.get(retry_of, i) >= i: errors.append(f"{pfx}.retry_of must precede retry")
             if row.get("cell_id") is not None and prior.get("cell_id") != row.get("cell_id"):
                 errors.append(f"{pfx}: retry must keep same cell_id")
@@ -1905,7 +1990,7 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
         for row in assignments
         if isinstance(row, dict) and isinstance(row.get("attempt_id"), str)
     }
-    ownership_owners: dict[str, str] = {}
+    errors.extend(_writer_ownership_errors(assignments))
     for index, row in enumerate(assignments):
         if not isinstance(row, dict):
             continue
@@ -1946,26 +2031,9 @@ def _validate_project_v2_contract(ledger: dict[str, Any]) -> list[str]:
             errors.append(
                 f"{pfx}.integration_status must be one of {sorted(INTEGRATION_STATES)}"
             )
+        if integration == "integrated" and (row.get("execution_status") != "completed" or row.get("acceptance_status") != "accepted"):
+            errors.append(f"{pfx}: integrated result requires completed/accepted attempt")
         if kind in {"builder", "operator"} and row.get("acceptance_status") == "accepted":
-            ownership = row.get("ownership")
-            if not isinstance(ownership, list) or not ownership:
-                errors.append(f"{pfx}.ownership must be a non-empty array")
-                ownership = []
-            for raw_owner in ownership:
-                if not isinstance(raw_owner, str) or not raw_owner.strip():
-                    errors.append(f"{pfx}.ownership values must be non-empty strings")
-                    continue
-                owner = raw_owner.strip().casefold()
-                if owner == "read-only":
-                    continue
-                previous = ownership_owners.get(owner)
-                if previous is not None:
-                    errors.append(
-                        f"ownership {raw_owner!r} is shared by accepted attempts "
-                        f"{previous!r} and {row.get('attempt_id')!r}"
-                    )
-                else:
-                    ownership_owners[owner] = str(row.get("attempt_id"))
             if closure_status == "complete" and integration != "integrated":
                 errors.append(
                     f"{pfx}: accepted {kind} must be integrated before complete closure"
@@ -2389,7 +2457,7 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None, allow
 
     seen: set[str] = set()
     status_by_attempt: dict[str, str] = {}
-    ownership_owners: dict[str, str] = {}
+    errors.extend(_writer_ownership_errors(assignments))
     started = 0
     final = 0
     accepted = 0
@@ -2520,19 +2588,9 @@ def validate_project_ledger(path: Path, configured_cap: int | None = None, allow
                 f"{prefix}.integration_status must be one of "
                 f"{sorted(INTEGRATION_STATES)}, got {integration!r}"
             )
+        if integration == "integrated" and (execution != "completed" or acceptance != "accepted"):
+            errors.append(f"{prefix}: integrated result requires completed/accepted attempt")
         if kind in {"builder", "operator"} and acceptance == "accepted":
-            for raw_owner in ownership:
-                owner = raw_owner.strip().casefold()
-                if owner == "read-only":
-                    continue
-                previous = ownership_owners.get(owner)
-                if previous is not None:
-                    errors.append(
-                        f"ownership {raw_owner!r} is shared by accepted attempts "
-                        f"{previous!r} and {attempt_id!r}"
-                    )
-                else:
-                    ownership_owners[owner] = attempt_id
             if phase == "closure" and closure_status == "complete" and integration != "integrated":
                 errors.append(
                     f"{prefix}: accepted {kind} must be integrated before complete closure"
