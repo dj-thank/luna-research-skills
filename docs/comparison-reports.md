@@ -107,8 +107,9 @@ exceptions are retained; process termination can prevent any output. Keep an err
 audit instead of passing it to the comparison checker. Successful export exits `0`.
 
 To preserve exact bytes on every OS, save the following as a Python script in the
-source root and run it with Python 3.11+. It creates a fresh directory and refuses
-to overwrite an earlier run. Review the resulting evidence and source fingerprints
+source root and run it with Python 3.11+. It reserves a fresh run directory and
+refuses to overwrite an earlier run. It stages and validates all three artifacts
+before publishing the `accepted` subdirectory. Review the evidence and source fingerprints
 before treating its digest as a trusted pin for reports from other parties.
 
 ```python
@@ -119,19 +120,61 @@ import sys
 
 run = Path("work/review-export")
 run.mkdir(parents=True, exist_ok=False)
+pending = run / ".pending"
+pending.mkdir()
 fixture_pin = "8b24fe12e113f019e35931ebefc7ab3fa48dee41055f84fa1dce1a1fc0506824"
-data = subprocess.check_output([sys.executable, "tools/export_review_comparison.py", "--sha256", fixture_pin])
-evidence = run / "evidence.json"
+try:
+    data = subprocess.check_output([sys.executable, "tools/export_review_comparison.py", "--sha256", fixture_pin])
+except subprocess.CalledProcessError as error:
+    with (pending / "producer-audit.json").open("xb") as stream:
+        stream.write(error.output)
+    raise
+evidence = pending / "evidence.json"
 with evidence.open("xb") as stream:
     stream.write(data)
 pin = hashlib.sha256(data).hexdigest()
-(run / "evidence.sha256").write_text(pin + "\n", encoding="utf-8")
+with (pending / "evidence.sha256").open("x", encoding="utf-8") as stream:
+    stream.write(pin + "\n")
 command = [sys.executable, "tools/check_comparison.py", "--evidence", str(evidence), "--sha256", pin]
-report = run / "report.json"
+report = pending / "report.json"
 with report.open("xb") as stream:
     stream.write(subprocess.check_output(command))
-subprocess.run(command + ["--report", str(report)], check=True)
+subprocess.run(command + ["--report", str(report)], check=True, capture_output=True)
+published = run / "accepted"
+pending.rename(published)
+print(published)
 ```
+
+Use files under `work/review-export/accepted` only after checking their identity
+and report. A consistent negative comparison is still valid evidence; this
+publication step does not require `passes_case_gate` to be true.
+
+If execution stops, keep the run directory. `.pending` may contain incomplete
+files, a producer refusal audit, or a complete bundle that was not published yet.
+Do not treat its presence as completion or rename it blindly. For recovery,
+establish the evidence digest from trusted input/source review, then rerun
+`check_comparison.py --evidence PATH --sha256 APPROVED_EVIDENCE_SHA256 --report PATH`
+against the retained evidence and report, and check that the sidecar digest agrees.
+An absent/malformed report or mismatched pin is incomplete evidence. A completed
+rename followed by process termination can leave a valid `accepted` bundle even
+without a success message; inspect the files rather than trusting the process exit.
+Start a new attempt in a different fresh directory to preserve earlier evidence.
+
+The fresh parent reservation and single writer keep the destination absent during
+publication. Do not share this directory with another writer. This is a process
+interruption protocol, not a promise of power-loss durability or atomic behavior
+on every network filesystem. [Pillai et al.](https://www.usenix.org/conference/osdi14/technical-sessions/presentation/pillai)
+distinguish filesystem update atomicity from persistence ordering; a successful
+rename alone does not establish disk durability.
+
+Development compared 16 frozen scenarios across direct redirection, the previous
+buffered/exclusive-write example, and staged bundle publication. On Windows, 48
+child processes included 30 controlled terminations. Partial artifacts at the
+published path fell from five scenarios to zero versus the previous example;
+both preserved all 16 previous-output controls and retained five recoverable
+valid bundles. Two interrupted complete bundles stayed in staging until checked.
+The direct-redirection ablation was not the previous documented procedure. These
+bounded process tests do not measure model accuracy, speed, cost or power-loss recovery.
 
 The plugin includes the consumer; the producer and benchmark engine require the
 source checkout. Source fingerprints record the local files observed before and

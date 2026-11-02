@@ -403,6 +403,8 @@ For your own comparisons, follow the [report checking guide](docs/comparison-rep
 
 Use the [review evidence producer](docs/comparison-reports.md#export-a-review-comparison-without-hand-counting-checks) to export the existing benchmark directly. It counts actual evaluation attempts, distinguishes cache reuse from failures, and refuses a complete export when the run is incomplete.
 
+The saving example validates evidence, digest and report before publishing an `accepted` directory. It retains interrupted `.pending` files and refusal audits and never overwrites an earlier run.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution
