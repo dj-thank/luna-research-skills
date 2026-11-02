@@ -27,6 +27,7 @@ python .agents/skills/run-diverse-luna-project/scripts/test_plan_swarm.py
 python tools/benchmark_swarm.py
 python tools/benchmark_review.py
 python tools/benchmark_communication.py
+python tools/benchmark_delivery.py
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/validate_repository.py
 python tools/release_metadata.py
@@ -42,7 +43,7 @@ pwsh -NoProfile -File tools/Test-LunaMigrationTools.ps1 -Source (Resolve-Path '.
 
 CI repeats the Python checks on Windows, macOS and Linux with Python 3.11–3.13,
 and runs migration checks with both PowerShell 7 and Windows PowerShell 5.1.
-The three benchmark CLIs use fixed synthetic answers and make no agent/tool-service
+The four benchmark CLIs use fixed synthetic answers and make no agent/tool-service
 calls. Inspect their case outcomes as well as their exit status: unsuccessful
 comparison policies are intentionally retained. See [the experiment guide](docs/swarm-experiments.md).
 
