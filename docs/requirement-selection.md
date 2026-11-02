@@ -52,7 +52,7 @@ All records are illustrative, not live execution receipts or permission grants.
 
 ## Input and result contracts
 
-The question has exactly `schema_version: 1`, `question_id`, `question`, `subject`,
+The v1 question has exactly `schema_version: 1`, `question_id`, `question`, `subject`,
 `source_sha256`, `max_source_bytes`, `max_result_bytes` and `requirements`.
 Each requirement has a unique `id` and `purpose: answer` or `guard`. At least one
 of each purpose is required, with at most 32 requirements. This is a structural
@@ -102,7 +102,85 @@ result limit includes metadata and the final newline. Diagnostics are separate
 from this limit and never contain partial observations. Invalid CLI arguments
 use argparse's stderr/exit 2 rather than the JSON result contract.
 
-## What the comparison establishes
+## Optional relationships between requirements
+
+A complete view may still contain tests for another revision, or evidence that
+does not cover all required targets. Root can declare these relationships in a
+v2 question. It uses the same fields as v1, with `schema_version: 2` and one
+additional `relations` array. Existing v1 questions and outputs are unchanged.
+
+```sh
+python tools/read_requirements.py --question tools/fixtures/relation_question.json --sha256 3ed4977efdfe81f241f7211b4ac1ce54032e674951e3f8a9ef3d6cf5088fa8e4 --source tools/fixtures/relation_source.json
+```
+
+This fictional example checks test revision, artifact identity, prerequisite
+artifact identity and target coverage. It also includes a typed-value check.
+Source records retain their schema version 1. The question must be independently
+reviewed and pinned, including its relations. There are no implicit relations.
+
+Each relation has exactly a unique `id`, an `operator`, and `left`/`right`
+operands. Each operand has exactly `requirement` (an already declared ID) and
+`pointer` (an RFC6901 JSON string pointer **inside that requirement's value**).
+Empty pointers select the whole value; `~1` and `~0` escape slash and tilde.
+There must be 1–32 relations, and a relation cannot compare identical operands.
+No expressions, commands, external files, literal overrides or fallback values
+are executed. The two supported operators are:
+
+| Operator | Required relationship |
+| --- | --- |
+| `equal` | Typed JSON values must be equal, ignoring object key order |
+| `subset` | Both operands must be arrays of strings; every left string must occur on the right |
+
+For example, required targets are the left operand and tested targets the right.
+Subset comparison ignores array order and repetitions, allows additional right
+targets, and is case sensitive. An empty left set is a valid subset; this does
+not establish that the root selected meaningful requirements. Full original
+arrays and qualifiers are retained in successful output. Equality still treats
+false and zero, or integer 1 and float 1.0, as different values.
+
+Relations run only after all required observations are known and nonconflicting.
+All observations for a requirement must already have the same typed value; the
+reader never resolves a disagreement by picking the first record. A relation
+failure returns `INSUFFICIENT`/exit 1, with `relation_gaps` containing its ID and
+`MISSING` (pointer absent), `UNKNOWN` (selected operand is null), `TYPE` (invalid
+subset operands), or `MISMATCH` (relationship fails). No observations or partial
+successful relation checks are returned. Malformed relation contracts are
+`REFUSED` before the source is read.
+
+Successful v2 output keeps all observations and adds `relation_checks` with
+`id`, `operator` and `status: MATCH`; its scope is
+`declared_requirements_and_relations_only`. The result envelope remains schema
+version 1, and the full successful output including relation metadata must fit
+`max_result_bytes`. A matching relation does not turn a pending prerequisite,
+failed test, stale permission or unknown real-world fact into approval. Root
+must still interpret every fact and qualifier and review missing relationships.
+
+X27 fixed 32 new cases before implementation. All matched their expected views,
+gaps or refusals: eight valid views, eight relation gaps, three unresolved
+requirement cases and thirteen refusals. The valid cases include reordered,
+extra, repeated and empty scopes, plus a pending prerequisite that must remain
+pending. The current v1 reader already preserves these facts for manual review;
+its absence of a relation diagnostic is **not** a false approval or a measured
+human/model error. The gain is eight additional automatic diagnostics with no
+false gap in the eight valid cases.
+
+Across the eight complete views, response bytes increased **14,088 → 16,808**
+(340 extra bytes each); question bytes increased **3,640 → 9,856**. Source reads
+stayed at eight/9,360 bytes for each method. The preregistered bounds were at most
+1 KiB additional response bytes, 4 KiB per complete response/question, correct
+diagnostics and exact retention of all required values/qualifiers. This is an
+opt-in check with measured overhead, not a context, speed or accuracy improvement.
+The existing 25 X26 cases are regression controls for unchanged v1 behavior.
+
+X27 frozen SHA256:
+`804ed476e10e9c99c03da027288d53b3ae78076a85c4091a95c80419d580f2d3`.
+[Chain-of-Verification v2, sections 3.3–3.4 and 6](https://arxiv.org/abs/2309.11495v2)
+motivates explicit cross-checking and acknowledges remaining errors and added
+computation. Our deterministic relation contract is an engineering inference;
+it does not reproduce that paper's LLM experiment. Existing native budget 6/6
+was retained; this experiment used root checks, not a fresh independent model.
+
+## What the field-selection comparison establishes
 
 X26 fixed 25 new synthetic cases before implementation: seven complete views,
 six insufficiency cases and twelve refusals. Questions covered integration,

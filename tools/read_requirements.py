@@ -27,15 +27,18 @@ def fields(value, expected):
         raise ValueError('fields do not match schema')
 
 
-def version(document):
-    if type(document['schema_version']) is not int or document['schema_version'] != 1:
+def version(document, allowed=(1,)):
+    if type(document['schema_version']) is not int or document['schema_version'] not in allowed:
         raise ValueError('unsupported schema version')
 
 
 def validate_question(question):
-    fields(question, {'schema_version', 'question_id', 'question', 'subject', 'source_sha256',
-                      'max_source_bytes', 'max_result_bytes', 'requirements'})
-    version(question)
+    expected = {'schema_version', 'question_id', 'question', 'subject', 'source_sha256',
+                'max_source_bytes', 'max_result_bytes', 'requirements'}
+    if type(question) is dict and question.get('schema_version') == 2:
+        expected.add('relations')
+    fields(question, expected)
+    version(question, (1, 2))
     identifier(question['question_id']); identifier(question['subject'])
     text = question['question']
     if type(text) is not str or not text.strip() or len(text) > 4096:
@@ -58,6 +61,58 @@ def validate_question(question):
         ids.add(row['id']); purposes.add(row['purpose'])
     if purposes != {'answer', 'guard'}:
         raise ValueError('question needs both answer and guard requirements')
+    if question['schema_version'] == 2:
+        validate_relations(question['relations'], ids)
+
+
+def validate_relations(relations, requirements):
+    if type(relations) is not list or not 1 <= len(relations) <= 32:
+        raise ValueError('expected 1 to 32 relations')
+    ids = set()
+    for row in relations:
+        fields(row, {'id', 'operator', 'left', 'right'})
+        identifier(row['id'])
+        if row['id'] in ids:
+            raise ValueError('relation IDs must be unique')
+        ids.add(row['id'])
+        if type(row['operator']) is not str or row['operator'] not in ('equal', 'subset'):
+            raise ValueError('relation operator must be equal or subset')
+        for operand in (row['left'], row['right']):
+            fields(operand, {'requirement', 'pointer'})
+            identifier(operand['requirement'])
+            if operand['requirement'] not in requirements:
+                raise ValueError('relations may reference only declared requirements')
+            E.tokens(operand['pointer'])
+        if row['left'] == row['right']:
+            raise ValueError('relation operands must be distinct')
+
+
+def check_relations(relations, selected):
+    # Every match for a requirement already has the same typed value. Records
+    # and qualifiers are still returned in full; this does not pick a winner.
+    values = {row['id']: row['observations'][0]['value'] for row in selected}
+    gaps = []
+    for relation in relations:
+        try:
+            left, right = [E.select(values[operand['requirement']], operand['pointer'])
+                           for operand in (relation['left'], relation['right'])]
+        except ValueError:
+            reason = 'MISSING'
+        else:
+            reason = None
+            if left is None or right is None:
+                reason = 'UNKNOWN'
+            elif relation['operator'] == 'equal':
+                if E.encode(left) != E.encode(right):
+                    reason = 'MISMATCH'
+            elif any(type(value) is not list or any(type(item) is not str for item in value)
+                     for value in (left, right)):
+                reason = 'TYPE'
+            elif not set(left).issubset(set(right)):
+                reason = 'MISMATCH'
+        if reason:
+            gaps.append(dict(id=relation['id'], reason=reason))
+    return gaps
 
 
 def validate_source(document):
@@ -113,14 +168,24 @@ def read_requirements(question_path, expected_question_sha256, source_path):
                 gaps.append(dict(id=requirement['id'], reason=reason))
             else:
                 selected.append(dict(requirement, observations=matches))
-        result = dict(schema_version=1, status='INSUFFICIENT' if gaps else 'OBSERVED',
-                      scope='declared_requirements_only', question_id=question['question_id'],
+        relation_gaps = []
+        has_relations = question['schema_version'] == 2
+        if has_relations and not gaps:
+            relation_gaps = check_relations(question['relations'], selected)
+        result = dict(schema_version=1, status='INSUFFICIENT' if gaps or relation_gaps else 'OBSERVED',
+                      scope='declared_requirements_and_relations_only' if has_relations else 'declared_requirements_only',
+                      question_id=question['question_id'],
                       subject=question['subject'], question_sha256=expected_question_sha256,
                       source_sha256=E.digest(source), metrics=metrics)
         if gaps:
             result['gaps'] = gaps
+        elif relation_gaps:
+            result['relation_gaps'] = relation_gaps
         else:
             result['requirements'] = selected
+            if has_relations:
+                result['relation_checks'] = [dict(id=row['id'], operator=row['operator'], status='MATCH')
+                                             for row in question['relations']]
             if len(E.encode(result)) > question['max_result_bytes']:
                 raise ValueError('result byte limit exceeded; never truncate required evidence')
         return result
