@@ -70,13 +70,18 @@ def receive(database, envelope, payload, expected, *, dedup, rollback=False):
         connection.execute('CREATE TABLE IF NOT EXISTS effects (payload BLOB NOT NULL)')
         try:
             with connection:
-                prior = connection.execute('SELECT payload FROM inbox WHERE identity=?', (key,)).fetchone() if dedup else None
-                if prior is not None:
-                    if prior[0] != payload:
-                        return None
-                else:
-                    if dedup:
-                        connection.execute('INSERT INTO inbox VALUES (?,?)', (key, payload))
+                inserted = True
+                if dedup:
+                    # Claim the identity before reading it: a concurrent duplicate
+                    # waits for this transaction instead of racing an empty read.
+                    inserted = connection.execute(
+                        'INSERT OR IGNORE INTO inbox VALUES (?,?)', (key, payload)
+                    ).rowcount == 1
+                    if not inserted:
+                        prior = connection.execute('SELECT payload FROM inbox WHERE identity=?', (key,)).fetchone()
+                        if prior is None or prior[0] != payload:
+                            return None
+                if inserted:
                     if rollback:
                         raise RuntimeError('injected rollback before effect')
                     connection.execute('INSERT INTO effects VALUES (?)', (payload,))

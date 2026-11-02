@@ -41,6 +41,7 @@
 ### Added
 
 - Add an offline delivery-recovery comparison with frozen loss/ACK/rollback cases and SQLite receipt/effect transactions. Preserve failed retry controls, bound transmissions, and keep unknown completion distinct from success; no live transport or external exactly-once guarantee.
+- Claim local SQLite delivery receipts atomically before checking duplicates, preventing a check-then-insert uniqueness error under overlapping deliveries. Add bounded two-process regressions and stored-payload conflict checks; retain the serial benchmark's answers and limited local-effect scope.
 - Planner 1.2 adds read-only accepted-retry hints for blocked dependencies, including required ledger reordering. Root must reopen artifacts and explicitly rebind inputs; existing dispatch restrictions remain in force.
 - Add known-answer swarm planning, bounded review and scoped-communication benchmarks. Preserve unsuccessful alternatives, exact expectations and limits instead of claiming model, cost or latency improvements from simulations.
 - Clarify artifact handoffs: bind the root-selected run, producer, epoch, contract and revision/digest to reopened bytes, and retain separate acceptance and runtime evidence.
