@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Stage the documented comparison bundle until its evidence, pin and report are checked, then publish it under a fresh `accepted` directory. Retain interrupted artifacts and refusal audits, with subprocess regressions for partial writes and lost publication acknowledgements.
+
 - Add an offline, success-only CI evidence checker for an independently specified commit and required check name/app pairs. Reject cancelled, ambiguous, incomplete or stale snapshots; retain optional-check behavior and document the distinction from GitHub merge authorization.
 
 - Export deterministic review evidence from actual scorer attempts, excluding cache hits and preserving failed attempts in refusal audits. Bind the input fixture before evaluation, retain source fingerprints with backward-compatible comparison schema 2, and document the source-only producer/packaged-consumer workflow.
