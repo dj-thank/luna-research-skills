@@ -1,0 +1,1148 @@
+{
+  "schema_version": 1,
+  "fixture_notice": "Synthetic labels only; UUIDs, receipts, times and digests do not describe a live run.",
+  "now": "2026-01-01T00:20:00Z",
+  "base_ledger": {
+    "ledger_type": "project",
+    "version": 2,
+    "tree_id": "11111111-1111-4111-8111-111111111111",
+    "run_id": "879ad9bf-2bec-520c-be4b-a568b442769e",
+    "mode": "flat",
+    "assignments": [
+      {
+        "attempt_id": "A",
+        "kind": "builder",
+        "role": "builder",
+        "parent_attempt_id": null,
+        "depth": 1,
+        "wave": 1,
+        "may_spawn_descendants": false,
+        "descendant_budget": 0,
+        "root_parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+        "root_parent_call_id": null,
+        "delegated_by": {
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": null
+        },
+        "execution_status": "planned",
+        "acceptance_status": "pending",
+        "runtime_verified": false,
+        "objective": "SYNTHETIC fixture A",
+        "ownership": [
+          "fixture/A"
+        ],
+        "acceptance_criteria": [
+          "oracle"
+        ],
+        "evidence_locator": "synthetic:A",
+        "dependencies": [],
+        "integration_status": "pending",
+        "deadline": "2026-01-01T00:50:00Z"
+      },
+      {
+        "attempt_id": "D",
+        "kind": "builder",
+        "role": "builder",
+        "parent_attempt_id": null,
+        "depth": 1,
+        "wave": 1,
+        "may_spawn_descendants": false,
+        "descendant_budget": 0,
+        "root_parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+        "root_parent_call_id": null,
+        "delegated_by": {
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": null
+        },
+        "execution_status": "planned",
+        "acceptance_status": "pending",
+        "runtime_verified": false,
+        "objective": "SYNTHETIC fixture D",
+        "ownership": [
+          "fixture/D"
+        ],
+        "acceptance_criteria": [
+          "oracle"
+        ],
+        "evidence_locator": "synthetic:D",
+        "dependencies": [],
+        "integration_status": "pending",
+        "deadline": "2026-01-01T00:50:00Z"
+      },
+      {
+        "attempt_id": "R",
+        "kind": "reviewer",
+        "role": "reviewer",
+        "parent_attempt_id": null,
+        "depth": 1,
+        "wave": 2,
+        "may_spawn_descendants": false,
+        "descendant_budget": 0,
+        "root_parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+        "root_parent_call_id": null,
+        "delegated_by": {
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": null
+        },
+        "execution_status": "planned",
+        "acceptance_status": "pending",
+        "runtime_verified": false,
+        "objective": "SYNTHETIC fixture R",
+        "ownership": [
+          "read-only"
+        ],
+        "acceptance_criteria": [
+          "oracle"
+        ],
+        "evidence_locator": "synthetic:R",
+        "dependencies": [
+          "A"
+        ],
+        "integration_status": "not_applicable",
+        "deadline": "2026-01-01T00:50:00Z"
+      },
+      {
+        "attempt_id": "B",
+        "kind": "builder",
+        "role": "builder",
+        "parent_attempt_id": null,
+        "depth": 1,
+        "wave": 3,
+        "may_spawn_descendants": false,
+        "descendant_budget": 0,
+        "root_parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+        "root_parent_call_id": null,
+        "delegated_by": {
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": null
+        },
+        "execution_status": "planned",
+        "acceptance_status": "pending",
+        "runtime_verified": false,
+        "objective": "SYNTHETIC fixture B",
+        "ownership": [
+          "fixture/B"
+        ],
+        "acceptance_criteria": [
+          "oracle"
+        ],
+        "evidence_locator": "synthetic:B",
+        "dependencies": [
+          "A",
+          "R"
+        ],
+        "integration_status": "pending",
+        "deadline": "2026-01-01T00:50:00Z"
+      },
+      {
+        "attempt_id": "S",
+        "kind": "reviewer",
+        "role": "reviewer",
+        "parent_attempt_id": null,
+        "depth": 1,
+        "wave": 4,
+        "may_spawn_descendants": false,
+        "descendant_budget": 0,
+        "root_parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+        "root_parent_call_id": null,
+        "delegated_by": {
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": null
+        },
+        "execution_status": "planned",
+        "acceptance_status": "pending",
+        "runtime_verified": false,
+        "objective": "SYNTHETIC fixture S",
+        "ownership": [
+          "read-only"
+        ],
+        "acceptance_criteria": [
+          "oracle"
+        ],
+        "evidence_locator": "synthetic:S",
+        "dependencies": [
+          "D",
+          "B"
+        ],
+        "integration_status": "not_applicable",
+        "deadline": "2026-01-01T00:50:00Z"
+      },
+      {
+        "attempt_id": "V",
+        "kind": "verifier",
+        "role": "verifier",
+        "parent_attempt_id": null,
+        "depth": 1,
+        "wave": 5,
+        "may_spawn_descendants": false,
+        "descendant_budget": 0,
+        "root_parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+        "root_parent_call_id": null,
+        "delegated_by": {
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": null
+        },
+        "execution_status": "planned",
+        "acceptance_status": "pending",
+        "runtime_verified": false,
+        "objective": "SYNTHETIC fixture V",
+        "ownership": [
+          "read-only"
+        ],
+        "acceptance_criteria": [
+          "oracle"
+        ],
+        "evidence_locator": "synthetic:V",
+        "dependencies": [
+          "A",
+          "D",
+          "R",
+          "B",
+          "S"
+        ],
+        "integration_status": "not_applicable",
+        "deadline": "2026-01-01T00:50:00Z"
+      }
+    ],
+    "attempt_budget_N": 6,
+    "concurrency_cap_C": 2,
+    "wave_width_W": 2,
+    "max_workflow_depth": 1,
+    "verifier_reserve_V": 1,
+    "phase": "planning",
+    "closure_status": "open",
+    "root_integration_status": "not_started",
+    "root_integration_receipt": null,
+    "overall_deadline": "2026-01-01T01:00:00Z",
+    "target_gate": "LOCAL_PASS",
+    "verified_gates": [],
+    "gate_receipts": {},
+    "external_authority": false
+  },
+  "cases": [
+    {
+      "id": "initial",
+      "description": "Two independent builders can start",
+      "row_overrides": {},
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "A",
+          "D"
+        ],
+        "blocked_reasons": {
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "V": [
+            "ROOT_INTEGRATION_REQUIRED"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "one_active",
+      "description": "Independent builder fills the second slot",
+      "row_overrides": {
+        "A": {
+          "execution_status": "started",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          }
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "D"
+        ],
+        "blocked_reasons": {},
+        "errors": []
+      }
+    },
+    {
+      "id": "two_active",
+      "description": "Full capacity prevents additional starts",
+      "row_overrides": {
+        "A": {
+          "execution_status": "started",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          }
+        },
+        "D": {
+          "execution_status": "started",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          }
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {
+          "R": [
+            "CAPACITY_OR_WAVE_LIMIT"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "candidate_review",
+      "description": "A finished candidate can be reviewed while D runs",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "pending",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "D": {
+          "execution_status": "started",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          }
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "R"
+        ],
+        "blocked_reasons": {},
+        "errors": []
+      }
+    },
+    {
+      "id": "rolling_handoff",
+      "description": "Accepted A unlocks B without waiting for unrelated D",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "R": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:06:00Z",
+          "root_parent_call_id": "synthetic-R",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-R"
+          },
+          "finished_at": "2026-01-01T00:07:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "0ea9adc6-562e-53db-9558-0cf2d8bc3fd3",
+          "runtime_turn": "e5517f2b-4e25-51f1-85fa-39564150e2f5",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-R",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "D": {
+          "execution_status": "started",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          }
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "B"
+        ],
+        "blocked_reasons": {},
+        "errors": []
+      }
+    },
+    {
+      "id": "rejected_dependency",
+      "description": "Rejected candidate cannot unlock a consumer",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "rejected",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "D"
+        ],
+        "blocked_reasons": {
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "ownership_conflict",
+      "description": "The first planned writer reserves its shared path",
+      "row_overrides": {
+        "D": {
+          "ownership": [
+            "fixture/A/subdir"
+          ]
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "A"
+        ],
+        "blocked_reasons": {
+          "D": [
+            "WRITER_OWNERSHIP_CONFLICT"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "future_finish",
+      "description": "Future completion still consumes a slot",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:25:00Z",
+          "acceptance_status": "pending",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "D": {
+          "wave": 2
+        },
+        "R": {
+          "wave": 3
+        },
+        "B": {
+          "wave": 4
+        },
+        "S": {
+          "wave": 5
+        },
+        "V": {
+          "wave": 6
+        }
+      },
+      "ledger_overrides": {
+        "concurrency_cap_C": 1,
+        "wave_width_W": 1
+      },
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {
+          "D": [
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "R": [
+            "DEPENDENCY_FINISH_FUTURE"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "expired_candidate",
+      "description": "Expired A is skipped but independent D remains ready",
+      "row_overrides": {
+        "A": {
+          "deadline": "2026-01-01T00:15:00Z"
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [
+          "D"
+        ],
+        "blocked_reasons": {
+          "A": [
+            "DEADLINE_EXPIRED"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "integration_gate",
+      "description": "Final verification waits for root integration",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "D": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          },
+          "finished_at": "2026-01-01T00:08:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6e91664b-5130-57b2-b4a5-addb00f05af5",
+          "runtime_turn": "7a095da5-7b55-5b98-a8b3-1bc6faaa2310",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-D",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "R": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:06:00Z",
+          "root_parent_call_id": "synthetic-R",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-R"
+          },
+          "finished_at": "2026-01-01T00:07:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "0ea9adc6-562e-53db-9558-0cf2d8bc3fd3",
+          "runtime_turn": "e5517f2b-4e25-51f1-85fa-39564150e2f5",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-R",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "B": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:08:00Z",
+          "root_parent_call_id": "synthetic-B",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-B"
+          },
+          "finished_at": "2026-01-01T00:09:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "74dce60b-d592-59fa-a2bb-f879f5501954",
+          "runtime_turn": "41caa332-1df1-55c6-b7d3-35de62517769",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-B",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "S": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:10:00Z",
+          "root_parent_call_id": "synthetic-S",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-S"
+          },
+          "finished_at": "2026-01-01T00:11:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6ee3be64-796b-5198-801d-555be1ad5d6a",
+          "runtime_turn": "ca5f57e9-78a4-5da8-8fc7-5f346993c6b9",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-S",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        }
+      },
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {
+          "V": [
+            "ROOT_INTEGRATION_REQUIRED",
+            "ACCEPTED_WRITERS_NOT_INTEGRATED"
+          ]
+        },
+        "errors": []
+      }
+    },
+    {
+      "id": "final_verifier",
+      "description": "Frozen root integration enables final verification",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "D": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          },
+          "finished_at": "2026-01-01T00:08:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6e91664b-5130-57b2-b4a5-addb00f05af5",
+          "runtime_turn": "7a095da5-7b55-5b98-a8b3-1bc6faaa2310",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-D",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "R": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:06:00Z",
+          "root_parent_call_id": "synthetic-R",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-R"
+          },
+          "finished_at": "2026-01-01T00:07:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "0ea9adc6-562e-53db-9558-0cf2d8bc3fd3",
+          "runtime_turn": "e5517f2b-4e25-51f1-85fa-39564150e2f5",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-R",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "B": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:08:00Z",
+          "root_parent_call_id": "synthetic-B",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-B"
+          },
+          "finished_at": "2026-01-01T00:09:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "74dce60b-d592-59fa-a2bb-f879f5501954",
+          "runtime_turn": "41caa332-1df1-55c6-b7d3-35de62517769",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-B",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "S": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:10:00Z",
+          "root_parent_call_id": "synthetic-S",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-S"
+          },
+          "finished_at": "2026-01-01T00:11:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6ee3be64-796b-5198-801d-555be1ad5d6a",
+          "runtime_turn": "ca5f57e9-78a4-5da8-8fc7-5f346993c6b9",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-S",
+          "runtime_model": "gpt-6-luna",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        }
+      },
+      "ledger_overrides": {
+        "root_integration_status": "completed",
+        "root_integration_receipt": "synthetic:integration"
+      },
+      "expected": {
+        "selected_attempt_ids": [
+          "V"
+        ],
+        "blocked_reasons": {},
+        "errors": []
+      }
+    },
+    {
+      "id": "implicit_profile_rejected",
+      "description": "Claimed runtime cannot choose its own model policy",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "D": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          },
+          "finished_at": "2026-01-01T00:08:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6e91664b-5130-57b2-b4a5-addb00f05af5",
+          "runtime_turn": "7a095da5-7b55-5b98-a8b3-1bc6faaa2310",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-D",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "R": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:06:00Z",
+          "root_parent_call_id": "synthetic-R",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-R"
+          },
+          "finished_at": "2026-01-01T00:07:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "0ea9adc6-562e-53db-9558-0cf2d8bc3fd3",
+          "runtime_turn": "e5517f2b-4e25-51f1-85fa-39564150e2f5",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-R",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "B": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:08:00Z",
+          "root_parent_call_id": "synthetic-B",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-B"
+          },
+          "finished_at": "2026-01-01T00:09:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "74dce60b-d592-59fa-a2bb-f879f5501954",
+          "runtime_turn": "41caa332-1df1-55c6-b7d3-35de62517769",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-B",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "S": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:10:00Z",
+          "root_parent_call_id": "synthetic-S",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-S"
+          },
+          "finished_at": "2026-01-01T00:11:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6ee3be64-796b-5198-801d-555be1ad5d6a",
+          "runtime_turn": "ca5f57e9-78a4-5da8-8fc7-5f346993c6b9",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-S",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        }
+      },
+      "ledger_overrides": {
+        "root_integration_status": "completed",
+        "root_integration_receipt": "synthetic:integration"
+      },
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {},
+        "errors": [
+          "INVALID_LEDGER"
+        ]
+      }
+    },
+    {
+      "id": "explicit_sol",
+      "description": "An explicitly selected supported policy accepts matching receipts",
+      "row_overrides": {
+        "A": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-A",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-A"
+          },
+          "finished_at": "2026-01-01T00:05:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "7bfc56cf-30cf-5359-8eb8-c66f5030368f",
+          "runtime_turn": "5ee575e1-a07a-521c-8648-8da7baa6fbc0",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-A",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "D": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:00:00Z",
+          "root_parent_call_id": "synthetic-D",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-D"
+          },
+          "finished_at": "2026-01-01T00:08:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6e91664b-5130-57b2-b4a5-addb00f05af5",
+          "runtime_turn": "7a095da5-7b55-5b98-a8b3-1bc6faaa2310",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-D",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "R": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:06:00Z",
+          "root_parent_call_id": "synthetic-R",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-R"
+          },
+          "finished_at": "2026-01-01T00:07:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "0ea9adc6-562e-53db-9558-0cf2d8bc3fd3",
+          "runtime_turn": "e5517f2b-4e25-51f1-85fa-39564150e2f5",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-R",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        },
+        "B": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:08:00Z",
+          "root_parent_call_id": "synthetic-B",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-B"
+          },
+          "finished_at": "2026-01-01T00:09:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "74dce60b-d592-59fa-a2bb-f879f5501954",
+          "runtime_turn": "41caa332-1df1-55c6-b7d3-35de62517769",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-B",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only",
+          "integration_status": "integrated"
+        },
+        "S": {
+          "execution_status": "completed",
+          "started_at": "2026-01-01T00:10:00Z",
+          "root_parent_call_id": "synthetic-S",
+          "delegated_by": {
+            "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+            "parent_call_id": "synthetic-S"
+          },
+          "finished_at": "2026-01-01T00:11:00Z",
+          "acceptance_status": "accepted",
+          "runtime_verified": true,
+          "thread_uuid": "6ee3be64-796b-5198-801d-555be1ad5d6a",
+          "runtime_turn": "ca5f57e9-78a4-5da8-8fc7-5f346993c6b9",
+          "parent_thread_uuid": "11111111-1111-4111-8111-111111111111",
+          "parent_call_id": "synthetic-S",
+          "runtime_model": "gpt-6.1-sol",
+          "runtime_effort": "low",
+          "agent_role": "default",
+          "spawn_kind": "spawn_agent",
+          "safety_enforcement": "prompt_only"
+        }
+      },
+      "ledger_overrides": {
+        "root_integration_status": "completed",
+        "root_integration_receipt": "synthetic:integration"
+      },
+      "expected": {
+        "selected_attempt_ids": [
+          "V"
+        ],
+        "blocked_reasons": {},
+        "errors": []
+      },
+      "specialist_model": "gpt-6.1-sol"
+    },
+    {
+      "id": "unsupported_profile",
+      "description": "Unsupported model selection fails closed",
+      "row_overrides": {},
+      "ledger_overrides": {},
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {},
+        "errors": [
+          "INVALID_INPUT"
+        ]
+      },
+      "specialist_model": "unsupported"
+    },
+    {
+      "id": "invalid_budget",
+      "description": "Boolean budget is not an integer budget",
+      "row_overrides": {},
+      "ledger_overrides": {
+        "attempt_budget_N": true
+      },
+      "expected": {
+        "selected_attempt_ids": [],
+        "blocked_reasons": {},
+        "errors": [
+          "INVALID_LEDGER"
+        ]
+      }
+    }
+  ],
+  "communication": {
+    "agents": [
+      "A",
+      "D",
+      "R",
+      "B",
+      "S",
+      "V",
+      "root"
+    ],
+    "current_epochs": {
+      "A": 2,
+      "D": 1
+    },
+    "recipients": {
+      "A": [
+        "R",
+        "root"
+      ],
+      "D": [
+        "S",
+        "root"
+      ]
+    },
+    "events": [
+      {
+        "event_id": "a-old",
+        "sender": "A",
+        "epoch": 1,
+        "artifact_digest": "old"
+      },
+      {
+        "event_id": "a-current",
+        "sender": "A",
+        "epoch": 2,
+        "artifact_digest": "current"
+      },
+      {
+        "event_id": "a-duplicate",
+        "sender": "A",
+        "epoch": 2,
+        "artifact_digest": "current"
+      },
+      {
+        "event_id": "d-current",
+        "sender": "D",
+        "epoch": 1,
+        "artifact_digest": "docs"
+      }
+    ],
+    "expected_deliveries": [
+      [
+        "a-current",
+        "R"
+      ],
+      [
+        "a-current",
+        "root"
+      ],
+      [
+        "d-current",
+        "S"
+      ],
+      [
+        "d-current",
+        "root"
+      ]
+    ]
+  }
+}

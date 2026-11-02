@@ -294,6 +294,8 @@ Pin dependency revisions, assign disjoint edits, and identify shared-device owne
 
 The bundled `plan_swarm.py` reads a flat Project v2 ledger and returns a proposed next batch plus review, dependency, ownership, capacity and integration blockers as JSON. It does not modify the ledger or start agents. See [planner usage](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md#inspect-the-next-batch).
 
+Feed actual dispatch and verified results back into the ledger. Run `python tools/benchmark_swarm.py` against predeclared answers and follow the [swarm evaluation and improvement procedure](docs/swarm-experiments.md) for communication experiments and native repair trials. For an explicitly selected Sol run, pass `--specialist-model gpt-6.1-sol` to the planner as well.
+
 ### Turn research into improvements
 
 ```text

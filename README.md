@@ -290,6 +290,8 @@ API担当と説明書担当を並行して動かし、APIの成果を親が受�
 
 付属の `plan_swarm.py` は、flatなProject v2台帳から次の実行候補と待ち理由をJSONで返します。レビュー待ち・依存待ち・担当衝突・枠不足・統合待ちを確認でき、台帳の変更やエージェントの起動は行いません。[使い方](.agents/skills/run-diverse-luna-project/references/swarm-coordination.md#inspect-the-next-batch)
 
+実際の担当選択と検証結果を台帳へ戻しながら改善できます。`python tools/benchmark_swarm.py` で事前に定義した正解と比較し、通信方式の実験と実エージェントでの修復確認は[スウォームの評価・改善手順](docs/swarm-experiments.md)に沿って記録します。Solを明示選択した実行では、プランナーにも `--specialist-model gpt-6.1-sol` を指定します。
+
 ### 調査した改善案を実装へつなぐ
 
 ```text
