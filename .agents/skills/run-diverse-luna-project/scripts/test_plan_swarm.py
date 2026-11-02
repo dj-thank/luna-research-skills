@@ -193,6 +193,19 @@ class PlannerTests(unittest.TestCase):
         value["assignments"][2]["deadline"] = "2026-01-01T00:10:00Z"
         self.assertIn("DEADLINE_EXPIRED", self.codes(self.run_plan(value), "B"))
 
+    def test_future_terminal_attempt_still_occupies_capacity_at_snapshot(self):
+        rows = [row("A", status="completed", finished_at="2026-01-01T00:25:00Z"),
+                row("B", wave=2), row("V", "verifier", wave=3)]
+        value = ledger(rows, concurrency_cap_C=1, wave_width_W=1, attempt_budget_N=4)
+        result = self.run_plan(value)
+        self.assertEqual(result["selected_attempt_ids"], [])
+        self.assertEqual(result["active_attempt_ids"], ["A"])
+        self.assertEqual(result["capacity"]["effective_open_children"], 1)
+        self.assertIn("CAPACITY_OR_WAVE_LIMIT", self.codes(result, "B"))
+        self.assertEqual(result["active_alerts"][0]["reasons"],
+                         [P.reason("RECORDED_FINISH_AFTER_SNAPSHOT")])
+        self.assertEqual(self.run_plan(value, now="2026-01-01T00:25:00Z")["selected_attempt_ids"], ["B"])
+
     def test_terminal_historical_writer_needs_external_actual_release_check(self):
         value = ledger()
         value["assignments"][2]["ownership"] = ["work/a/next"]

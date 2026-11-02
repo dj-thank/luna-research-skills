@@ -38,6 +38,8 @@ spawn. Do not reuse a plan after its inputs or live ownership change.
 
 The default clock is current UTC. `--now <timezone-aware ISO timestamp>` supports
 reproducible simulations; a historical override is not a live deadline check.
+Dispatched rows with a recorded finish after that snapshot still occupy capacity,
+with an alert; a future finish cannot release a slot early.
 The planner does not rewrite wave assignments, wait, retry or repair invalid
 ledgers. Root records any approved plan change before executing its suggestion.
 

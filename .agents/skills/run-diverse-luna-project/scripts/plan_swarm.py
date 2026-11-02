@@ -82,8 +82,10 @@ def plan(ledger, open_children, now):
     budget, cap, width = get("attempt_budget_N", "N"), get("concurrency_cap_C", "C"), get("wave_width_W", "W")
     reserve = settings.get("verifier_reserve_V", settings.get("verifier_reserve", 0))
     by_id = {r["attempt_id"]: r for r in rows}
-    active = [r for r in rows if r["execution_status"] == "started"]
     end = lambda r: timestamp(r.get("finished_at")) or timestamp(r.get("timeout_at"))
+    active = [r for r in rows if r["execution_status"] == "started" or
+              (r["execution_status"] not in {"planned", "not_dispatched"}
+               and end(r) is not None and end(r) > now)]
     used = sum(r["execution_status"] not in {"planned", "not_dispatched"} for r in rows)
     remaining = budget - used
     reserve_left = max(0, reserve - sum(r["kind"] in RESERVE and r["acceptance_status"] == "accepted"
@@ -110,8 +112,11 @@ def plan(ledger, open_children, now):
             result.append(reason("ACTIVE_TTL_EXPIRED"))
         return result
     for r in active:
-        if expiration(r):
-            alerts.append({"attempt_id": r["attempt_id"], "reasons": expiration(r)})
+        active_reasons = expiration(r)
+        if r["execution_status"] != "started":
+            active_reasons.append(reason("RECORDED_FINISH_AFTER_SNAPSHOT"))
+        if active_reasons:
+            alerts.append({"attempt_id": r["attempt_id"], "reasons": active_reasons})
     selected_reserve = 0
     for r in rows:
         if r["execution_status"] != "planned":
