@@ -19,11 +19,14 @@ POLICIES = ('checked_critique', 'checked_minority', 'unique_critique')
 class OracleBudget:
     """Serial, in-memory experiment budget for the deterministic score function."""
 
-    def __init__(self, limit):
+    def __init__(self, limit, *, attempts=None):
         if type(limit) is not int or limit < 1:
             raise ValueError('oracle budget must be a positive integer')
         self.limit, self.calls, self.hits = limit, 0, 0
         self._cache = {}
+        if attempts is not None and type(attempts) is not list:
+            raise ValueError('attempts must be a list or None')
+        self.attempts = attempts
 
     def check(self, expected, proposal, *, revision, epoch, reuse=False):
         # Full content is the key: IDs/digests supplied by an agent are not proof.
@@ -34,13 +37,21 @@ class OracleBudget:
         if self.calls >= self.limit:
             return None  # Unchecked, distinct from a rejected False verdict.
         self.calls += 1  # Failed attempts also consume the finite budget.
-        verdict = B.score(expected, proposal)['passed']
+        event = {'status': 'started'}
+        if self.attempts is not None:
+            self.attempts.append(event)
+        try:
+            verdict = B.score(expected, proposal)['passed']
+        except Exception:
+            event['status'] = 'failed'
+            raise
+        event.update(status='returned', verdict=verdict)
         if reuse:
             self._cache[key] = verdict
         return verdict
 
 
-def evaluate(document, case, policy, revision):
+def evaluate(document, case, policy, revision, *, attempts=None):
     if policy not in POLICIES:
         raise ValueError(f'unknown review policy: {policy}')
     ballots = case['independent']
@@ -51,7 +62,7 @@ def evaluate(document, case, policy, revision):
         raise ValueError('a strict majority is required; ties need a separate experiment')
     majority, critic = ranking[0][0], case['critique']
     minority = next((p for p in ballots if p != majority), critic)
-    budget = OracleBudget(document['budget'])
+    budget = OracleBudget(document['budget'], attempts=attempts)
     checks = []
 
     def check(pid):
@@ -77,7 +88,7 @@ def evaluate(document, case, policy, revision):
                 delivered_proposals=len(ballots)+1, checks=checks)
 
 
-def run_benchmark(document):
+def validate_document(document):
     cases = document.get('cases')
     if not isinstance(cases, list) or not cases or len({c['id'] for c in cases}) != len(cases):
         raise ValueError('non-empty cases with unique IDs are required')
@@ -86,6 +97,11 @@ def run_benchmark(document):
         raise ValueError('every proposal needs an independent boolean correctness label')
     if document['budget'] != 2 or type(document['budget']) is not int:
         raise ValueError('this comparison requires a two-call budget')
+
+
+def run_benchmark(document):
+    validate_document(document)
+    cases, labels = document['cases'], document['valid_labels']
     revision = hashlib.sha256(Path(B.__file__).read_bytes()).hexdigest()
     records = []
     for case in cases:

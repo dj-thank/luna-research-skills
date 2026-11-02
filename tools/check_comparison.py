@@ -54,10 +54,18 @@ def load_json(data):
 
 def summarize(document, evidence_sha256):
     """Compute outcomes from choices/labels, never from a scorer's passed flag."""
-    _object(document, ('schema_version', 'evidence_kind', 'work_unit', 'policies',
-                       'per_case_budget', 'cases', 'work'), 'evidence')
-    if type(document['schema_version']) is not int or document['schema_version'] != 1:
+    if type(document) is not dict:
+        raise ValueError('evidence must be an object')
+    version = document.get('schema_version')
+    if type(version) is not int or version not in (1, 2):
         raise ValueError('unsupported evidence schema_version')
+    keys = ('schema_version', 'evidence_kind', 'work_unit', 'policies', 'per_case_budget', 'cases', 'work')
+    _object(document, keys + (('source',) if version == 2 else ()), 'evidence')
+    if version == 2:
+        _object(document['source'], ('fixture_sha256', 'review_sha256', 'validator_sha256', 'exporter_sha256'), 'source')
+        for value in document['source'].values():
+            if type(value) is not str or not re.fullmatch('[0-9a-f]{64}', value):
+                raise ValueError('source fingerprints must be lowercase SHA-256')
     if document['evidence_kind'] != 'synthetic_known_answer':
         raise ValueError('only synthetic_known_answer evidence is supported')
     if document['work_unit'] not in UNITS:
@@ -129,11 +137,14 @@ def summarize(document, evidence_sha256):
             regressions.append(case['id'])
     for row in metrics.values():
         row['total_calls'] = row['evaluation_calls'] + row['calibration_calls']
-    return dict(schema_version=1, evidence_sha256=evidence_sha256,
+    result = dict(schema_version=version, evidence_sha256=evidence_sha256,
                 evidence_kind=document['evidence_kind'], work_unit=document['work_unit'],
                 policies=document['policies'], total_cases=len(cases), metrics=metrics,
                 recoveries=sorted(recoveries), regressions=sorted(regressions),
                 passes_case_gate=bool(recoveries) and not regressions and metrics['candidate']['false_accept'] == 0)
+    if version == 2:
+        result['source'] = dict(document['source'])
+    return result
 
 
 def _differences(expected, actual, path='report'):

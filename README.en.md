@@ -401,6 +401,8 @@ Each emits JSON and exits nonzero when results disagree with the frozen expectat
 
 For your own comparisons, follow the [report checking guide](docs/comparison-reports.md). `check_comparison.py` checks separately pinned evidence for per-case losses, omitted calibration calls and changed inputs. Report consistency and policy adoption are separate decisions.
 
+Use the [review evidence producer](docs/comparison-reports.md#export-a-review-comparison-without-hand-counting-checks) to export the existing benchmark directly. It counts actual evaluation attempts, distinguishes cache reuse from failures, and refuses a complete export when the run is incomplete.
+
 ### Actual model execution
 
 The checker distinguishes the current Luna route from an explicitly selected Sol route by comparing configuration, runtime records, and parent dispatch records. Public regression tests and CI check model mix-ups, acceptance of Sol without explicit selection, and concurrency-limit violations.
