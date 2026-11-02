@@ -24,6 +24,7 @@ python .agents/skills/run-diverse-luna-project/scripts/test_dispatch_budget.py
 python .agents/skills/run-diverse-luna-research/scripts/test_plan_swarm.py
 python .agents/skills/run-diverse-luna-project/scripts/test_plan_swarm.py
 python tools/benchmark_swarm.py
+python tools/benchmark_review.py
 python -m unittest discover -s tools -p 'test_*.py'
 python tools/validate_repository.py
 python tools/release_metadata.py
