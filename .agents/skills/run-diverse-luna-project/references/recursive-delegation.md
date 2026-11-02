@@ -76,3 +76,7 @@ On correction or timeout, relay the changed scope down the affected subtree, rec
 actual interruption/disposition and recover unused work. Preserve unrelated branches.
 A message acknowledgement is not subtree completion, and interruption is not rollback.
 Continuations count as their own attempts and keep their activation-evidence limit.
+
+Before transferring a writer to a replacement, apply the resource-release and
+late-result rules in [swarm coordination](swarm-coordination.md). A coordinator's
+timeout does not prove that its descendants or owned subprocesses have stopped.

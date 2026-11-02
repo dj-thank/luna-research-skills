@@ -126,6 +126,16 @@ For lifecycle validation, `planned/pending` has not started. Close a root-only g
 
 Keep the machine-readable ledger as UTF-8 JSON with this shape:
 
+Checker `2026-11-02.3` validates supplied v2 recovery metadata: positive integer
+`epoch`/`ttl_seconds` (not booleans), non-empty `dedup_key`, and null or non-empty
+`cancel_reason`. Legacy omissions remain readable. Supplied retry epochs must
+increase along known ancestry and supplied dedup keys must stay consistent.
+A dispatched retry requires its predecessor's terminal timestamp at or before
+its start; a newer dispatched epoch excludes acceptance of stale ancestors.
+Planned retries do not invalidate existing results. TTL is a checked duration,
+not an automatic timer, and a terminal ledger row does not prove a process has
+stopped. Root verifies disposition before reassigning a shared source or resource.
+
 ```json
 {
   "ledger_type": "research",
