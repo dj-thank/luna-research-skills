@@ -1,5 +1,7 @@
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -235,6 +237,64 @@ class DispatchBudgetTests(unittest.TestCase):
         ):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'dynamic wrapper'):
                 self.wrapped_counts(source)
+
+
+class DispatchInputDiagnosticsTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.config = self.root / 'config.toml'
+        self.config.write_text('[agents]\nmax_concurrent_threads_per_session=6\n', encoding='utf-8')
+        self.trace = self.root / 'root.jsonl'
+        self.trace.write_text(json.dumps({'type': 'session_meta', 'payload': {'id': 'root'}}) + '\n', encoding='utf-8')
+        self.state = self.root / 'state.json'
+        self.valid = {'version': 1, 'root_thread_id': 'root', 'started_at': '2026-01-01T00:00:00Z',
+                      'attempt_budget_N': 6, 'concurrency_cap_C': 6, 'greatest_observed_attempts': 0,
+                      'rollouts': [str(self.trace)]}
+
+    def invoke(self, value, expected_code):
+        self.state.write_text(json.dumps(value), encoding='utf-8')
+        before = self.state.read_bytes()
+        result = subprocess.run([sys.executable, str(Path(__file__).with_name('check_dispatch_budget.py')),
+                                 '--state', str(self.state), '--config', str(self.config)],
+                                capture_output=True, text=True, encoding='utf-8', timeout=30)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(result.stderr, '')
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload['status'], 'BLOCK_NEW_DISPATCH')
+        self.assertEqual(payload['schema_version'], 1)
+        self.assertEqual(payload['reason_code'], expected_code)
+        self.assertEqual(self.state.read_bytes(), before)
+
+    def test_malformed_state_shapes_are_json_errors_without_mutation(self):
+        for value in ([], None, 1, {}, {**self.valid, 'rollouts': []},
+                      {**self.valid, 'rollouts': [1]}, {**self.valid, 'rollouts': 'root.jsonl'},
+                      {**self.valid, 'greatest_observed_attempts': []},
+                      {**self.valid, 'started_at': 1}, {**self.valid, 'version': True}):
+            with self.subTest(value=value):
+                self.invoke(value, 'INVALID_STATE')
+
+    def test_non_table_config_is_a_json_error(self):
+        self.config.write_text('agents=[]\n', encoding='utf-8')
+        self.invoke(self.valid, 'INVALID_CONFIG')
+
+    def test_malformed_metadata_is_a_json_error(self):
+        for value in ([], {'type': 'session_meta', 'payload': []},
+                      {'type': 'session_meta', 'payload': {'id': []}}):
+            with self.subTest(value=value):
+                self.trace.write_text(json.dumps(value) + '\n', encoding='utf-8')
+                self.invoke(self.valid, 'INVALID_ROLLOUT')
+
+    def test_malformed_response_record_is_a_json_error(self):
+        for value in ([], {'type': 'response_item', 'payload': []},
+                      {'type': 'response_item', 'timestamp': 4, 'payload': {}},
+                      {'type': 'response_item', 'timestamp': '2026-02-01T00:00:00Z',
+                       'payload': {'type': 'function_call', 'name': 'spawn_agent', 'call_id': []}}):
+            with self.subTest(value=value):
+                self.trace.write_text(json.dumps({'type': 'session_meta', 'payload': {'id': 'root'}})
+                                      + '\n' + json.dumps(value) + '\n', encoding='utf-8')
+                self.invoke(self.valid, 'TRACE_VALIDATION_FAILED')
 
 
 if __name__ == '__main__':

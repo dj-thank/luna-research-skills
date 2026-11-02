@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
+import sys
 from pathlib import Path
 import tempfile
 import unittest
@@ -2748,6 +2750,92 @@ class V2ActivationTests(unittest.TestCase):
                 p=Path(d)/"child.jsonl"; write_jsonl(p,[value])
                 errors,_=CHECK.validate_runtime_rollout(p,"default",require_initial_turn=True)
                 self.assertTrue(any("expected object" in e for e in errors))
+
+
+class JsonDiagnosticsTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.home = self.root / "codex"
+        self.home.mkdir()
+        (self.home / "config.toml").write_text(
+            '[agents]\nenabled=true\nmax_concurrent_threads_per_session=6\n', encoding="utf-8")
+        self.arguments = ["--codex-home", str(self.home), "--workspace", str(self.root),
+                          "--agent-role", "default", "--allow-generic-worker"]
+
+    def invoke(self, *extra, as_json=True):
+        result = subprocess.run([sys.executable, str(SCRIPT_PATH), *self.arguments,
+                                 *(["--json"] if as_json else []), *extra],
+                                capture_output=True, text=True, encoding="utf-8", timeout=30)
+        self.assertNotIn("Traceback", result.stderr)
+        return result, json.loads(result.stdout) if as_json else result.stdout
+
+    def test_static_success_does_not_claim_runtime_verification(self):
+        result, payload = self.invoke()
+        self.assertEqual(result.returncode, 0, payload)
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["schema_version"], 1)
+        self.assertEqual(payload["checked"]["static"], "passed")
+        for stage in ("runtime", "schema", "ledger", "spawn_provenance", "ledger_receipts"):
+            self.assertEqual(payload["checked"][stage], "not_requested")
+
+    def test_text_and_json_have_the_same_failure_exit(self):
+        (self.home / "config.toml").write_text('[agents]\nenabled=false\n', encoding="utf-8")
+        text_result, text_output = self.invoke(as_json=False)
+        json_result, payload = self.invoke()
+        self.assertEqual(text_result.returncode, json_result.returncode)
+        self.assertEqual(json_result.returncode, 1)
+        self.assertIn("ERROR:", text_output)
+        self.assertEqual(payload["checked"]["static"], "failed")
+        self.assertTrue(payload["errors"])
+
+    def test_config_read_failure_leaves_requested_stages_unrun(self):
+        (self.home / "config.toml").write_text('[agents', encoding="utf-8")
+        result, payload = self.invoke("--runtime-rollout", str(self.root / "missing.jsonl"))
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(payload["checked"]["static"], "failed")
+        self.assertEqual(payload["checked"]["runtime"], "not_run")
+
+    def test_malformed_v2_feature_table_is_a_json_failure(self):
+        (self.home / "config.toml").write_text(
+            'features=[]\n[agents]\nenabled=true\nmax_concurrent_threads_per_session=6\n', encoding="utf-8")
+        result, payload = self.invoke("--require-v2")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(payload["checked"]["static"], "failed")
+
+    def test_runtime_stage_distinguishes_missing_and_completed_receipts(self):
+        path = self.root / "child.jsonl"
+        result, payload = self.invoke("--runtime-rollout", str(path))
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(payload["checked"]["runtime"], "failed")
+        child, turn = str(uuid.uuid4()), str(uuid.uuid4())
+        write_jsonl(path, rollout_records(child, turn))
+        result, payload = self.invoke("--runtime-rollout", str(path), "--runtime-turn", turn)
+        self.assertEqual(result.returncode, 0, payload)
+        self.assertEqual(payload["checked"]["runtime"], "passed")
+        self.assertEqual(payload["checked"]["spawn_provenance"], "not_requested")
+
+    def test_missing_runtime_cannot_pass_requested_provenance(self):
+        result, payload = self.invoke("--require-spawn-provenance")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(payload["checked"]["spawn_provenance"], "failed")
+
+    def test_invalid_ledger_does_not_claim_receipt_revalidation(self):
+        path = self.root / "ledger.json"
+        write_json(path, {})
+        result, payload = self.invoke("--ledger-json", str(path), "--verify-ledger-receipts")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(payload["checked"]["ledger"], "failed")
+        self.assertEqual(payload["checked"]["ledger_receipts"], "not_run")
+
+    def test_missing_ledger_and_invalid_schema_have_distinct_stages(self):
+        path = self.root / "schema.json"
+        write_json(path, {})
+        result, payload = self.invoke("--spawn-schema-json", str(path), "--verify-ledger-receipts")
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(payload["checked"]["schema"], "failed")
+        self.assertEqual(payload["checked"]["ledger_receipts"], "failed")
 
 
 if __name__ == "__main__":

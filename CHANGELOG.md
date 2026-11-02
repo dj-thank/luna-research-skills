@@ -6,6 +6,8 @@
 
 ### Fixed
 
+- Return structured dispatch diagnostics for malformed configuration, state, and rollout records while preserving the existing state on rejection.
+- Bound each stress-test command and include its iteration, command, exit/timeout reason, and output tail in failure diagnostics.
 - Count literal exec-wrapped spawn/followup calls in the shared dispatch budget and inspect them when verifying leaf/coordinator delegation. Reject uncountable dynamic wrappers instead of silently accepting zero attempts; ignore comments and quoted examples.
 - Bind wrapped spawn provenance to actual top-level literal arguments, so comment examples, nested task content, duplicate keys and object spreads cannot stand in for the selected model or fresh-context setting. Ignore non-exec custom-tool payloads and reject ambiguous syntax.
 - Protect Python installer destination traversal during concurrent directory replacement, and reject PowerShell source paths with junction/reparse ancestors before reading package content.
@@ -29,6 +31,8 @@
 
 ### Added
 
+- Add optional `check_setup.py --json` results with separate static, schema, ledger, runtime, provenance, and receipt-validation stages; text output remains the default.
+- Add bounded first-request examples, a research-to-implementation handoff, and an illustrative comparison with incompatible measurement conditions.
 - 英語版 `README.en.md` と、両README冒頭の English / 日本語リンクを追加。4つの図、導入・依頼・検証の5段階の手順、実例と確認範囲を英語で説明する。plugin ZIPでも英語READMEを収録し、スキルへのリンクを配布先へ変換する。
 
 - READMEの量子センサー例を実際に調査した結果と、GPT-6 Luna / lowの6体による分担・深さ2の再委任・回収・独立検証を記録した公開文書とJSONを追加。READMEから開けるようにし、実際の流れをMermaidとステップ別に説明。判定・取得範囲・未検証の境界を保持する。

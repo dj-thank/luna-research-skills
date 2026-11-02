@@ -199,6 +199,16 @@ When called from a project, hand back packets plus a conflict/gap matrix. Do not
 
 Completion criterion: every material conclusion is root-verified, counts reconcile, source-plane conflicts are explicit, no stale or lower-gate evidence is promoted, and the research answer is clearly separated from any later implementation status.
 
+### Handoff to authorized implementation
+
+For a request that includes improvements, the root can turn verified findings into this optional working table. This is an example of the existing delivery handoff, not an additional ledger schema or a new permission requirement.
+
+| Supported change and evidence | Affected target | Acceptance check | Unresolved condition |
+|---|---|---|---|
+| Example C-1 / E-1: a command timeout makes a reproduced hang finite | The caller's test runner | A deliberately stalled fixture ends within the configured limit and names the failing suite; existing tests still pass | Default timeout may need measurement on slower supported hosts |
+
+Scouts supply evidence and counterarguments. The root decides which changes are worth implementing under existing user authority, tracks the acceptance checks, and completes the authorized work. A research-only request needs no implementation table. This handoff does not automatically select the Project workflow or turn a scout into a writer.
+
 ## Hard evidence and mutation boundaries
 
 - Map every citation to the exact claim it supports.

@@ -233,9 +233,12 @@ def dispatch_names(payload: dict) -> list[str]:
 def meta(path: Path) -> dict:
     with path.open(encoding='utf-8') as source:
         first = json.loads(next(source))
-    if first.get('type') != 'session_meta':
+    if not isinstance(first, dict) or first.get('type') != 'session_meta':
         raise ValueError(f'no session metadata: {path}')
-    return first['payload']
+    payload = first.get('payload')
+    if not isinstance(payload, dict) or not isinstance(payload.get('id'), str) or not payload['id'].strip():
+        raise ValueError(f'session metadata must contain an object with a non-empty id: {path}')
+    return payload
 
 
 def parent(value):
@@ -251,10 +254,31 @@ def parent(value):
 
 
 def parse_time(value):
+    if not isinstance(value, str):
+        raise ValueError('timestamps must be ISO-8601 strings')
     result = datetime.fromisoformat(value.replace('Z', '+00:00'))
     if result.tzinfo is None:
         raise ValueError('timestamps must have a timezone')
     return result
+
+
+def validate_state(state):
+    if not isinstance(state, dict):
+        raise ValueError('state must be a JSON object')
+    if type(state.get('version')) is not int or state['version'] != 1:
+        raise ValueError('state.version must be 1')
+    if not isinstance(state.get('root_thread_id'), str) or not state['root_thread_id'].strip():
+        raise ValueError('state.root_thread_id must be a non-empty string')
+    rollouts = state.get('rollouts')
+    if not isinstance(rollouts, list) or not rollouts or any(
+        not isinstance(path, str) or not path.strip() for path in rollouts
+    ):
+        raise ValueError('state.rollouts must be a non-empty array of paths')
+    for field in ('attempt_budget_N', 'concurrency_cap_C', 'greatest_observed_attempts'):
+        value = state.get(field)
+        if type(value) is not int or value < 0:
+            raise ValueError(f'state.{field} must be a non-negative integer')
+    parse_time(state.get('started_at'))
 
 
 def observed_attempts(state: dict) -> dict:
@@ -267,9 +291,13 @@ def observed_attempts(state: dict) -> dict:
         with path.open(encoding='utf-8') as source:
             for raw in source:
                 item = json.loads(raw)
+                if not isinstance(item, dict):
+                    raise ValueError(f'rollout records must be JSON objects: {path}')
                 p = item.get('payload', {})
-                if item.get('type') != 'response_item' or not isinstance(p, dict):
+                if item.get('type') != 'response_item':
                     continue
+                if not isinstance(p, dict):
+                    raise ValueError(f'response_item payload must be an object: {path}')
                 if item.get('timestamp') and parse_time(item['timestamp']) < since:
                     continue
                 names = dispatch_names(p)
@@ -278,7 +306,7 @@ def observed_attempts(state: dict) -> dict:
                 if not item.get('timestamp'):
                     raise ValueError('dispatch call lacks timestamp')
                 call_id = p.get('call_id')
-                if not call_id:
+                if not isinstance(call_id, str) or not call_id.strip():
                     raise ValueError('dispatch call lacks call_id')
                 key = (ident, call_id)
                 if key in seen:
@@ -329,16 +357,22 @@ def main(argv=None):
     parser.add_argument('--open-children', type=int, default=0)
     parser.add_argument('--verification', action='store_true')
     args = parser.parse_args(argv)
+    reason_code = 'INVALID_CONFIG'
     try:
         config = tomllib.loads(args.config.read_text(encoding='utf-8-sig'))
-        cap = config.get('agents', {}).get('max_concurrent_threads_per_session')
+        agents = config.get('agents', {})
+        if not isinstance(agents, dict):
+            raise ValueError('configuration agents must be a TOML table')
+        cap = agents.get('max_concurrent_threads_per_session')
         if not isinstance(cap, int) or isinstance(cap, bool) or not 1 <= cap <= MAX_CHILDREN:
             raise ValueError(f'loaded configuration must cap children at {MAX_CHILDREN} or fewer')
         if args.init:
+            reason_code = 'INVALID_STATE'
             if args.state.exists():
                 raise ValueError('state already exists; continuation must reuse it')
             if args.root_rollout is None:
                 raise ValueError('--init requires --root-rollout')
+            reason_code = 'INVALID_ROLLOUT'
             root_meta = meta(args.root_rollout)
             if parent(root_meta.get('source')) or root_meta.get('parent_thread_id'):
                 raise ValueError('initialize the objective budget only at the real root')
@@ -348,9 +382,14 @@ def main(argv=None):
                      'greatest_observed_attempts': 0,
                      'rollouts': [str(args.root_rollout.resolve())]}
         else:
+            reason_code = 'INVALID_STATE'
             state = json.loads(args.state.read_text(encoding='utf-8'))
+            validate_state(state)
             if cap != state['concurrency_cap_C']:
                 raise ValueError('configured capacity changed during this objective')
+        reason_code = 'INVALID_STATE'
+        validate_state(state)
+        reason_code = 'INVALID_ROLLOUT'
         if meta(Path(state['rollouts'][0])).get('id') != state['root_thread_id']:
             raise ValueError('state no longer binds to its original root')
         known = {meta(Path(path)).get('id') for path in state['rollouts']}
@@ -363,20 +402,24 @@ def main(argv=None):
             resolved = str(path.resolve())
             if resolved not in state['rollouts']:
                 state['rollouts'].append(resolved)
+        reason_code = 'TRACE_VALIDATION_FAILED'
         counts = observed_attempts(state)
+        reason_code = 'DISPATCH_LIMIT'
         check_limits(state, counts, args.new_spawns, args.new_followups,
                      args.open_children, args.verification)
         state['greatest_observed_attempts'] = counts['total']
+        reason_code = 'STATE_WRITE_FAILED'
         args.state.parent.mkdir(parents=True, exist_ok=True)
         with args.state.open('x' if args.init else 'w', encoding='utf-8') as dest:
             json.dump(state, dest, ensure_ascii=False, indent=2)
-        print(json.dumps({'status': 'PASS', 'observed': counts,
+        print(json.dumps({'schema_version': 1, 'status': 'PASS', 'observed': counts,
                           'attempt_budget_N': state['attempt_budget_N'],
                           'concurrency_cap_C': cap,
                           'planned': args.new_spawns + args.new_followups}))
         return 0
     except (ValueError, OSError, KeyError, StopIteration) as error:
-        print(json.dumps({'status': 'BLOCK_NEW_DISPATCH', 'reason': str(error)}))
+        print(json.dumps({'schema_version': 1, 'status': 'BLOCK_NEW_DISPATCH',
+                          'reason_code': reason_code, 'reason': str(error) or type(error).__name__}))
         return 2
 
 

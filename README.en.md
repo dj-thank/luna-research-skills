@@ -191,6 +191,19 @@ If a Windows command fails or configuration disagrees with CLI output, use the [
 
 ### Request research
 
+Start with a bounded decision and two alternatives:
+
+```text
+$run-diverse-luna-research
+Help me choose SQLite or PostgreSQL for a small personal app.
+Use public official sources and the stable versions available on the research date.
+Compare setup effort, backups, and concurrent-update constraints.
+Return a comparison table, sources, and unknowns. Divide only useful independent
+questions; recursive delegation is unnecessary for this request.
+```
+
+If a short parent-only check can answer the question, the parent answers directly. For a broader unfamiliar field, use a request like this:
+
 ```text
 $run-diverse-luna-research
 I want to learn about quantum sensors, but I do not yet know what to investigate.
@@ -272,6 +285,17 @@ sequenceDiagram
     end
     P->>U: Explain the result, evidence and remaining work
 ```
+
+### Turn research into improvements
+
+```text
+Examine this repository from the user, research-quality, and maintainer perspectives.
+For each improvement, give the evidence, affected files, acceptance check,
+and the strongest reason to leave it unchanged.
+Select supported, useful changes, then implement and verify them while preserving existing behavior.
+```
+
+Evidence scouts return sources and proposals; the parent owns selection, implementation, and verification. Use the [implementation handoff example](.agents/skills/run-diverse-luna-research/references/workflow.md#handoff-to-authorized-implementation) to connect each change to evidence and an observable check. Explicitly select the Project workflow as well when you want delegated implementation.
 
 ## Step 5: check the results
 
