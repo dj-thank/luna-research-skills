@@ -800,6 +800,15 @@ class RuntimeReceiptTests(unittest.TestCase):
             with self.subTest(source=source):
                 self.assertIsNone(CHECK._parse_wrapped_spawn_arguments(source))
 
+    def test_wrapped_provenance_ignores_examples_before_actual_call(self) -> None:
+        call = 'await tools.multi_agent_v1__spawn_agent({agent_type: "default", message: "task"});'
+        for example in ('// ' + call + '\n', '/* ' + call + ' */\n',
+                        '`' + call + '`;\n', 'const regex = /tools.multi_agent_v1__spawn_agent({})/;\n'):
+            with self.subTest(example=example):
+                arguments = CHECK._parse_wrapped_spawn_arguments(example + call)
+                self.assertIsNotNone(arguments)
+                self.assertEqual(arguments['agent_type'], 'default')
+
     def test_parent_full_history_spawn_is_rejected(self) -> None:
         child_records = rollout_records(str(uuid.uuid4()), str(uuid.uuid4()))
         child_meta = child_records[0]["payload"]

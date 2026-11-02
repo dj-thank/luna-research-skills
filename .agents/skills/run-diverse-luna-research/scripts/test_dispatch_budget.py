@@ -111,6 +111,32 @@ class DispatchBudgetTests(unittest.TestCase):
     def test_unrelated_exec_is_not_a_dispatch(self):
         self.assertEqual(self.wrapped_counts('text(await tools.exec_command({cmd: "echo hi"}));')['total'], 0)
 
+    def test_indirect_tool_references_fail_closed(self):
+        for source in (
+            'await tools["multi_agent_v1__spawn_agent"]({});',
+            'const dispatch = tools.multi_agent_v1__spawn_agent; await dispatch({});',
+            'const t = tools; await t.spawn_agent({});',
+            'await tools.collaboration.spawn_agent.call(null, {});',
+            'const dispatch = tools.collaboration.spawn_agent.bind(tools); await dispatch({});',
+        ):
+            with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'cannot count dispatch'):
+                self.wrapped_counts(source)
+
+    def test_regex_literals_do_not_hide_or_invent_calls(self):
+        for source, count in (
+            ("const regex = /'/; await tools.multi_agent_v1__spawn_agent({});", 1),
+            ('const regex = /["\\/]/g; await tools.multi_agent_v1__followup_task({});', 1),
+            ('const regex = /tools.multi_agent_v1__spawn_agent({})/;', 0),
+        ):
+            with self.subTest(source=source):
+                self.assertEqual(self.wrapped_counts(source)['total'], count)
+
+    def test_non_exec_custom_tool_source_is_not_executed(self):
+        self.assertEqual(self.wrapped_counts('+await tools.collaboration.spawn_agent({});', name='apply_patch')['total'], 0)
+
+    def test_benign_template_expression_is_not_dispatch(self):
+        self.assertEqual(self.wrapped_counts('text(`count=${results.length}`);')['total'], 0)
+
 
 if __name__ == '__main__':
     unittest.main()

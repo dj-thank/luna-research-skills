@@ -2906,16 +2906,12 @@ def _parse_wrapped_spawn_arguments(value: object) -> dict[str, Any] | None:
     if not isinstance(value, str):
         return None
     try:
-        if _DISPATCH.dispatch_names({"type": "custom_tool_call", "input": value}) != ["spawn_agent"]:
-            return None
+        calls = _DISPATCH.wrapped_dispatch_calls(value)
     except ValueError:
         return None
-    call_matches = list(
-        re.finditer(r"\btools\.[A-Za-z_][A-Za-z0-9_.]*spawn_agent\s*\(", value)
-    )
-    if len(call_matches) != 1:
+    if len(calls) != 1 or calls[0][0] != "spawn_agent":
         return None
-    object_start = value.find("{", call_matches[0].end())
+    object_start = value.find("{", calls[0][1])
     if object_start < 0:
         return None
 
@@ -3021,7 +3017,7 @@ def _parent_spawn_calls(
             )
         ):
             arguments = _parse_spawn_arguments(payload.get("arguments"))
-        elif payload.get("type") == "custom_tool_call":
+        elif _DISPATCH.is_exec_wrapper(payload):
             arguments = _parse_wrapped_spawn_arguments(payload.get("input"))
         else:
             continue

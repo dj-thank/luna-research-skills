@@ -15,37 +15,37 @@ MAX_ATTEMPTS = 12
 MAX_WAVE = 3
 
 DISPATCH_NAMES = {'spawn_agent', 'followup_task'}
-WRAPPED_DISPATCH = re.compile(
-    r'\btools\.([A-Za-z_][A-Za-z0-9_.]*)\s*\('
-)
+TOOL_REFERENCE = re.compile(r'\btools(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)+')
 
 
-def dispatch_names(payload: dict) -> list[str]:
-    """Recognize direct calls and literal exec wrappers without executing code.
+def is_exec_wrapper(payload: dict) -> bool:
+    name = payload.get('name')
+    return (payload.get('type') == 'custom_tool_call' and isinstance(name, str)
+            and name.split('.')[-1].split('__')[-1] == 'exec')
 
-    A wrapper may contain several calls. Quoted task text and comments are not
-    calls; dynamic control flow cannot prove an attempt count and fails closed.
+
+def _visible_wrapper_code(source: str) -> str:
+    """Mask literal/comment contents while preserving offsets into the receipt.
+
+    This is a conservative lexer for literal exec wrappers, not a JS evaluator.
+    Unsupported interpolation fails closed instead of hiding executable code.
     """
-    if payload.get('type') == 'function_call':
-        name = payload.get('name', '').split('.')[-1].split('__')[-1]
-        return [name] if name in DISPATCH_NAMES else []
-    if payload.get('type') != 'custom_tool_call':
-        return []
-    source = payload.get('input')
-    if not isinstance(source, str):
-        return []
     code = list(source)
     index = 0
+    regex_allowed = True
     while index < len(source):
         start = index
+        character = source[index]
         if source.startswith('//', index):
             end = source.find('\n', index)
             index = len(source) if end < 0 else end
         elif source.startswith('/*', index):
             end = source.find('*/', index + 2)
-            index = len(source) if end < 0 else end + 2
-        elif source[index] in '\"\'`':
-            quote = source[index]
+            if end < 0:
+                raise ValueError('cannot count dispatch in an unterminated comment')
+            index = end + 2
+        elif character in '\"\'`':
+            quote = character
             index += 1
             while index < len(source):
                 if source[index] == '\\':
@@ -55,20 +55,93 @@ def dispatch_names(payload: dict) -> list[str]:
                     break
                 else:
                     index += 1
+            else:
+                raise ValueError('cannot count dispatch in an unterminated string')
             if quote == '`' and '${' in source[start:index]:
-                if re.search(r'(?:spawn_agent|followup_task)\b', source[start:index]):
+                if re.search(r'\btools\b|(?:spawn_agent|followup_task)\b', source[start:index]):
                     raise ValueError('cannot count dispatch inside template interpolation')
+            regex_allowed = False
+        elif character == '/' and regex_allowed:
+            index += 1
+            in_class = False
+            while index < len(source):
+                if source[index] == '\\':
+                    index += 2
+                    continue
+                if source[index] == '[':
+                    in_class = True
+                elif source[index] == ']':
+                    in_class = False
+                elif source[index] == '/' and not in_class:
+                    index += 1
+                    while index < len(source) and source[index].isalpha():
+                        index += 1
+                    break
+                index += 1
+            else:
+                raise ValueError('cannot count dispatch in an unterminated regex')
+            regex_allowed = False
+        elif character.isalpha() or character in '_$':
+            index += 1
+            while index < len(source) and (source[index].isalnum() or source[index] in '_$'):
+                index += 1
+            regex_allowed = source[start:index] in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new'}
+            continue
         else:
+            if not character.isspace():
+                regex_allowed = character not in ')]}.' and not character.isdigit()
             index += 1
             continue
         code[start:index] = ' ' * (index - start)
-    visible = ''.join(code)
-    names = [match.group(1).split('.')[-1].split('__')[-1]
-             for match in WRAPPED_DISPATCH.finditer(visible)]
-    names = [name for name in names if name in DISPATCH_NAMES]
-    if names and re.search(r'\b(?:for|while|do|if|switch|function|eval)\b|=>|\?|&&|\|\|', visible):
+    return ''.join(code)
+
+
+def wrapped_dispatch_calls(source: str) -> list[tuple[str, int]]:
+    """Return dispatch names and opening-parenthesis ends for literal calls.
+
+    Tool aliases/computed access cannot establish invocation counts. Reject
+    them rather than allowing a zero count to authorize further delegation.
+    """
+    visible = _visible_wrapper_code(source)
+    calls = []
+    spans = []
+    for token in re.finditer(r'\btools\b', visible):
+        reference = TOOL_REFERENCE.match(visible, token.start())
+        if reference is None:
+            raise ValueError('cannot count dispatch through computed or aliased tools')
+        end = reference.end()
+        while end < len(visible) and visible[end].isspace():
+            end += 1
+        if end >= len(visible) or visible[end] != '(':
+            raise ValueError('cannot count dispatch through a tool alias or indirect reference')
+        components = [part.split('__')[-1] for part in re.sub(r'\s+', '', reference.group()).split('.')[1:]]
+        if any(part in DISPATCH_NAMES for part in components[:-1]):
+            raise ValueError('cannot count dispatch through an indirect native reference')
+        name = components[-1]
+        spans.append(reference.span())
+        if name in DISPATCH_NAMES:
+            calls.append((name, end + 1))
+    for token in re.finditer(r'\b[A-Za-z_][A-Za-z0-9_]*\b', visible):
+        if token.group().split('__')[-1] in DISPATCH_NAMES:
+            if not any(start <= token.start() < end for start, end in spans):
+                raise ValueError('cannot count dispatch through an indirect native reference')
+    if calls and re.search(r'\b(?:for|while|do|if|switch|function|eval)\b|=>|\?|&&|\|\|', visible):
         raise ValueError('cannot count dispatch in dynamic wrapper; use direct native calls')
-    return names
+    return calls
+
+
+def dispatch_names(payload: dict) -> list[str]:
+    """Recognize direct native calls and the supported exec wrapper subset."""
+    if payload.get('type') == 'function_call':
+        name = payload.get('name')
+        if not isinstance(name, str):
+            return []
+        name = name.split('.')[-1].split('__')[-1]
+        return [name] if name in DISPATCH_NAMES else []
+    if not is_exec_wrapper(payload) or not isinstance(payload.get('input'), str):
+        return []
+    return [name for name, _ in wrapped_dispatch_calls(payload['input'])]
+
 
 
 def meta(path: Path) -> dict:
