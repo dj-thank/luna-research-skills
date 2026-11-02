@@ -182,7 +182,14 @@ def _read_regular_file(path: Path, relative_path: str) -> FileSnapshot:
         raise InstallError(f"source file exceeds {MAX_FILE_BYTES} bytes: {path}")
 
     try:
-        with path.open("rb") as handle:
+        if os.name == "nt":
+            handle = path.open("rb")
+        else:
+            # A regular file can become a FIFO between lstat and open. Avoid
+            # waiting for a pipe writer; fstat below rejects the raced type.
+            descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            handle = os.fdopen(descriptor, "rb")
+        with handle:
             opened = os.fstat(handle.fileno())
             if not stat.S_ISREG(opened.st_mode):
                 raise InstallError(f"source changed to a non-regular file while reading: {path}")
@@ -675,7 +682,8 @@ def _remove_owned_package(path: Path, expected: SkillSnapshot) -> None:
                         raise InstallError(f"rollback found a modified file: {observed.relative_path}")
                     file_path.unlink()
                 else:
-                    opened = os.open(file_path.name, os.O_RDONLY | os.O_NOFOLLOW, dir_fd=descriptor)
+                    opened = os.open(file_path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,
+                                     dir_fd=descriptor)
                     with os.fdopen(opened, "rb") as handle:
                         if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
                             raise InstallError(f"rollback found a non-regular file: {observed.relative_path}")

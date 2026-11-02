@@ -9,6 +9,8 @@
 - Count literal exec-wrapped spawn/followup calls in the shared dispatch budget and inspect them when verifying leaf/coordinator delegation. Reject uncountable dynamic wrappers instead of silently accepting zero attempts; ignore comments and quoted examples.
 - Bind wrapped spawn provenance to actual top-level literal arguments, so comment examples, nested task content, duplicate keys and object spreads cannot stand in for the selected model or fresh-context setting. Ignore non-exec custom-tool payloads and reject ambiguous syntax.
 - Protect Python installer destination traversal during concurrent directory replacement, and reject PowerShell source paths with junction/reparse ancestors before reading package content.
+- Reject source and rollback files replaced with POSIX named pipes without waiting for a writer; preserve the replaced file for inspection.
+- Run each Python matrix command in a separate CI step so Windows PowerShell cannot hide an earlier failure behind a later successful command.
 
 
 - README の導入を観点別の調査に合わせ、未知の分野で調査観点を見つける手順と、必要時に同じ予算内で再委任する図・依頼例を追加。
