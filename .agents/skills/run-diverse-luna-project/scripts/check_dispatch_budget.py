@@ -91,8 +91,9 @@ def _visible_wrapper_code(source: str) -> str:
             index += 1
             while index < len(source) and (source[index].isalnum() or source[index] in '_$'):
                 index += 1
-            previous_token = source[start:index]
-            regex_allowed = previous_token in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'else', 'do', 'in', 'instanceof', 'extends', 'break', 'continue', 'debugger'}
+            word = source[start:index]
+            regex_allowed = previous_token != '.' and word in {'return', 'throw', 'case', 'await', 'yield', 'typeof', 'void', 'delete', 'new', 'else', 'do', 'in', 'instanceof', 'extends', 'break', 'continue', 'debugger'}
+            previous_token = word
             continue
         elif source[index:index + 2] in {'++', '--'}:
             previous_token = source[index:index + 2]

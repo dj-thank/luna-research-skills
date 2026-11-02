@@ -145,6 +145,7 @@ class DispatchBudgetTests(unittest.TestCase):
             "let foo\n/'/; await tools.multi_agent_v1__spawn_agent({}); // '",
             'const x = value / 2; await tools.collaboration.spawn_agent({});',
             'const of=4; of / 2; await tools.spawn_agent({}); const x=3; x / 1;',
+            'obj.return / 2; await tools.spawn_agent({}); obj.x / 1;',
         ):
             with self.subTest(source=source), self.assertRaisesRegex(ValueError, 'ambiguous slash'):
                 self.wrapped_counts(source)
