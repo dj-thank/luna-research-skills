@@ -36,13 +36,21 @@ def score(expected, actual):
     errors = {item['code'] for item in actual.get('errors', [])}
     wanted_errors = set(expected.get('errors', []))
     exact_selection = selected == expected['selected_attempt_ids']
-    reason_match = all(set(codes) <= reasons.get(aid, set())
-                       for aid, codes in expected.get('blocked_reasons', {}).items())
+    wanted_reasons = {aid: set(codes) for aid, codes in expected.get('blocked_reasons', {}).items()}
+    unexpected_blocked = sorted(set(reasons) - set(wanted_reasons))
+    missing_blocked = sorted(set(wanted_reasons) - set(reasons))
+    extra_reasons = {aid: sorted(codes - wanted_reasons.get(aid, set()))
+                     for aid, codes in reasons.items() if codes - wanted_reasons.get(aid, set())}
+    missing_reasons = {aid: sorted(codes - reasons.get(aid, set()))
+                       for aid, codes in wanted_reasons.items() if codes - reasons.get(aid, set())}
+    reason_match = reasons == wanted_reasons
     return dict(passed=exact_selection and reason_match and errors == wanted_errors,
                 selection_correct=exact_selection,
                 unexpected_starts=sorted(set(selected) - set(expected['selected_attempt_ids'])),
                 missed_ready=sorted(set(expected['selected_attempt_ids']) - set(selected)),
-                blocker_reasons_correct=reason_match, error_codes_correct=errors == wanted_errors)
+                blocker_reasons_correct=reason_match, error_codes_correct=errors == wanted_errors,
+                unexpected_blocked=unexpected_blocked, missing_blocked=missing_blocked,
+                unexpected_blocker_reasons=extra_reasons, missing_blocker_reasons=missing_reasons)
 
 
 def communication_trial(case):

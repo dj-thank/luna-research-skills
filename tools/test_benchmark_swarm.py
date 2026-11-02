@@ -46,6 +46,16 @@ class BenchmarkTests(unittest.TestCase):
         self.assertFalse(B.score(wanted, actual)['passed'])
         self.assertFalse(B.score(dict(selected_attempt_ids=[], errors=['INVALID_LEDGER']), {})['passed'])
 
+    def test_extra_blocked_attempt_or_reason_cannot_pass(self):
+        wanted = dict(selected_attempt_ids=['A'], blocked_reasons={'B': ['DEPENDENCY_NOT_ACCEPTED']})
+        actual = dict(selected_attempt_ids=['A'], blocked=[
+            dict(attempt_id='B', reasons=[dict(code='DEPENDENCY_NOT_ACCEPTED'), dict(code='WRONG_REASON')]),
+            dict(attempt_id='INVENTED', reasons=[dict(code='DEPENDENCY_FAILED')])])
+        result = B.score(wanted, actual)
+        self.assertFalse(result['passed'])
+        self.assertEqual(result['unexpected_blocked'], ['INVENTED'])
+        self.assertEqual(result['unexpected_blocker_reasons']['B'], ['WRONG_REASON'])
+
     def test_fixture_hygiene_rejects_empty_duplicate_and_unknown_cases(self):
         document = json.loads(B.DEFAULT_CASES.read_text(encoding='utf-8'))
         with self.assertRaises(ValueError):

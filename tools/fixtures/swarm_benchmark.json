@@ -232,10 +232,22 @@
         ],
         "blocked_reasons": {
           "R": [
-            "DEPENDENCY_NOT_ACCEPTED"
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
           ],
           "V": [
-            "ROOT_INTEGRATION_REQUIRED"
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
+            "CAPACITY_OR_WAVE_LIMIT"
           ]
         },
         "errors": []
@@ -260,7 +272,26 @@
         "selected_attempt_ids": [
           "D"
         ],
-        "blocked_reasons": {},
+        "blocked_reasons": {
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ]
+        },
         "errors": []
       }
     },
@@ -292,6 +323,21 @@
         "selected_attempt_ids": [],
         "blocked_reasons": {
           "R": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
             "CAPACITY_OR_WAVE_LIMIT"
           ]
         },
@@ -338,7 +384,22 @@
         "selected_attempt_ids": [
           "R"
         ],
-        "blocked_reasons": {},
+        "blocked_reasons": {
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ]
+        },
         "errors": []
       }
     },
@@ -403,7 +464,19 @@
         "selected_attempt_ids": [
           "B"
         ],
-        "blocked_reasons": {},
+        "blocked_reasons": {
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
+            "ACCEPTED_WRITERS_NOT_INTEGRATED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ]
+        },
         "errors": []
       }
     },
@@ -439,8 +512,19 @@
           "D"
         ],
         "blocked_reasons": {
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
           "B": [
             "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED"
           ]
         },
         "errors": []
@@ -464,6 +548,20 @@
         "blocked_reasons": {
           "D": [
             "WRITER_OWNERSHIP_CONFLICT"
+          ],
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED"
           ]
         },
         "errors": []
@@ -521,7 +619,22 @@
             "CAPACITY_OR_WAVE_LIMIT"
           ],
           "R": [
-            "DEPENDENCY_FINISH_FUTURE"
+            "DEPENDENCY_FINISH_FUTURE",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "CAPACITY_OR_WAVE_LIMIT"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED",
+            "CAPACITY_OR_WAVE_LIMIT"
           ]
         },
         "errors": []
@@ -543,6 +656,20 @@
         "blocked_reasons": {
           "A": [
             "DEADLINE_EXPIRED"
+          ],
+          "R": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "B": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "S": [
+            "DEPENDENCY_NOT_ACCEPTED"
+          ],
+          "V": [
+            "DEPENDENCY_NOT_ACCEPTED",
+            "ROOT_INTEGRATION_REQUIRED",
+            "NON_VERIFIER_WORK_UNFINISHED"
           ]
         },
         "errors": []

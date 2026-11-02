@@ -20,7 +20,9 @@ The command emits JSON and exits nonzero on an oracle mismatch. CI runs it on
 Windows, macOS and Linux. The independent expectations live in
 [swarm_benchmark.json](../tools/fixtures/swarm_benchmark.json); the runner does not
 derive them from planner output. Case descriptions, expected selected IDs, required
-blocker reasons and error codes are reviewable before execution. Fixture UUIDs,
+blocker reasons and error codes are reviewable before execution. Scoring requires
+the exact set of blocked attempts and reason codes, and reports missing and
+unexpected blocks separately. Fixture UUIDs,
 timestamps, receipt locators and artifact digests are synthetic labels.
 
 The first 15 cases cover independent work, capacity, candidate review, rolling
