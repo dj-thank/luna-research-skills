@@ -4,6 +4,12 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Count literal exec-wrapped spawn/followup calls in the shared dispatch budget and inspect them when verifying leaf/coordinator delegation. Reject uncountable dynamic wrappers instead of silently accepting zero attempts; ignore comments and quoted examples.
+- Protect Python installer destination traversal during concurrent directory replacement, and reject PowerShell source paths with junction/reparse ancestors before reading package content.
+
+
 - README の導入を観点別の調査に合わせ、未知の分野で調査観点を見つける手順と、必要時に同じ予算内で再委任する図・依頼例を追加。
 
 - Apply the six-child concurrency cap to workspace config overrides, with boundary regression tests in both skills.

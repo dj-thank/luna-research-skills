@@ -1173,6 +1173,23 @@ class LedgerTests(unittest.TestCase):
             receipt_errors, _ = CHECK.validate_ledger_receipts(
                 ledger_path, codex_home
             )
+            self.assertEqual(receipt_errors, [])
+            for payload in (
+                {"type": "function_call", "name": "collaboration.spawn_agent",
+                 "call_id": "hidden", "arguments": "{}"},
+                {"type": "custom_tool_call", "name": "functions.exec", "call_id": "hidden",
+                 "input": 'await tools.multi_agent_v1__spawn_agent({message: "task"});'},
+            ):
+                with self.subTest(call_type=payload["type"]):
+                    write_jsonl(rollout, rollout_records(thread_id, turn_id, parent_id=parent_id)
+                                + [{"type": "response_item", "payload": payload}])
+                    errors, _ = CHECK.validate_ledger_receipts(ledger_path, codex_home)
+                    self.assertTrue(any("leaf rollout contains actual spawn_agent" in e for e in errors), errors)
+            # A coordinator cannot hide an unleased edge in the same wrapper either.
+            accepted.update(role="coordinator", may_spawn_descendants=True)
+            write_json(ledger_path, ledger)
+            errors, _ = CHECK.validate_ledger_receipts(ledger_path, codex_home)
+            self.assertTrue(any("match the leased child edges" in e for e in errors), errors)
         self.assertEqual(static_errors, [])
         self.assertEqual(receipt_errors, [])
 

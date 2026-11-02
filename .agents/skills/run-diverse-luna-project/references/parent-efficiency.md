@@ -45,6 +45,14 @@ counts actual native calls, including unsuccessful attempts; registering a child
 does not replace the independent runtime/provenance checks. --verification may
 spend the protected reserve only on required verification.
 
+Direct function calls and literal exec-wrapper calls share the same attempt
+counter. Multiple calls in one wrapper consume separate attempts; duplicate
+receipts of that wrapper are counted once. Comments and quoted task examples
+are ignored. Wrappers with dynamic control flow or dispatch inside template
+interpolation cannot establish an exact count and block new dispatch; use
+direct native calls for those cases. Receipt verification uses the same scan
+to detect unauthorized leaf spawns and unleased coordinator edges.
+
 Retain the same state, start time, registered tree and greatest observed count over
 goal continuation, corrections and followups. Reinitialization is rejected. Larger
 budgets require a root-recorded remaining acceptance condition and a different

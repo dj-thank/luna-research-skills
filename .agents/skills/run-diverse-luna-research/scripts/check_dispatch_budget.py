@@ -6,12 +6,69 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 import sys
 import tomllib
 
 MAX_CHILDREN = 6
 MAX_ATTEMPTS = 12
 MAX_WAVE = 3
+
+DISPATCH_NAMES = {'spawn_agent', 'followup_task'}
+WRAPPED_DISPATCH = re.compile(
+    r'\btools\.([A-Za-z_][A-Za-z0-9_.]*)\s*\('
+)
+
+
+def dispatch_names(payload: dict) -> list[str]:
+    """Recognize direct calls and literal exec wrappers without executing code.
+
+    A wrapper may contain several calls. Quoted task text and comments are not
+    calls; dynamic control flow cannot prove an attempt count and fails closed.
+    """
+    if payload.get('type') == 'function_call':
+        name = payload.get('name', '').split('.')[-1].split('__')[-1]
+        return [name] if name in DISPATCH_NAMES else []
+    if payload.get('type') != 'custom_tool_call':
+        return []
+    source = payload.get('input')
+    if not isinstance(source, str):
+        return []
+    code = list(source)
+    index = 0
+    while index < len(source):
+        start = index
+        if source.startswith('//', index):
+            end = source.find('\n', index)
+            index = len(source) if end < 0 else end
+        elif source.startswith('/*', index):
+            end = source.find('*/', index + 2)
+            index = len(source) if end < 0 else end + 2
+        elif source[index] in '\"\'`':
+            quote = source[index]
+            index += 1
+            while index < len(source):
+                if source[index] == '\\':
+                    index += 2
+                elif source[index] == quote:
+                    index += 1
+                    break
+                else:
+                    index += 1
+            if quote == '`' and '${' in source[start:index]:
+                if re.search(r'(?:spawn_agent|followup_task)\b', source[start:index]):
+                    raise ValueError('cannot count dispatch inside template interpolation')
+        else:
+            index += 1
+            continue
+        code[start:index] = ' ' * (index - start)
+    visible = ''.join(code)
+    names = [match.group(1).split('.')[-1].split('__')[-1]
+             for match in WRAPPED_DISPATCH.finditer(visible)]
+    names = [name for name in names if name in DISPATCH_NAMES]
+    if names and re.search(r'\b(?:for|while|do|if|switch|function|eval)\b|=>|\?|&&|\|\|', visible):
+        raise ValueError('cannot count dispatch in dynamic wrapper; use direct native calls')
+    return names
 
 
 def meta(path: Path) -> dict:
@@ -52,15 +109,15 @@ def observed_attempts(state: dict) -> dict:
             for raw in source:
                 item = json.loads(raw)
                 p = item.get('payload', {})
-                if item.get('type') != 'response_item' or p.get('type') != 'function_call':
+                if item.get('type') != 'response_item' or not isinstance(p, dict):
                     continue
-                name = p.get('name', '').split('.')[-1].split('__')[-1]
-                if name not in counts:
+                if item.get('timestamp') and parse_time(item['timestamp']) < since:
+                    continue
+                names = dispatch_names(p)
+                if not names:
                     continue
                 if not item.get('timestamp'):
                     raise ValueError('dispatch call lacks timestamp')
-                if parse_time(item['timestamp']) < since:
-                    continue
                 call_id = p.get('call_id')
                 if not call_id:
                     raise ValueError('dispatch call lacks call_id')
@@ -68,7 +125,8 @@ def observed_attempts(state: dict) -> dict:
                 if key in seen:
                     continue
                 seen.add(key)
-                counts[name] += 1
+                for name in names:
+                    counts[name] += 1
     return {**counts, 'total': sum(counts.values())}
 
 

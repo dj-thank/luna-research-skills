@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 from datetime import datetime
 import json
 import math
@@ -14,11 +15,20 @@ import uuid
 from pathlib import Path
 from typing import Any, Iterable
 
+# Load by file location so standalone packages and importlib-based consumers
+# share the same dispatch recognition without modifying the process sys.path.
+_DISPATCH_SPEC = importlib.util.spec_from_file_location(
+    'luna_dispatch_budget', Path(__file__).with_name('check_dispatch_budget.py')
+)
+assert _DISPATCH_SPEC is not None and _DISPATCH_SPEC.loader is not None
+_DISPATCH = importlib.util.module_from_spec(_DISPATCH_SPEC)
+_DISPATCH_SPEC.loader.exec_module(_DISPATCH)
+
 DEFAULT_SPECIALIST_MODEL = "gpt-6-luna"
 EXPECTED_MODEL = DEFAULT_SPECIALIST_MODEL
 SUPPORTED_SPECIALIST_MODELS = (DEFAULT_SPECIALIST_MODEL, "gpt-6.1-sol")
 EXPECTED_REASONING_EFFORT = "low"
-CHECKER_CONTRACT_VERSION = "2026-10-14.2"
+CHECKER_CONTRACT_VERSION = "2026-11-02.1"
 MIN_CONCURRENT_THREADS = 2
 MAX_CONCURRENT_THREADS = 6
 MAX_ATTEMPT_BUDGET = 12
@@ -3267,17 +3277,17 @@ def validate_ledger_receipts(
                 for line_number, line in enumerate(handle, start=1):
                     doc = json.loads(line)
                     payload = doc.get("payload") if isinstance(doc, dict) else None
-                    if isinstance(payload, dict) and doc.get("type") == "response_item" and payload.get("type") == "function_call":
-                        name = payload.get("name")
-                        if isinstance(name, str) and (name == "spawn_agent" or name.endswith(".spawn_agent") or name.endswith("__spawn_agent")):
+                    if isinstance(payload, dict) and doc.get("type") == "response_item":
+                        spawn_count = _DISPATCH.dispatch_names(payload).count("spawn_agent")
+                        if spawn_count:
                             call_id = payload.get("call_id")
                             if not isinstance(call_id, str) or not call_id.strip():
                                 errors.append(
                                     f"assignments[{index}]: spawn_agent call at line {line_number} has no call_id"
                                 )
                             else:
-                                actual_spawn_call_ids.append(call_id)
-        except (OSError, json.JSONDecodeError) as exc:
+                                actual_spawn_call_ids.extend([call_id] * spawn_count)
+        except (OSError, ValueError) as exc:
             errors.append(f"assignments[{index}]: cannot scan child rollout: {exc}")
         coordinator_roles = {
             "coordinator",
