@@ -407,6 +407,8 @@ The saving example validates evidence, digest and report before publishing an `a
 
 The [recovery inspector](docs/comparison-recovery.md) checks a trusted evidence pin and distinguishes complete published, complete staged, incomplete and conflicting runs. It is read-only and never reruns, publishes or deletes anything.
 
+For a narrow decision over large evidence, use the [on-demand handoff](docs/on-demand-evidence.md). It verifies approved request/source pins and returns exact answers with mandatory qualifications and pending status. Keep the original source and distinguish exposed context from actual source bytes read.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

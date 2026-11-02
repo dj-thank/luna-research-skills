@@ -189,6 +189,12 @@ short repair exchange without making debate or consensus an acceptance criterion
 
 ### Bind the handoff to the artifact being consumed
 
+For a narrow decision over a large JSON artifact, the [on-demand evidence reader](on-demand-evidence.md)
+implements a bounded partial view with independently approved request/source pins.
+Root fixes the required answers and guard fields first; the receiver reopens the
+source when needed. Preserve the full source and distinguish presented bytes from
+the full-file read needed to verify identity.
+
 Keep the expected identity in the root's accepted ledger or integration record,
 separate from the sender's claim. A matching sender-provided digest and file can
 both describe the wrong result. Conversely, an old passing receipt can refer to a
