@@ -47,6 +47,11 @@ The benchmark CLIs use fixed synthetic answers and make no agent/tool-service
 calls. Inspect their case outcomes as well as their exit status: unsuccessful
 comparison policies are intentionally retained. See [the experiment guide](docs/swarm-experiments.md).
 
+The tools unit suite also checks the portable [comparison report example](docs/comparison-reports.md),
+including pinned evidence, rejected-policy reports and calibration-inclusive work.
+Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
+check exiting zero validates consistency; it does not imply a passing case gate.
+
 Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behavior, `SKILL.md`-last publication, fail-closed path handling, no-overwrite semantics, and rollback tests for partial writes, concurrent destination creation, and user-modified content. Run its unit tests on Windows, macOS, and Linux through the existing Python matrix.
 
 Also run the bundled Skill Creator `quick_validate.py` against both Skill directories, validate the generated plugin manifest/archive, rebuild release assets twice and compare their SHA-256, and run `git diff --check`. Keep `release-check`, Python caches, runtime rollouts, discovery reports containing machine paths, and migration journals out of commits.
