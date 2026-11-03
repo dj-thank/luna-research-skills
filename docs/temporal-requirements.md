@@ -6,6 +6,9 @@ question's `as_of` timestamp and identifies the time-bearing answer and guard
 requirements. Agreement between sources alone does not check whether their
 agreed value applies at that time.
 
+If the observation itself must also be recent, [version 3 adds a separate age
+limit](observation-freshness.md). Validity alone does not check observation age.
+
 Version 1 questions keep their existing output. Version 2 adds only explicit
 time checks; it does not discover missing requirements, infer temporal meaning
 from prose, retrieve fresher evidence or choose among conflicting facts.

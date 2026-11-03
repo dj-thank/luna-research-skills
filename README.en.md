@@ -403,6 +403,8 @@ For evidence spread across original registers, [name each requirement's required
 
 For time-dependent questions, [declare the question's time and validity windows](docs/temporal-requirements.md) to diagnose expired, future or unknown intervals while retaining valid historical answers. This does not verify current provider state or the truth of the recorded windows.
 
+When observation age matters, [declare a maximum age](docs/observation-freshness.md) at the same question clock. The reader checks the selected observation timestamp without substituting a newer receipt timestamp.
+
 Each emits JSON and exits nonzero when results disagree with the frozen expectations. An alternative policy's incorrect answer can itself be an expected experimental result. The [evaluation and adoption guide](docs/swarm-experiments.md) explains fixed answers, preserved failures and reopening actual artifacts.
 
 For your own comparisons, follow the [report checking guide](docs/comparison-reports.md). `check_comparison.py` checks separately pinned evidence for per-case losses, omitted calibration calls and changed inputs. Report consistency and policy adoption are separate decisions.

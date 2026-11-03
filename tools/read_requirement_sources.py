@@ -17,14 +17,18 @@ if __name__ == "__main__":
 import read_evidence as E
 import read_requirements as R
 
+MAX_AGE_SECONDS = 315537897599  # Full span of the supported UTC calendar.
+
 
 def validate_question(question):
     fields = {"schema_version", "question_id", "question", "subject",
               "sources", "max_source_bytes", "max_result_bytes", "requirements"}
-    if type(question) is dict and question.get("schema_version") == 2:
+    if type(question) is dict and question.get("schema_version") in (2, 3):
         fields.update(("as_of", "time_constraints"))
+        if question["schema_version"] == 3:
+            fields.add("freshness_constraints")
     R.fields(question, fields)
-    R.version(question, (1, 2))
+    R.version(question, (1, 2, 3))
     R.identifier(question["question_id"]); R.identifier(question["subject"])
     text = question["question"]
     if type(text) is not str or not text.strip() or len(text) > 4096:
@@ -65,7 +69,7 @@ def validate_question(question):
         raise ValueError("question needs both answer and guard requirements")
     if used_sources != source_ids:
         raise ValueError("every declared source must serve a requirement")
-    if question["schema_version"] == 2:
+    if question["schema_version"] in (2, 3):
         timestamp(question["as_of"])
         constraints = question["time_constraints"]
         if type(constraints) is not list or not 1 <= len(constraints) <= 32:
@@ -80,6 +84,20 @@ def validate_question(question):
             E.tokens(row["valid_from"]); E.tokens(row["valid_until"])
             if row["valid_from"] == row["valid_until"]:
                 raise ValueError("interval pointers must be distinct")
+    if question["schema_version"] == 3:
+        constraints = question["freshness_constraints"]
+        if type(constraints) is not list or not 1 <= len(constraints) <= 32:
+            raise ValueError("expected 1 to 32 freshness constraints")
+        constraint_ids = set()
+        for row in constraints:
+            R.fields(row, {"id", "requirement", "observed_at", "max_age_seconds"})
+            R.identifier(row["id"]); R.identifier(row["requirement"])
+            if row["id"] in constraint_ids or row["requirement"] not in ids:
+                raise ValueError("freshness constraints need unique IDs and declared requirements")
+            constraint_ids.add(row["id"])
+            E.tokens(row["observed_at"])
+            if type(row["max_age_seconds"]) is not int or not 0 <= row["max_age_seconds"] <= MAX_AGE_SECONDS:
+                raise ValueError("max_age_seconds must be an integer from 0 to 315537897599")
 
 
 def timestamp(value):
@@ -120,6 +138,40 @@ def check_time(question, selected):
         if reason:
             gaps.append(dict(id=row["id"], requirement=row["requirement"], reason=reason))
     return gaps
+
+
+def check_freshness(question, selected):
+    """Check the declared observation, never forwarding time or the host clock."""
+    values = {r["id"]: r["observations"][0]["value"] for r in selected}
+    as_of = timestamp(question["as_of"])
+    gaps, checks = [], []
+    for row in question["freshness_constraints"]:
+        reason = None
+        try:
+            observed = E.select(values[row["requirement"]], row["observed_at"])
+        except ValueError:
+            reason = "MISSING"
+        else:
+            if observed is None:
+                reason = "UNKNOWN"
+            else:
+                try:
+                    delta = as_of - timestamp(observed)
+                except ValueError:
+                    reason = "TIME_FORMAT"
+                else:
+                    # UTC whole seconds: exact integer arithmetic, including negatives.
+                    age = delta.days * 86400 + delta.seconds
+                    if age < 0:
+                        reason = "FUTURE_OBSERVATION"
+                    elif age > row["max_age_seconds"]:
+                        reason = "STALE"
+        if reason:
+            gaps.append(dict(id=row["id"], requirement=row["requirement"], reason=reason))
+        else:
+            checks.append(dict(id=row["id"], requirement=row["requirement"], status="WITHIN_MAX_AGE",
+                               age_seconds=age, max_age_seconds=row["max_age_seconds"]))
+    return gaps, checks
 
 
 def bind_paths(bindings, expected_ids):
@@ -179,23 +231,31 @@ def read_sources(question_path, expected_question_sha256, source_bindings):
                 gaps.append(dict(id=requirement["id"], reason="CONFLICT"))
             else:
                 selected.append(dict(requirement, observations=matches))
-        has_time = question["schema_version"] == 2
+        has_time = question["schema_version"] in (2, 3)
+        has_freshness = question["schema_version"] == 3
         time_gaps = check_time(question, selected) if has_time and not gaps else []
-        result = dict(schema_version=1, status="INSUFFICIENT" if gaps or time_gaps else "OBSERVED",
+        freshness_gaps, freshness_checks = check_freshness(question, selected) if has_freshness and not (gaps or time_gaps) else ([], [])
+        result = dict(schema_version=1, status="INSUFFICIENT" if gaps or time_gaps or freshness_gaps else "OBSERVED",
                       scope="declared_requirements_and_sources_only", question_id=question["question_id"],
                       subject=question["subject"], question_sha256=expected_question_sha256,
                       sources=list(origins.values()), metrics=metrics)
         if has_time:
             result.update(as_of=question["as_of"], scope="declared_requirements_sources_and_time_only")
+        if has_freshness:
+            result["scope"] = "declared_requirements_sources_time_and_freshness_only"
         if gaps:
             result["gaps"] = gaps
         elif time_gaps:
             result["time_gaps"] = time_gaps
+        elif freshness_gaps:
+            result["freshness_gaps"] = freshness_gaps
         else:
             result["requirements"] = selected
             if has_time:
                 result["time_checks"] = [dict(id=r["id"], requirement=r["requirement"], status="COVERS_AS_OF")
                                          for r in question["time_constraints"]]
+            if has_freshness:
+                result["freshness_checks"] = freshness_checks
             if len(E.encode(result)) > question["max_result_bytes"]:
                 raise ValueError("result byte limit exceeded; never truncate required evidence")
         return result
