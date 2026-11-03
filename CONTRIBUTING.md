@@ -92,6 +92,12 @@ precedence. Unknown endpoints must not imply open-ended validity. Keep version 1
 results unchanged, include time metadata in response limits, and verify both
 dated plugin examples. Validity windows do not prove current provider state.
 
+For [observation-age constraints](docs/observation-freshness.md), preserve the
+fixed question clock, inclusive age boundary, exact integer seconds and earlier
+source/time diagnostics. Never substitute receipt time for the declared
+observation pointer. Preserve version 1/2 results and all original qualifiers,
+and verify both source/plugin examples including metadata byte limits.
+
 Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behavior, `SKILL.md`-last publication, fail-closed path handling, no-overwrite semantics, and rollback tests for partial writes, concurrent destination creation, and user-modified content. Run its unit tests on Windows, macOS, and Linux through the existing Python matrix.
 
 Also run the bundled Skill Creator `quick_validate.py` against both Skill directories, validate the generated plugin manifest/archive, rebuild release assets twice and compare their SHA-256, and run `git diff --check`. Keep `release-check`, Python caches, runtime rollouts, discovery reports containing machine paths, and migration journals out of commits.
