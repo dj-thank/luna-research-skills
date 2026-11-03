@@ -437,6 +437,8 @@ A [cancellation task](docs/cancellation-effects-evaluation.md) executes captured
 
 A [parser round-trip task](docs/marker-roundtrip-evaluation.md) checks a published packaging fix against twelve frozen repair/preservation cases. Requiring both rejects a casefold control that repairs quotes but changes existing case-sensitive semantics.
 
+An [ordered-record task](docs/ordered-records-evaluation.md) compares Boltons before/after a published fix and a lossy deduplication control across 24 observations. Key counts alone miss lost values; complete handoffs require exact occurrences, order and serialized query output.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

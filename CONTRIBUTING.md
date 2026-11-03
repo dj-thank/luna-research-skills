@@ -89,6 +89,11 @@ from preservation obligations. Freeze literal semantic answers before execution,
 retain quote/case regressions, and bind the reviewed package inventory. A repaired
 reported input does not establish preserved behavior; never discard failed controls.
 
+The [ordered-record example](docs/ordered-records-evaluation.md) must distinguish
+distinct-key counts from value occurrences. Compare exact ordered pairs and query
+strings, retain representation-equivalent cases and identical duplicates, and
+label synthetic order/missing-field receipts separately from package executions.
+
 The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.
