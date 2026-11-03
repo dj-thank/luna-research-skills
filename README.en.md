@@ -431,6 +431,8 @@ An [input/configuration task in another repository](docs/configuration-scope-eva
 
 A [file-effects and recovery task](docs/artifact-effects-evaluation.md) reproduces write failures hidden by matching return values. It checks the resulting synthetic file contents and preservation of the original bytes after an injected application exception.
 
+A [sequential retry task](docs/retry-effects-evaluation.md) executes three TinyDB application policies. It distinguishes duplicate insertion of one request from accidentally dropping a different request with the same payload; only request-ID handling satisfies all 12 bounded cases.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution
