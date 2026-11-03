@@ -149,3 +149,5 @@ The [2026-09-05 maintenance evaluation](docs/research-evaluation-2026-09-05.md) 
 The [partial-failure example](docs/partial-failure-evaluation.md) must observe the output prefix, terminal exception and resource exit before harness cleanup. Keep explicit historical/new call sites, dependency pins and source-finalization limits. Do not infer resource release from an exception or adopt exception swallowing as recovery.
 
 For exact Git-byte preparation, use the source-only [canonical snapshot helper](docs/canonical-source-preparation.md) with an independently pinned manifest and a new target. Keep binary/CRLF payloads intact; do not normalize away mismatches. Preserve INCOMPLETE outputs and reject existing destinations, indirect modes and source-overlapping paths.
+
+For data-dependent validation, bind each case to the [input bytes actually consumed](docs/input-provenance-evaluation.md). Matching code and outputs can hide a stale fixture that no longer exercises the regression. Keep input identities, case mappings and honest execution limits.

@@ -443,6 +443,8 @@ A [partial-failure task](docs/partial-failure-evaluation.md) tests a published m
 
 The [canonical source preparation helper](docs/canonical-source-preparation.md) checks pinned Git blobs before exporting a new directory. Six fixture cases distinguish checkout newline drift from real changes, while preserving binary data and existing destinations.
 
+An [input-provenance task](docs/input-provenance-evaluation.md) shows how stale configs make unfixed code pass all ten output checks. Binding each case to the configuration bytes actually read rejects that false acceptance while retaining the valid fix.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution
