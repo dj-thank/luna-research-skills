@@ -151,3 +151,5 @@ The [partial-failure example](docs/partial-failure-evaluation.md) must observe t
 For exact Git-byte preparation, use the source-only [canonical snapshot helper](docs/canonical-source-preparation.md) with an independently pinned manifest and a new target. Keep binary/CRLF payloads intact; do not normalize away mismatches. Preserve INCOMPLETE outputs and reject existing destinations, indirect modes and source-overlapping paths.
 
 For data-dependent validation, bind each case to the [input bytes actually consumed](docs/input-provenance-evaluation.md). Matching code and outputs can hide a stale fixture that no longer exercises the regression. Keep input identities, case mappings and honest execution limits.
+
+When preprocessing precedes parsing, also bind the [final parser input](docs/parser-input-evaluation.md) to independently expected contents. Capture after every declared transform at the actual API call, retain allowed normalization controls and label syntax-preserving versus syntax-erasing transformations. A raw file hash alone does not establish which parser path was exercised.
