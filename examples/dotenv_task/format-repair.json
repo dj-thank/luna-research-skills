@@ -1,0 +1,43 @@
+{
+  "reason": "Git and release builder normalize JSON CRLF to LF, invalidating the initial raw-byte pins. No provider CI had run.",
+  "original_frozen_sha256": "63ed1626833920d43202e62b26c07c14e586c12415612f20bc0d36a72fb3a324",
+  "repairs": {
+    "contract.json": {
+      "original": "bd581b879386c393cc2bcf662739b88a6364b8313e0f97354a101e677eb581c5",
+      "canonical": "a1ac0654bafa841f40329a9c85df6c13bd88d0baf12f76862d77395b36dc2ab2",
+      "parsed_values_unchanged": true
+    },
+    "equivalent-input.json": {
+      "original": "9738eeab064be2fdb17c898cf6ce12cf40de5aeb9c932d77c7c4bc65001422ed",
+      "canonical": "2e949061d9af6d6e1a4c7559e041f436b0aca7b04803a2e53ef8f0eec13dabc6",
+      "parsed_values_unchanged": true
+    },
+    "manifest.json": {
+      "original": "0bd9e54c84e3eae00ebb4714761666ddc8607687730816157bcec78e598595e2",
+      "canonical": "6650739b49f6a511d7175ee8b281db9aa60095dc0103eeefadcdb2a89c9ba023",
+      "parsed_values_unchanged": true
+    },
+    "oracle.json": {
+      "original": "eb0eb36aefe041c7a3b60fddb15814503d0f54602cb3605b4c1a173bce23dd47",
+      "canonical": "d989dd4c1a7ba7a1c58472735f7d414d29b1178a4e5ec4062aae4a3ec51cc779",
+      "parsed_values_unchanged": true
+    },
+    "wrong-environment.json": {
+      "original": "9b0c3c801363b03181aab4bac085ec8c4312d60c2b63acfa4983ea0c6a697c85",
+      "canonical": "f5786455aefb5aabe4fc243549c5e62e50136a0ce7a1b67ddebeb4bc07c40246",
+      "parsed_values_unchanged": true
+    },
+    "wrong-input.json": {
+      "original": "8930cab2b99dd80ad53bd5972e2d7e91d7f08e424201ee9cfab2cb58523c4440",
+      "canonical": "77765639180ba76c45a0301d0546c7dfa25e9399463b12e62cfbb2c60a60a966",
+      "parsed_values_unchanged": true
+    },
+    "wrong-mode.json": {
+      "original": "ae019d4f27cef3818e6f1cb2f69d7661bf3bb314771799b10dffa76850d8208b",
+      "canonical": "37eddc28c5da39a4955b176e652a50ec1cd3b93fce328b609d3c3ce98b12ba14",
+      "parsed_values_unchanged": true
+    }
+  },
+  "repaired_frozen_sha256": "dbe144c83804f2edf3697d7b23ff0f2aa67c947ce162063bc3d5a82ac037592c",
+  "oracle_values_unchanged": true
+}

@@ -64,6 +64,11 @@ binds imported package files and observed runtime labels. Keep actual code runs
 separate from receipt replays, preserve earlier fixed contracts, and do not turn
 this reviewed package inventory into a claim of whole-environment capture.
 
+The [input/configuration example](docs/configuration-scope-evaluation.md) pins a
+separate literal oracle and explicit synthetic execution manifests. Keep intended
+inputs independent of receipts, never export the host environment, and retain
+the distinction between upstream subset checks and a full external test suite.
+
 The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.
