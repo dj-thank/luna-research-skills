@@ -6,3 +6,6 @@
 *.jpg binary
 *.png binary
 *.zip binary
+
+# Unified patches need a space prefix on empty context lines.
+examples/value_chain_task/*.patch whitespace=-blank-at-eol
