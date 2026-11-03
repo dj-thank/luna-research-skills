@@ -7,7 +7,9 @@ independence, truth, freshness, or complete requirement selection.
 from __future__ import annotations
 
 import argparse
+from datetime import datetime
 from pathlib import Path
+import re
 import sys
 
 if __name__ == "__main__":
@@ -17,9 +19,12 @@ import read_requirements as R
 
 
 def validate_question(question):
-    R.fields(question, {"schema_version", "question_id", "question", "subject",
-                        "sources", "max_source_bytes", "max_result_bytes", "requirements"})
-    R.version(question)
+    fields = {"schema_version", "question_id", "question", "subject",
+              "sources", "max_source_bytes", "max_result_bytes", "requirements"}
+    if type(question) is dict and question.get("schema_version") == 2:
+        fields.update(("as_of", "time_constraints"))
+    R.fields(question, fields)
+    R.version(question, (1, 2))
     R.identifier(question["question_id"]); R.identifier(question["subject"])
     text = question["question"]
     if type(text) is not str or not text.strip() or len(text) > 4096:
@@ -60,6 +65,61 @@ def validate_question(question):
         raise ValueError("question needs both answer and guard requirements")
     if used_sources != source_ids:
         raise ValueError("every declared source must serve a requirement")
+    if question["schema_version"] == 2:
+        timestamp(question["as_of"])
+        constraints = question["time_constraints"]
+        if type(constraints) is not list or not 1 <= len(constraints) <= 32:
+            raise ValueError("expected 1 to 32 time constraints")
+        constraint_ids = set()
+        for row in constraints:
+            R.fields(row, {"id", "requirement", "valid_from", "valid_until"})
+            R.identifier(row["id"]); R.identifier(row["requirement"])
+            if row["id"] in constraint_ids or row["requirement"] not in ids:
+                raise ValueError("time constraints need unique IDs and declared requirements")
+            constraint_ids.add(row["id"])
+            E.tokens(row["valid_from"]); E.tokens(row["valid_until"])
+            if row["valid_from"] == row["valid_until"]:
+                raise ValueError("interval pointers must be distinct")
+
+
+def timestamp(value):
+    """Deliberately narrow UTC format; never consult the host clock or timezone."""
+    if type(value) is not str or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value):
+        raise ValueError("expected a valid UTC timestamp YYYY-MM-DDTHH:MM:SSZ")
+    return datetime.fromisoformat(value[:-1] + "+00:00")
+
+
+def check_time(question, selected):
+    # All observations of a selected requirement have identical typed values;
+    # preserve every observation/qualifier in the eventual complete response.
+    values = {r["id"]: r["observations"][0]["value"] for r in selected}
+    as_of = timestamp(question["as_of"])
+    gaps = []
+    for row in question["time_constraints"]:
+        reason = None
+        try:
+            start, end = [E.select(values[row["requirement"]], row[key])
+                          for key in ("valid_from", "valid_until")]
+        except ValueError:
+            reason = "MISSING"
+        else:
+            if start is None or end is None:
+                reason = "UNKNOWN"
+            else:
+                try:
+                    start, end = timestamp(start), timestamp(end)
+                except ValueError:
+                    reason = "TIME_FORMAT"
+                else:
+                    if start >= end:
+                        reason = "INVALID_INTERVAL"
+                    elif as_of < start:
+                        reason = "NOT_YET_VALID"
+                    elif as_of >= end:
+                        reason = "EXPIRED"
+        if reason:
+            gaps.append(dict(id=row["id"], requirement=row["requirement"], reason=reason))
+    return gaps
 
 
 def bind_paths(bindings, expected_ids):
@@ -119,14 +179,23 @@ def read_sources(question_path, expected_question_sha256, source_bindings):
                 gaps.append(dict(id=requirement["id"], reason="CONFLICT"))
             else:
                 selected.append(dict(requirement, observations=matches))
-        result = dict(schema_version=1, status="INSUFFICIENT" if gaps else "OBSERVED",
+        has_time = question["schema_version"] == 2
+        time_gaps = check_time(question, selected) if has_time and not gaps else []
+        result = dict(schema_version=1, status="INSUFFICIENT" if gaps or time_gaps else "OBSERVED",
                       scope="declared_requirements_and_sources_only", question_id=question["question_id"],
                       subject=question["subject"], question_sha256=expected_question_sha256,
                       sources=list(origins.values()), metrics=metrics)
+        if has_time:
+            result.update(as_of=question["as_of"], scope="declared_requirements_sources_and_time_only")
         if gaps:
             result["gaps"] = gaps
+        elif time_gaps:
+            result["time_gaps"] = time_gaps
         else:
             result["requirements"] = selected
+            if has_time:
+                result["time_checks"] = [dict(id=r["id"], requirement=r["requirement"], status="COVERS_AS_OF")
+                                         for r in question["time_constraints"]]
             if len(E.encode(result)) > question["max_result_bytes"]:
                 raise ValueError("result byte limit exceeded; never truncate required evidence")
         return result

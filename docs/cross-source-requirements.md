@@ -11,6 +11,10 @@ CLIs are offline/read-only and ship in the source and plugin ZIPs. These tools
 match reviewed subject/requirement tags; they do not discover relevant sources,
 translate natural-language questions or decide which source is authoritative.
 
+For time-dependent questions, an optional version 2 question adds an explicit
+[as-of timestamp and validity windows](temporal-requirements.md). Version 1
+continues to check agreement without interpreting timestamps.
+
 ## Try the fictional examples
 
 From the repository or extracted plugin root, using Python 3.11+:
