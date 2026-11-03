@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "task": "more-itertools-1250",
+  "issue": "https://github.com/more-itertools/more-itertools/issues/1250",
+  "base_commit": "bc8be1013ac90fe3c1df8aae646b02605d578818",
+  "fail_to_pass": [
+    "test_fix_generator_after_prefix",
+    "test_fix_generator_before_first",
+    "test_fix_iterator_next",
+    "test_fix_map_error"
+  ],
+  "pass_to_pass": [
+    "test_preserve_empty",
+    "test_preserve_iter_type_error",
+    "test_preserve_laziness",
+    "test_preserve_mapping",
+    "test_preserve_one_level",
+    "test_preserve_other_error",
+    "test_preserve_scalars",
+    "test_preserve_text_and_bytes"
+  ],
+  "variants": [
+    "original",
+    "remove-catch-negative-control",
+    "classify-then-consume"
+  ],
+  "expected": {
+    "original": {
+      "fix_pass": 0,
+      "preserve_pass": 8
+    },
+    "remove-catch-negative-control": {
+      "fix_pass": 4,
+      "preserve_pass": 6
+    },
+    "classify-then-consume": {
+      "fix_pass": 4,
+      "preserve_pass": 8
+    }
+  },
+  "adoption": [
+    "Every required test is present and PASS; missing and skipped are not success",
+    "Final patch passes the original upstream suite",
+    "Both questions preserve all actual receipt records; widened question rejects negative control",
+    "Stale revision and omitted-test receipt controls remain insufficient",
+    "No new source reads for widened question, at most 1024 extra output bytes for a complete view",
+    "One real task only; no unseen-task, agent-quality, latency, cost or independent-review claim"
+  ]
+}

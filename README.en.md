@@ -423,6 +423,8 @@ Optionally declare [relationships between requirements](docs/requirement-selecti
 
 For handoffs, [define the receiving question before reviewing the sender's checklist](docs/receiver-questions.md). Two executable examples over the same evidence show why all declared checks can match while a necessary check is omitted.
 
+The [actual external repair example](docs/external-task-evaluation.md) executes a more-itertools bug fix, retains a rejected patch that breaks existing behavior, and verifies the final repair against 12 behavior checks and 905 upstream tests. Replay the real receipts to see how explicit regression obligations improve handoff diagnostics, with the evaluation limits stated.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

@@ -1,0 +1,13 @@
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 2229563..be03494 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -4413,7 +4413,4 @@ def value_chain(*args):
+         if isinstance(value, scalar_types):
+             yield value
+             continue
+-        try:
+-            yield from value
+-        except TypeError:
+-            yield value
++        yield from value

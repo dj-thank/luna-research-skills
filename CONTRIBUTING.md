@@ -53,8 +53,13 @@ reviewed oracle independent of the generator; retain invalidated fixtures and
 explain repairs instead of silently rewriting expected values. The source-only
 helper and its positive/negative examples run in the tools unit suite.
 
-The tools unit suite also checks the portable [comparison report example](docs/comparison-reports.md),
-including pinned evidence, rejected-policy reports and calibration-inclusive work.
+The tools unit suite checks the portable [comparison report example](docs/comparison-reports.md)
+and replays the saved [external repair receipts](docs/external-task-evaluation.md).
+The latter keeps repair and preservation obligations separate, rejects missing or
+skipped required tests and binds source/probe hashes. Its CI checks do not execute
+the external repository; use the source-only probe for new actual task runs.
+
+The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.
 
