@@ -79,6 +79,11 @@ identity separate from payload equality. Preserve every attempt and stored state
 count setup writes separately, and reject fewer writes that drop valid requests.
 Its single-writer file-reopen runs do not establish network, crash or ACID guarantees.
 
+The [cancellation example](docs/cancellation-effects-evaluation.md) separates a
+request name from its execution generation. Preserve captured-callback traces,
+late-cancellation effects and legitimate replacements. Empty queues are not proof
+of no late effects; these sequential batches do not test concurrent interruption.
+
 The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.
