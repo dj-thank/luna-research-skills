@@ -86,6 +86,12 @@ original records with their verified source ID/digest; do not count majority,
 recency or a successful record as conflict resolution. Keep aggregate read limits,
 no partial observations on gaps, and both documented plugin examples executable.
 
+For optional [time constraints](docs/temporal-requirements.md), keep the caller's
+fixed as-of clock, half-open boundaries, historical answers and source-conflict
+precedence. Unknown endpoints must not imply open-ended validity. Keep version 1
+results unchanged, include time metadata in response limits, and verify both
+dated plugin examples. Validity windows do not prove current provider state.
+
 Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behavior, `SKILL.md`-last publication, fail-closed path handling, no-overwrite semantics, and rollback tests for partial writes, concurrent destination creation, and user-modified content. Run its unit tests on Windows, macOS, and Linux through the existing Python matrix.
 
 Also run the bundled Skill Creator `quick_validate.py` against both Skill directories, validate the generated plugin manifest/archive, rebuild release assets twice and compare their SHA-256, and run `git diff --check`. Keep `release-check`, Python caches, runtime rollouts, discovery reports containing machine paths, and migration journals out of commits.
