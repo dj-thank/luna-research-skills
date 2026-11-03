@@ -1,0 +1,22 @@
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 2229563..cfa17c4 100755
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -3729,10 +3729,13 @@ def iequals(*iterables):
+     elements of iterable are equal to each other.
+ 
+     """
+-    try:
+-        return all(map(all_equal, zip(*iterables, strict=True)))
+-    except ValueError:
+-        return False
++    marker = object()
++    for elements in zip_longest(*iterables, fillvalue=marker):
++        if any(element is marker for element in elements):
++            return False
++        if not all_equal(elements):
++            return False
++    return True
+ 
+ 
+ def distinct_combinations(iterable, r):
