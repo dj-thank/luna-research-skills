@@ -413,6 +413,8 @@ For evidence organized by subject and requirement, try [requirement-driven selec
 
 Optionally declare [relationships between requirements](docs/requirement-selection.md#optional-relationships-between-requirements) to check matching revisions/artifacts and coverage of required targets. These checks add context bytes, so include the relationships needed for the decision.
 
+For handoffs, [define the receiving question before reviewing the sender's checklist](docs/receiver-questions.md). Two executable examples over the same evidence show why all declared checks can match while a necessary check is omitted.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution
