@@ -1,0 +1,48 @@
+diff --git a/src/dotenv/main.py b/src/dotenv/main.py
+index b8d0a4e..2b434ee 100644
+--- a/src/dotenv/main.py
++++ b/src/dotenv/main.py
+@@ -120,19 +120,12 @@ def get_key(dotenv_path: Union[str, _PathLike], key_to_get: str) -> Optional[str
+ 
+ @contextmanager
+ def rewrite(path: Union[str, _PathLike]) -> Iterator[Tuple[IO[str], IO[str]]]:
+-    try:
+-        if not os.path.isfile(path):
+-            with io.open(path, "w+") as source:
+-                source.write("")
+-        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as dest:
+-            with io.open(path) as source:
+-                yield (source, dest)  # type: ignore
+-    except BaseException:
+-        if os.path.isfile(dest.name):
+-            os.unlink(dest.name)
+-        raise
+-    else:
+-        shutil.move(dest.name, path)
++    # Deliberately unsafe negative control; never adopt this variant.
++    with io.open(path) as current:
++        original = current.read()
++    with io.StringIO(original) as source:
++        with io.open(path, "w") as dest:
++            yield (source, dest)
+ 
+ 
+ def set_key(
+@@ -167,13 +160,17 @@ def set_key(
+ 
+     with rewrite(dotenv_path) as (source, dest):
+         replaced = False
++        missing_newline = False
+         for mapping in with_warn_for_invalid_lines(parse_stream(source)):
+             if mapping.key == key_to_set:
+                 dest.write(line_out)
+                 replaced = True
+             else:
+                 dest.write(mapping.original.string)
++                missing_newline = not mapping.original.string.endswith("\n")
+         if not replaced:
++            if missing_newline:
++                dest.write("\n")
+             dest.write(line_out)
+ 
+     return True, key_to_set, value_to_set
