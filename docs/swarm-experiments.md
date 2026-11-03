@@ -7,6 +7,10 @@ Keep experiment candidates isolated until they pass the same acceptance checks.
 Replacing a topology is allowed; improving a score on a convenient example is not
 enough to promote it.
 
+Before freezing generated cases, [check fixture isolation and reviewed answers](fixture-integrity.md).
+Changing construction order must preserve each independent case; matching hashes
+alone cannot detect an already contaminated input or answer key.
+
 ## Reproduce the known-answer benchmark
 
 From the repository or source ZIP root, run (the plugin ZIP contains the answer

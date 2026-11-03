@@ -1,0 +1,128 @@
+{
+  "case_ids": [
+    "alpha",
+    "beta",
+    "gamma"
+  ],
+  "expected_cases": [
+    {
+      "id": "alpha",
+      "input": {
+        "revision": 41,
+        "review": {
+          "status": "approved",
+          "owner": "root"
+        },
+        "tags": [
+          "x",
+          "y"
+        ]
+      },
+      "expected": {
+        "ready": true,
+        "revision": 41,
+        "status": "approved"
+      }
+    },
+    {
+      "id": "beta",
+      "input": {
+        "revision": 42,
+        "review": {
+          "status": "pending",
+          "owner": "root"
+        },
+        "tags": [
+          "x",
+          "y"
+        ]
+      },
+      "expected": {
+        "ready": false,
+        "revision": 42,
+        "status": "pending"
+      }
+    },
+    {
+      "id": "gamma",
+      "input": {
+        "revision": 43,
+        "review": {
+          "status": "unknown",
+          "owner": "root"
+        },
+        "tags": [
+          "x",
+          "y"
+        ]
+      },
+      "expected": {
+        "ready": null,
+        "revision": 43,
+        "status": "unknown"
+      }
+    }
+  ],
+  "variants": [
+    {
+      "id": "isolated",
+      "accept": true,
+      "order_independent": true
+    },
+    {
+      "id": "roundtrip",
+      "accept": true,
+      "order_independent": true
+    },
+    {
+      "id": "key-order",
+      "accept": true,
+      "order_independent": true
+    },
+    {
+      "id": "shared-input",
+      "accept": false,
+      "order_independent": false
+    },
+    {
+      "id": "shared-answer",
+      "accept": false,
+      "order_independent": false
+    },
+    {
+      "id": "running-state",
+      "accept": false,
+      "order_independent": false
+    },
+    {
+      "id": "wrong-answer",
+      "accept": false,
+      "order_independent": true
+    },
+    {
+      "id": "wrong-input",
+      "accept": false,
+      "order_independent": true
+    },
+    {
+      "id": "changed-type",
+      "accept": false,
+      "order_independent": true
+    },
+    {
+      "id": "missing-case",
+      "accept": false,
+      "order_independent": null
+    },
+    {
+      "id": "duplicate-case",
+      "accept": false,
+      "order_independent": null
+    },
+    {
+      "id": "extra-case",
+      "accept": false,
+      "order_independent": null
+    }
+  ]
+}
