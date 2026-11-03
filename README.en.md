@@ -441,6 +441,8 @@ An [ordered-record task](docs/ordered-records-evaluation.md) compares Boltons be
 
 A [partial-failure task](docs/partial-failure-evaluation.md) tests a published more-itertools API migration with twelve frozen cases. Correct exceptions alone miss eight cleanup failures; complete handoffs require the output prefix and resource state while still rejecting swallowed exceptions.
 
+The [canonical source preparation helper](docs/canonical-source-preparation.md) checks pinned Git blobs before exporting a new directory. Six fixture cases distinguish checkout newline drift from real changes, while preserving binary data and existing destinations.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

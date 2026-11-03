@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "files": {
+    ".gitattributes": {
+      "hex": "2a2e707920746578740a2a2e726177202d746578740a",
+      "mode": "100644"
+    },
+    "src/task.py": {
+      "hex": "524553554c54203d20320a",
+      "mode": "100644"
+    },
+    "data/mixed.raw": {
+      "hex": "00610d0a620d630aff",
+      "mode": "100644"
+    }
+  },
+  "base_task_hex": "524553554c54203d20310a",
+  "mutated_task_hex": "524553554c54203d2039390a",
+  "cases": [
+    {
+      "id": "lf_valid",
+      "profile": "lf",
+      "revision": "fixed",
+      "accept": true
+    },
+    {
+      "id": "crlf_valid",
+      "profile": "crlf",
+      "revision": "fixed",
+      "accept": true
+    },
+    {
+      "id": "eol_valid",
+      "profile": "eol",
+      "revision": "fixed",
+      "accept": true
+    },
+    {
+      "id": "lf_changed",
+      "profile": "lf",
+      "revision": "changed",
+      "accept": false
+    },
+    {
+      "id": "crlf_changed",
+      "profile": "crlf",
+      "revision": "changed",
+      "accept": false
+    },
+    {
+      "id": "eol_changed",
+      "profile": "eol",
+      "revision": "changed",
+      "accept": false
+    }
+  ],
+  "expected": {
+    "checkout": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "canonical": [
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ],
+    "normalize": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "adoption": [
+    "Canonical preparation matches all6 independently fixed decisions",
+    "Original mixed CRLF, bare CR and binary bytes are unchanged",
+    "Every semantic mutation is rejected before target creation",
+    "No existing checkout, config or existing target is modified",
+    "All inputs are verified before publication; interrupted output is reported INCOMPLETE and preserved",
+    "No native budget reset or speed/cost/model quality claim"
+  ]
+}
