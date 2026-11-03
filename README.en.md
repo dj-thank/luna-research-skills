@@ -433,6 +433,8 @@ A [file-effects and recovery task](docs/artifact-effects-evaluation.md) reproduc
 
 A [sequential retry task](docs/retry-effects-evaluation.md) executes three TinyDB application policies. It distinguishes duplicate insertion of one request from accidentally dropping a different request with the same payload; only request-ID handling satisfies all 12 bounded cases.
 
+A [cancellation task](docs/cancellation-effects-evaluation.md) executes captured schedule callbacks and later replacement work. Checking the current generation before an effect satisfies all 12 cases; acknowledgments and empty queues alone miss late writes and lost replacements.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution
