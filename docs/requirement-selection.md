@@ -12,6 +12,10 @@ JSON documents, use the [pointer-based reader](on-demand-evidence.md). Preparing
 the register and deciding what each question needs are additional work; this
 tool does not parse natural language into a complete requirement set.
 
+For handoffs, [define the receiving question before reviewing the sender's
+checklist](receiver-questions.md). Its paired example shows why all declared
+checks can match while a required relationship is still omitted.
+
 ## Try the fictional example
 
 From the repository or extracted plugin root:
