@@ -1,0 +1,85 @@
+diff --git a/src/packaging/_parser.py b/src/packaging/_parser.py
+index b4ea978..dfb0f24 100644
+--- a/src/packaging/_parser.py
++++ b/src/packaging/_parser.py
+@@ -68,7 +68,14 @@ class Value(Node):
+     __slots__ = ()
+ 
+     def serialize(self) -> str:
+-        return f'"{self}"'
++        value = str(self).casefold()
++        if '"' not in value:
++            return f'"{value}"'
++        if "'" not in value:
++            return f"'{value}'"
++        raise ValueError(
++            "Cannot serialize marker value containing both quote characters"
++        )
+ 
+ 
+ class Op(Node):
+diff --git a/tests/test_markers.py b/tests/test_markers.py
+index 4daa60d..a265fef 100644
+--- a/tests/test_markers.py
++++ b/tests/test_markers.py
+@@ -79,6 +79,26 @@ class TestNode:
+         with pytest.raises(NotImplementedError):
+             Node("cover all the code").serialize()
+ 
++    @pytest.mark.parametrize(
++        ("value", "expected"),
++        [
++            ("plain", '"plain"'),
++            ('a"b', "'a\"b'"),
++            ("a'b", '"a\'b"'),
++        ],
++    )
++    def test_value_serialize_chooses_quote_delimiter(
++        self, value: str, expected: str
++    ) -> None:
++        assert Value(value).serialize() == expected
++
++    def test_value_serialize_rejects_both_quote_delimiters(self) -> None:
++        with pytest.raises(
++            ValueError,
++            match="Cannot serialize marker value containing both quote characters",
++        ):
++            Value("a\"b'c").serialize()
++
+ 
+ class TestOperatorEvaluation:
+     def test_prefers_pep440(self) -> None:
+@@ -231,6 +251,10 @@ class TestMarker:
+             # Test the different quoting rules
+             ("python_version == '2.7'", 'python_version == "2.7"'),
+             ('python_version == "2.7"', 'python_version == "2.7"'),
++            (
++                '\'a" == os_name or python_version >= "0" or "b\' == os_name',
++                '\'a" == os_name or python_version >= "0" or "b\' == os_name',
++            ),
+             # Test and/or expressions
+             (
+                 'python_version == "2.7" and os_name == "linux"',
+diff --git a/tests/test_requirements.py b/tests/test_requirements.py
+index 33c25da..7f8a572 100644
+--- a/tests/test_requirements.py
++++ b/tests/test_requirements.py
+@@ -179,6 +179,18 @@ def test_normalized_requirements(input_req: str, norm_req: str) -> None:
+     assert str(req) == norm_req
+ 
+ 
++def test_requirement_marker_with_embedded_double_quote_round_trips() -> None:
++    req_string = 'demo; \'a" == os_name or python_version >= "0" or "b\' == os_name'
++    req = Requirement(req_string)
++
++    assert str(req) == req_string
++    assert req.marker is not None
++    assert req.marker.evaluate() is False
++    round_tripped_marker = Requirement(str(req)).marker
++    assert round_tripped_marker is not None
++    assert round_tripped_marker.evaluate() is False
++
++
+ class TestRequirementParsing:
+     @pytest.mark.parametrize(
+         "marker",

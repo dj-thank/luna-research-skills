@@ -435,6 +435,8 @@ A [sequential retry task](docs/retry-effects-evaluation.md) executes three TinyD
 
 A [cancellation task](docs/cancellation-effects-evaluation.md) executes captured schedule callbacks and later replacement work. Checking the current generation before an effect satisfies all 12 cases; acknowledgments and empty queues alone miss late writes and lost replacements.
 
+A [parser round-trip task](docs/marker-roundtrip-evaluation.md) checks a published packaging fix against twelve frozen repair/preservation cases. Requiring both rejects a casefold control that repairs quotes but changes existing case-sensitive semantics.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

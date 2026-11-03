@@ -84,6 +84,11 @@ request name from its execution generation. Preserve captured-callback traces,
 late-cancellation effects and legitimate replacements. Empty queues are not proof
 of no late effects; these sequential batches do not test concurrent interruption.
 
+The [marker round-trip example](docs/marker-roundtrip-evaluation.md) separates repair
+from preservation obligations. Freeze literal semantic answers before execution,
+retain quote/case regressions, and bind the reviewed package inventory. A repaired
+reported input does not establish preserved behavior; never discard failed controls.
+
 The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.
