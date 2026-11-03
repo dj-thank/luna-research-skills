@@ -15,6 +15,9 @@ tool does not parse natural language into a complete requirement set.
 For handoffs, [define the receiving question before reviewing the sender's
 checklist](receiver-questions.md). Its paired example shows why all declared
 checks can match while a required relationship is still omitted.
+When facts must be checked against multiple original registers, use the
+[cross-source reader](cross-source-requirements.md) to name the sources required
+for each fact and retain their separate provenance.
 
 ## Try the fictional example
 

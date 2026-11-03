@@ -399,6 +399,8 @@ python tools/benchmark_delivery.py
 
 Before freezing generated comparison data, [check construction order and separately reviewed answers](docs/fixture-integrity.md) to detect cross-case mutation. Matching hashes cannot detect corruption that happened before the snapshot was frozen.
 
+For evidence spread across original registers, [name each requirement's required sources](docs/cross-source-requirements.md). The reader preserves values, qualifiers and source attribution, and detects declared conflicts, unknowns and missing records without substituting one favorable source for another.
+
 Each emits JSON and exits nonzero when results disagree with the frozen expectations. An alternative policy's incorrect answer can itself be an expected experimental result. The [evaluation and adoption guide](docs/swarm-experiments.md) explains fixed answers, preserved failures and reopening actual artifacts.
 
 For your own comparisons, follow the [report checking guide](docs/comparison-reports.md). `check_comparison.py` checks separately pinned evidence for per-case losses, omitted calibration calls and changed inputs. Report consistency and policy adoption are separate decisions.

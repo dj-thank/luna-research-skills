@@ -44,6 +44,7 @@ class ReleaseBuilderTests(unittest.TestCase):
                 "docs/nested/guide.md": b"[Skill](../../.agents/skills/demo/SKILL.md)\n",
                 "tools/fixtures/example.json": b'{"expected": true}\n',
                 "tools/MIGRATION.md": b"migration procedure",
+                "tools/read_requirement_sources.py": b"# cross-source reader\n",
                 "tools/install_luna_skills.py": (
                     Path(__file__).with_name("install_luna_skills.py").read_bytes()
                 ),
@@ -63,6 +64,7 @@ class ReleaseBuilderTests(unittest.TestCase):
                     "docs/evaluation.md",
                     "tools/MIGRATION.md",
                     "tools/install_luna_skills.py",
+                    "tools/read_requirement_sources.py",
                     "CONTRIBUTING.md",
                     "CHANGELOG.md",
                 ):
