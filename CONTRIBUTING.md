@@ -74,6 +74,11 @@ values from exact artifact contents and bounded exception recovery. Preserve bot
 newline-specific literal oracles, reject missing effect evidence, and use fresh
 disposable directories. Application exception tests do not prove crash durability.
 
+The [sequential retry example](docs/retry-effects-evaluation.md) must keep request
+identity separate from payload equality. Preserve every attempt and stored state,
+count setup writes separately, and reject fewer writes that drop valid requests.
+Its single-writer file-reopen runs do not establish network, crash or ACID guarantees.
+
 The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.
