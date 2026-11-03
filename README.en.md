@@ -425,6 +425,8 @@ For handoffs, [define the receiving question before reviewing the sender's check
 
 The [actual external repair example](docs/external-task-evaluation.md) executes a more-itertools bug fix, retains a rejected patch that breaks existing behavior, and verifies the final repair against 12 behavior checks and 905 upstream tests. Replay the real receipts to see how explicit regression obligations improve handoff diagnostics, with the evaluation limits stated.
 
+A [second task checks the imported code scope](docs/execution-scope-evaluation.md): changing a helper causes five failures while the primary source stays identical. Comparing the three executed package files detects a replay of an earlier passing receipt.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

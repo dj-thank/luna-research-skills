@@ -59,6 +59,11 @@ The latter keeps repair and preservation obligations separate, rejects missing o
 skipped required tests and binds source/probe hashes. Its CI checks do not execute
 the external repository; use the source-only probe for new actual task runs.
 
+The [execution-scope example](docs/execution-scope-evaluation.md) additionally
+binds imported package files and observed runtime labels. Keep actual code runs
+separate from receipt replays, preserve earlier fixed contracts, and do not turn
+this reviewed package inventory into a claim of whole-environment capture.
+
 The comparison report checks cover pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
 check exiting zero validates consistency; it does not imply a passing case gate.

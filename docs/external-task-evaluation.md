@@ -82,7 +82,7 @@ All five comparisons use one source read per arm, with identical source bytes. F
 4. Bind the handoff to the executed source and test bytes, and check required test IDs against passed IDs. Keep failures, scope and provenance visible.
 5. Run the project's required broader checks before adoption, then inspect original logs and implementation. This example checks one changed source file; real multi-file tasks must bind the full candidate and relevant dependencies.
 
-Source/receipt equality does not authenticate a fabricated result, discover missing requirements or prove upstream approval. The broader suite remains a separate root acceptance gate. No upstream PR was sent; all external changes are isolated local artifacts.
+Source/receipt equality does not authenticate a fabricated result, discover missing requirements or prove upstream approval. The broader suite remains a separate root acceptance gate. No upstream PR was sent; all external changes are isolated local artifacts. A [second actual task](execution-scope-evaluation.md) tests the imported-code boundary that this single-file example leaves open.
 
 Root authored and ran this experiment after the objective's native delegation budget reached 6/6. The issue already disclosed a suggested fix and root read it. There was **no blind solve, fresh independent agent review or agent-versus-agent experiment**. The result generalizes only as a procedure to test on further tasks, not a measured success rate.
 

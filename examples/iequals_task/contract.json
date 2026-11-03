@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "task": "more-itertools-1282",
+  "issue": "https://github.com/more-itertools/more-itertools/issues/1282",
+  "base_commit": "bc8be1013ac90fe3c1df8aae646b02605d578818",
+  "fail_to_pass": [
+    "test_fix_comparison_error",
+    "test_fix_comparison_truth_error",
+    "test_fix_iteration_after_prefix",
+    "test_fix_iteration_before_first"
+  ],
+  "pass_to_pass": [
+    "test_preserve_empty_and_single",
+    "test_preserve_equal_types",
+    "test_preserve_lengths",
+    "test_preserve_none_data",
+    "test_preserve_order",
+    "test_preserve_short_circuit",
+    "test_preserve_unfakeable_fill",
+    "test_preserve_unequal_values"
+  ],
+  "code_scope": [
+    "more_itertools/__init__.py",
+    "more_itertools/more.py",
+    "more_itertools/recipes.py"
+  ],
+  "expected": {
+    "original": {
+      "fix_pass": 0,
+      "preserve_pass": 8
+    },
+    "fixed": {
+      "fix_pass": 4,
+      "preserve_pass": 8
+    },
+    "changed-helper-control": {
+      "fix_pass": 2,
+      "preserve_pass": 5
+    }
+  },
+  "handoffs": {
+    "original": [
+      "INSUFFICIENT",
+      "INSUFFICIENT"
+    ],
+    "fixed": [
+      "OBSERVED",
+      "OBSERVED"
+    ],
+    "changed-helper-current": [
+      "INSUFFICIENT",
+      "INSUFFICIENT"
+    ],
+    "changed-helper-stale-receipt": [
+      "OBSERVED",
+      "INSUFFICIENT"
+    ],
+    "runtime-control": [
+      "INSUFFICIENT",
+      "INSUFFICIENT"
+    ]
+  },
+  "adoption": [
+    "Exact known test outcomes; all final task and upstream tests pass",
+    "Fixed and changed-helper primary source hashes are equal, recipes hashes differ",
+    "Whole reviewed package scope rejects reused passing receipt on changed helper; same source facts retained",
+    "Runtime mismatch remains insufficient; no false rejection of valid fixed receipt",
+    "At most 1024 extra response bytes per complete view; no extra register reads",
+    "One known-answer task; not blind or independent agent evaluation; no whole-environment, speed, cost or model-quality claim"
+  ]
+}
