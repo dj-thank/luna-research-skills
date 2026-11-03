@@ -47,6 +47,12 @@ The benchmark CLIs use fixed synthetic answers and make no agent/tool-service
 calls. Inspect their case outcomes as well as their exit status: unsuccessful
 comparison policies are intentionally retained. See [the experiment guide](docs/swarm-experiments.md).
 
+Before freezing generated benchmark cases, use the [fixture preparation checks](docs/fixture-integrity.md)
+to compare construction orders and separately reviewed inputs/answers. Keep the
+reviewed oracle independent of the generator; retain invalidated fixtures and
+explain repairs instead of silently rewriting expected values. The source-only
+helper and its positive/negative examples run in the tools unit suite.
+
 The tools unit suite also checks the portable [comparison report example](docs/comparison-reports.md),
 including pinned evidence, rejected-policy reports and calibration-inclusive work.
 Keep the example's digest and report aligned with its exact UTF-8/LF bytes. A report
