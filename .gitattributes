@@ -22,3 +22,5 @@ examples/json_input_transfer/inputs/*.bin binary
 examples/json_input_transfer/stale-inputs/*.bin binary
 examples/parser_input/*.patch whitespace=-blank-at-eol,-blank-at-eof
 examples/parser_input/inputs/*.bin binary
+examples/stream_chunks/*.patch whitespace=-blank-at-eol,-blank-at-eof
+examples/stream_chunks/inputs/*.bin binary

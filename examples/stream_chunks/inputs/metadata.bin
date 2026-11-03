@@ -1,0 +1,6 @@
+: keepalive
+id: 7
+event: update
+retry: 100
+data: ok
+
