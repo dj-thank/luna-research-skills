@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "empty",
+      "items": [],
+      "fault": "none",
+      "at": 0
+    },
+    {
+      "id": "single",
+      "items": [
+        "a"
+      ],
+      "fault": "none",
+      "at": 0
+    },
+    {
+      "id": "duplicates",
+      "items": [
+        "a",
+        "a",
+        "b"
+      ],
+      "fault": "none",
+      "at": 0
+    },
+    {
+      "id": "unicode",
+      "items": [
+        "桜",
+        "snow"
+      ],
+      "fault": "none",
+      "at": 0
+    },
+    {
+      "id": "source_zero",
+      "items": [
+        "a",
+        "b",
+        "c"
+      ],
+      "fault": "source",
+      "at": 0
+    },
+    {
+      "id": "source_one",
+      "items": [
+        "a",
+        "b",
+        "c"
+      ],
+      "fault": "source",
+      "at": 1
+    },
+    {
+      "id": "source_two",
+      "items": [
+        "a",
+        "b",
+        "c"
+      ],
+      "fault": "source",
+      "at": 2
+    },
+    {
+      "id": "source_three",
+      "items": [
+        "a",
+        "b",
+        "c"
+      ],
+      "fault": "source",
+      "at": 3
+    },
+    {
+      "id": "consumer_zero",
+      "items": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "fault": "consumer",
+      "at": 0
+    },
+    {
+      "id": "consumer_one",
+      "items": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "fault": "consumer",
+      "at": 1
+    },
+    {
+      "id": "consumer_two",
+      "items": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "fault": "consumer",
+      "at": 2
+    },
+    {
+      "id": "consumer_three",
+      "items": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "fault": "consumer",
+      "at": 3
+    }
+  ]
+}
