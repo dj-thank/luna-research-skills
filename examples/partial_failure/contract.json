@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "task": "context-partial-failure",
+  "base_commit": "c8e2cb4e7c7b294d72a617f910d8a0d690553b94",
+  "fixed_commit": "042e67bc9b4f0b26be67c97c809c3b35da5f33ab",
+  "accepted_pr": "https://github.com/more-itertools/more-itertools/pull/123",
+  "original_report": "https://github.com/more-itertools/more-itertools/issues/121",
+  "migration": "API removal plus documented call-site replacement: base uses historical context(), fixed uses explicit with; swallow uses fixed package and intentionally masks exceptions.",
+  "case_ids": [
+    "empty",
+    "single",
+    "duplicates",
+    "unicode",
+    "source_zero",
+    "source_one",
+    "source_two",
+    "source_three",
+    "consumer_zero",
+    "consumer_one",
+    "consumer_two",
+    "consumer_three"
+  ],
+  "variants": {
+    "base": {
+      "failed_ids": [
+        "source_zero",
+        "source_one",
+        "source_two",
+        "source_three",
+        "consumer_zero",
+        "consumer_one",
+        "consumer_two",
+        "consumer_three"
+      ],
+      "terminal_passes": 12,
+      "state_passes": 4,
+      "expected_passes": 4
+    },
+    "fixed": {
+      "failed_ids": [],
+      "terminal_passes": 12,
+      "state_passes": 12,
+      "expected_passes": 12
+    },
+    "swallow": {
+      "failed_ids": [
+        "source_zero",
+        "source_one",
+        "source_two",
+        "source_three",
+        "consumer_zero",
+        "consumer_one",
+        "consumer_two",
+        "consumer_three"
+      ],
+      "terminal_passes": 4,
+      "state_passes": 12,
+      "expected_passes": 4
+    }
+  },
+  "handoffs": {
+    "base": [
+      "OBSERVED",
+      "INSUFFICIENT"
+    ],
+    "fixed": [
+      "OBSERVED",
+      "OBSERVED"
+    ],
+    "swallow": [
+      "INSUFFICIENT",
+      "INSUFFICIENT"
+    ],
+    "missing_state": [
+      "OBSERVED",
+      "INSUFFICIENT"
+    ],
+    "lost_prefix": [
+      "OBSERVED",
+      "INSUFFICIENT"
+    ]
+  },
+  "adoption": [
+    "All12 literal cases and variant failure IDs match; complete requirements reject base and both synthetic diagnostics",
+    "Preserve rejection of swallowed exceptions, valid observations and qualifiers; source reads unchanged and <=1024 added response bytes",
+    "Explicit snapshot precedes harness teardown; no GC-timing or automatic input-generator-close guarantee",
+    "No reader runtime or installed skill changes; no fresh agent or speed/cost/reasoning claim"
+  ],
+  "scope": "Trusted historical package plus transparent local call sites; synthetic in-memory StringIO resources and string inputs; no network/service/file side effects from target runs",
+  "primary_paper": "https://doi.org/10.1016/j.infsof.2014.08.004",
+  "independence": "Root read fix before freezing; no blind solve or fresh independent review; native6/6 unchanged"
+}

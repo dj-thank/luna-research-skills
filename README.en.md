@@ -439,6 +439,8 @@ A [parser round-trip task](docs/marker-roundtrip-evaluation.md) checks a publish
 
 An [ordered-record task](docs/ordered-records-evaluation.md) compares Boltons before/after a published fix and a lossy deduplication control across 24 observations. Key counts alone miss lost values; complete handoffs require exact occurrences, order and serialized query output.
 
+A [partial-failure task](docs/partial-failure-evaluation.md) tests a published more-itertools API migration with twelve frozen cases. Correct exceptions alone miss eight cleanup failures; complete handoffs require the output prefix and resource state while still rejecting swallowed exceptions.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

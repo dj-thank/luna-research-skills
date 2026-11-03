@@ -145,3 +145,5 @@ Also run the bundled Skill Creator `quick_validate.py` against both Skill direct
 Routing or description changes require fresh, task-local forward evaluation against both `references/evaluation-cases.md` files. Record expected versus observed Skill selection, route, N/C/W/V, exact completed Luna/low receipts, parent spawn output containing the child UUID, ownership collisions, latency, and false completion claims. A static case manifest or checker unit test complements but does not replace live runtime evidence.
 
 The [2026-09-05 maintenance evaluation](docs/research-evaluation-2026-09-05.md) separates observed routing, synthetic fixtures, live public-source execution and untested dimensions. Keep private raw runtime receipts outside public commits.
+
+The [partial-failure example](docs/partial-failure-evaluation.md) must observe the output prefix, terminal exception and resource exit before harness cleanup. Keep explicit historical/new call sites, dependency pins and source-finalization limits. Do not infer resource release from an exception or adopt exception swallowing as recovery.

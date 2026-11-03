@@ -15,3 +15,4 @@ examples/dotenv_task/*.patch whitespace=-blank-at-eol,-blank-at-eof
 examples/artifact_effects/*.patch whitespace=-blank-at-eol,-blank-at-eof
 examples/marker_roundtrip/*.patch whitespace=-blank-at-eol,-blank-at-eof
 examples/ordered_records/*.patch whitespace=-blank-at-eol,-blank-at-eof
+examples/partial_failure/*.patch whitespace=-blank-at-eol,-blank-at-eof

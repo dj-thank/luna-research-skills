@@ -1,0 +1,479 @@
+diff --git a/.travis.yml b/.travis.yml
+index 3553786..669707a 100644
+--- a/.travis.yml
++++ b/.travis.yml
+@@ -8,6 +8,8 @@ python:
+     - "3.4"
+     - "3.5"
+     - "3.6"
++    - "pypy"
++    - "pypy3"
+ 
+ install:
+     - "pip install ."
+diff --git a/docs/api.rst b/docs/api.rst
+index b6d81af..3f8437c 100644
+--- a/docs/api.rst
++++ b/docs/api.rst
+@@ -15,7 +15,6 @@ New Routines
+ .. autofunction:: collapse
+ .. autofunction:: collate(*iterables, key=lambda a: a, reverse=False)
+ .. autofunction:: consumer
+-.. autofunction:: context
+ .. autofunction:: distinct_permutations
+ .. autofunction:: distribute
+ .. autofunction:: divide
+diff --git a/docs/conf.py b/docs/conf.py
+index 42f819a..73f9847 100644
+--- a/docs/conf.py
++++ b/docs/conf.py
+@@ -48,7 +48,7 @@ copyright = u'2012, Erik Rose'
+ # built documents.
+ #
+ # The short X.Y version.
+-version = '2.6.0'
++version = '3.0.0'
+ # The full version, including alpha/beta/rc tags.
+ release = version
+ 
+diff --git a/docs/versions.rst b/docs/versions.rst
+index 3cf5423..5b5fdbb 100644
+--- a/docs/versions.rst
++++ b/docs/versions.rst
+@@ -2,87 +2,132 @@
+ Version History
+ ===============
+ 
++3.0.0
++-----
++
++* Removed itertools:
++    * ``context`` has been removed due to a design flaw - see below for
++      replacement options. (thanks to NeilGirdhar)
++* Improvements to existing itertools:
++    * ``side_effect`` now supports ``before`` and ``after`` keyword
++      arguments. (Thanks to yardsale8)
++* PyPy and PyPy3 are now supported.
++
++The major version change is due to the removal of the ``context`` function.
++Replace it with standard ``with`` statement context management:
++
++.. code-block:: python
++
++    # Don't use context() anymore
++    file_obj = StringIO()
++    consume(print(x, file=f) for f in context(file_obj) for x in u'123')
++
++    # Use a with statement instead
++    file_obj = StringIO()
++    with file_obj as f:
++        consume(print(x, file=f) for x in u'123')
++
+ 2.6.0
+-    * New itertools:
+-        * ``adjacent`` and ``groupby_transform`` (Thanks to diazona)
+-        * ``always_iterable`` (Thanks to jaraco)
+-        * ``context`` (Thanks to yardsale8)
+-        * ``divide`` (Thanks to mozbhearsum)
+-    * Improvements to existing itertools:
+-        * ``ilen`` is now slightly faster. (Thanks to wbolster)
+-        * ``peekable`` can now prepend items to an iterable. (Thanks to diazona)
++-----
++
++* New itertools:
++    * ``adjacent`` and ``groupby_transform`` (Thanks to diazona)
++    * ``always_iterable`` (Thanks to jaraco)
++    * (Removed in 3.0.0) ``context`` (Thanks to yardsale8)
++    * ``divide`` (Thanks to mozbhearsum)
++* Improvements to existing itertools:
++    * ``ilen`` is now slightly faster. (Thanks to wbolster)
++    * ``peekable`` can now prepend items to an iterable. (Thanks to diazona)
+ 
+ 2.5.0
+-    * New itertools:
+-        * ``distribute`` (Thanks to mozbhearsum and coady)
+-        * ``sort_together`` (Thanks to clintval)
+-        * ``stagger`` and ``zip_offset`` (Thanks to joshbode)
+-        * ``padded``
+-    * Improvements to existing itertools:
+-        * ``peekable`` now handles negative indexes and slices with negative
+-          components properly.
+-        * ``intersperse`` is now slightly faster. (Thanks to pylang)
+-        * ``windowed`` now accepts a ``step`` keyword argument.
+-          (Thanks to pylang)
+-    * Python 3.6 is now supported.
++-----
++
++* New itertools:
++    * ``distribute`` (Thanks to mozbhearsum and coady)
++    * ``sort_together`` (Thanks to clintval)
++    * ``stagger`` and ``zip_offset`` (Thanks to joshbode)
++    * ``padded``
++* Improvements to existing itertools:
++    * ``peekable`` now handles negative indexes and slices with negative
++      components properly.
++    * ``intersperse`` is now slightly faster. (Thanks to pylang)
++    * ``windowed`` now accepts a ``step`` keyword argument.
++      (Thanks to pylang)
++* Python 3.6 is now supported.
+ 
+ 2.4.1
+-    * Move docs 100% to readthedocs.io.
++-----
++
++* Move docs 100% to readthedocs.io.
+ 
+ 2.4
+-    * New itertools:
+-        * ``accumulate``, ``all_equal``, ``first_true``, ``partition``, and
+-          ``tail`` from the itertools documentation.
+-        * ``bucket`` (Thanks to Rosuav and cvrebert)
+-        * ``collapse`` (Thanks to abarnet)
+-        * ``interleave`` and ``interleave_longest`` (Thanks to abarnet)
+-        * ``side_effect`` (Thanks to nvie)
+-        * ``sliced`` (Thanks to j4mie and coady)
+-        * ``split_before`` and ``split_after`` (Thanks to astronouth7303)
+-        * ``spy`` (Thanks to themiurgo and mathieulongtin)
+-    * Improvements to existing itertools:
+-        * ``chunked`` is now simpler and more friendly to garbage collection.
+-          (Contributed by coady, with thanks to piskvorky)
+-        * ``collate`` now delegates to ``heapq.merge`` when possible.
+-          (Thanks to kmike and julianpistorius)
+-        * ``peekable``-wrapped iterables are now indexable and sliceable.
+-          Iterating through ``peekable``-wrapped iterables is also faster.
+-        * ``one`` and ``unique_to_each`` have been simplified.
+-          (Thanks to coady)
++-----
++
++* New itertools:
++    * ``accumulate``, ``all_equal``, ``first_true``, ``partition``, and
++      ``tail`` from the itertools documentation.
++    * ``bucket`` (Thanks to Rosuav and cvrebert)
++    * ``collapse`` (Thanks to abarnet)
++    * ``interleave`` and ``interleave_longest`` (Thanks to abarnet)
++    * ``side_effect`` (Thanks to nvie)
++    * ``sliced`` (Thanks to j4mie and coady)
++    * ``split_before`` and ``split_after`` (Thanks to astronouth7303)
++    * ``spy`` (Thanks to themiurgo and mathieulongtin)
++* Improvements to existing itertools:
++    * ``chunked`` is now simpler and more friendly to garbage collection.
++      (Contributed by coady, with thanks to piskvorky)
++    * ``collate`` now delegates to ``heapq.merge`` when possible.
++      (Thanks to kmike and julianpistorius)
++    * ``peekable``-wrapped iterables are now indexable and sliceable.
++      Iterating through ``peekable``-wrapped iterables is also faster.
++    * ``one`` and ``unique_to_each`` have been simplified.
++      (Thanks to coady)
+ 
+ 
+ 2.3
+-    * Added ``one`` from ``jaraco.util.itertools``. (Thanks, jaraco!)
+-    * Added ``distinct_permutations`` and ``unique_to_each``. (Contributed by
+-      bbayles)
+-    * Added ``windowed``. (Contributed by bbayles, with thanks to buchanae,
+-      jaraco, and abarnert)
+-    * Simplified the implementation of ``chunked``. (Thanks, nvie!)
+-    * Python 3.5 is now supported. Python 2.6 is no longer supported.
+-    * Python 3 is now supported directly; there is no 2to3 step.
++-----
++
++* Added ``one`` from ``jaraco.util.itertools``. (Thanks, jaraco!)
++* Added ``distinct_permutations`` and ``unique_to_each``. (Contributed by
++  bbayles)
++* Added ``windowed``. (Contributed by bbayles, with thanks to buchanae,
++  jaraco, and abarnert)
++* Simplified the implementation of ``chunked``. (Thanks, nvie!)
++* Python 3.5 is now supported. Python 2.6 is no longer supported.
++* Python 3 is now supported directly; there is no 2to3 step.
+ 
+ 2.2
+-    * Added ``iterate`` and ``with_iter``. (Thanks, abarnert!)
++-----
++
++* Added ``iterate`` and ``with_iter``. (Thanks, abarnert!)
+ 
+ 2.1
+-    * Added (tested!) implementations of the recipes from the itertools
+-      documentation. (Thanks, Chris Lonnen!)
+-    * Added ``ilen``. (Thanks for the inspiration, Matt Basta!)
++-----
++
++* Added (tested!) implementations of the recipes from the itertools
++  documentation. (Thanks, Chris Lonnen!)
++* Added ``ilen``. (Thanks for the inspiration, Matt Basta!)
+ 
+ 2.0
+-    * ``chunked`` now returns lists rather than tuples. After all, they're
+-      homogeneous. This slightly backward-incompatible change is the reason for
+-      the major version bump.
+-    * Added ``@consumer``.
+-    * Improved test machinery.
++-----
++
++* ``chunked`` now returns lists rather than tuples. After all, they're
++  homogeneous. This slightly backward-incompatible change is the reason for
++  the major version bump.
++* Added ``@consumer``.
++* Improved test machinery.
+ 
+ 1.1
+-    * Added ``first`` function.
+-    * Added Python 3 support.
+-    * Added a default arg to ``peekable.peek()``.
+-    * Noted how to easily test whether a peekable iterator is exhausted.
+-    * Rewrote documentation.
++-----
++
++* Added ``first`` function.
++* Added Python 3 support.
++* Added a default arg to ``peekable.peek()``.
++* Noted how to easily test whether a peekable iterator is exhausted.
++* Rewrote documentation.
+ 
+ 1.0
+-    * Initial release, with ``collate``, ``peekable``, and ``chunked``. Could
+-      really use better docs.
++-----
++
++* Initial release, with ``collate``, ``peekable``, and ``chunked``. Could
++  really use better docs.
+diff --git a/more_itertools/more.py b/more_itertools/more.py
+index 1497dfa..a0010e7 100644
+--- a/more_itertools/more.py
++++ b/more_itertools/more.py
+@@ -20,7 +20,6 @@ __all__ = [
+     'collapse',
+     'collate',
+     'consumer',
+-    'context',
+     'distinct_permutations',
+     'distribute',
+     'divide',
+@@ -688,24 +687,29 @@ def spy(iterable, n=1):
+ 
+ def interleave(*iterables):
+     """Return a new iterable yielding from each iterable in turn,
+-    until the shortest is exhausted. Note that this is the same as
+-    ``chain(*zip(*iterables))``.
++    until the shortest is exhausted.
+ 
+         >>> list(interleave([1, 2, 3], [4, 5], [6, 7, 8]))
+         [1, 4, 6, 2, 5, 7]
+ 
++    Note that this is the same as ``chain(*zip(*iterables))``.
++    For a version that doesn't terminate after the shortest iterable is
++    exhausted, see ``interleave_longest()``.
++
+     """
+     return chain.from_iterable(zip(*iterables))
+ 
+ 
+ def interleave_longest(*iterables):
+     """Return a new iterable yielding from each iterable in turn,
+-    skipping any that are exhausted. Note that this is not the same as
+-    ``chain(*zip_longest(*iterables))``.
++    skipping any that are exhausted.
+ 
+         >>> list(interleave_longest([1, 2, 3], [4, 5], [6, 7, 8]))
+         [1, 4, 6, 2, 5, 7, 3, 8]
+ 
++    Note that this is an alternate implementation of ``roundrobin()`` from the
++    itertools documentation.
++
+     """
+     i = chain.from_iterable(zip_longest(*iterables, fillvalue=_marker))
+     return filter(lambda x: x is not _marker, i)
+@@ -748,13 +752,16 @@ def collapse(iterable, base_type=None, levels=None):
+         yield x
+ 
+ 
+-def side_effect(func, iterable, chunk_size=None):
++def side_effect(func, iterable, chunk_size=None, before=None, after=None):
+     """Invoke *func* on each item in *iterable* (or on each *chunk_size* group
+     of items) before yielding the item.
+ 
+     `func` must be a function that takes a single argument. Its return value
+     will be discarded.
+ 
++    *before* and *after* are optional functions that take no arguments. They
++    will be executed before iteration starts and after it ends, respectively.
++
+     `side_effect` can be used for logging, updating progress bars, or anything
+     that is not functionally "pure."
+ 
+@@ -779,23 +786,32 @@ def side_effect(func, iterable, chunk_size=None):
+ 
+         >>> from io import StringIO
+         >>> from more_itertools import consume
+-        >>> with StringIO() as f:
+-        ...     func = lambda x: print(x, end=u',', file=f)
+-        ...     it = [u'a', u'b', u'c']
+-        ...     consume(side_effect(func, it))
+-        ...     print(f.getvalue())
+-        a,b,c,
++        >>> f = StringIO()
++        >>> func = lambda x: print(x, file=f)
++        >>> before = lambda: print(u'HEADER', file=f)
++        >>> after = f.close
++        >>> it = [u'a', u'b', u'c']
++        >>> consume(side_effect(func, it, before=before, after=after))
++        >>> f.closed
++        True
+ 
+     """
+-    if chunk_size is None:
+-        for item in iterable:
+-            func(item)
+-            yield item
+-    else:
+-        for chunk in chunked(iterable, chunk_size):
+-            func(chunk)
+-            for item in chunk:
++    try:
++        if before is not None:
++            before()
++
++        if chunk_size is None:
++            for item in iterable:
++                func(item)
+                 yield item
++        else:
++            for chunk in chunked(iterable, chunk_size):
++                func(chunk)
++                for item in chunk:
++                    yield item
++    finally:
++        if after is not None:
++            after()
+ 
+ 
+ def sliced(seq, n):
+@@ -1198,39 +1214,3 @@ def groupby_transform(iterable, keyfunc=None, valuefunc=None):
+     """
+     valuefunc = (lambda x: x) if valuefunc is None else valuefunc
+     return ((k, map(valuefunc, g)) for k, g in groupby(iterable, keyfunc))
+-
+-
+-def context(obj):
+-    """Wrap *obj*, an object that supports the context manager protocol,
+-    in a ``with`` statement and then yield the resultant object.
+-
+-    The object's ``__enter__()`` method runs before this function yields, and
+-    its ``__exit__()`` method runs after control returns to this function.
+-
+-    This can be used to operate on objects that can close automatically when
+-    using a ``with`` statement, like IO objects:
+-
+-        >>> from io import StringIO
+-        >>> from more_itertools import consume
+-        >>> it = [u'1', u'2', u'3']
+-        >>> file_obj = StringIO()
+-        >>> consume(print(x, file=f) for f in context(file_obj) for x in it)
+-        >>> file_obj.closed
+-        True
+-
+-    Be sure to iterate over the returned context manager in the outermost
+-    loop of a nested loop structure so it only enters and exits once::
+-
+-        >>> # Right
+-        >>> file_obj = StringIO()
+-        >>> consume(print(x, file=f) for f in context(file_obj) for x in it)
+-
+-        >>> # Wrong
+-        >>> file_obj = StringIO()
+-        >>> consume(print(x, file=f) for x in it for f in context(file_obj))
+-        Traceback (most recent call last):
+-        ...
+-        ValueError: I/O operation on closed file.
+-    """
+-    with obj as context_obj:
+-        yield context_obj
+diff --git a/more_itertools/tests/test_more.py b/more_itertools/tests/test_more.py
+index 1589f31..c7f2933 100644
+--- a/more_itertools/tests/test_more.py
++++ b/more_itertools/tests/test_more.py
+@@ -619,6 +619,49 @@ class SideEffectTests(TestCase):
+         eq_(result, list(range(10)))
+         eq_(counter[0], 5)
+ 
++    def test_before_after(self):
++        f = StringIO()
++        collector = []
++
++        def func(item):
++            print(item, file=f)
++            collector.append(f.getvalue())
++
++        def it():
++            yield u'a'
++            yield u'b'
++            raise Exception('kaboom')
++
++        before = lambda: print('HEADER', file=f)
++        after = f.close
++
++        try:
++            consume(side_effect(func, it(), before=before, after=after))
++        except Exception:
++            pass
++
++        # The iterable should have been written to the file
++        self.assertEqual(collector, [u'HEADER\na\n', u'HEADER\na\nb\n'])
++
++        # The file should be closed even though something bad happened
++        self.assertTrue(f.closed)
++
++    def test_before_fails(self):
++        f = StringIO()
++        func = lambda x: print(x, file=f)
++
++        def before():
++            raise Exception('ouch')
++
++        try:
++            consume(side_effect(func, u'abc', before=before, after=f.close))
++        except Exception:
++            pass
++
++        # The file should be closed even though something bad happened in the
++        # before function
++        self.assertTrue(f.closed)
++
+ 
+ class SlicedTests(TestCase):
+     """Tests for ``sliced()``"""
+@@ -1107,21 +1150,3 @@ class GroupByTransformTests(TestCase):
+         actual = groupby_transform(iterable, key)  # default valuefunc
+         expected = groupby(iterable, key)
+         self.assertAllGroupsEqual(actual, expected)
+-
+-
+-class ContextTestCase(TestCase):
+-    def test_basic(self):
+-        before = []
+-        after = []
+-
+-        @contextmanager
+-        def managed():
+-            before.append('open')
+-            yield 'running'
+-            after.append('close')
+-
+-        actual = [(c, x) for c in context(managed()) for x in range(3)]
+-        expected = [('running', 0), ('running', 1), ('running', 2)]
+-        self.assertEqual(actual, expected)
+-        self.assertEqual(before, ['open'])
+-        self.assertEqual(after, ['close'])
+diff --git a/setup.py b/setup.py
+index 5439802..e244f10 100644
+--- a/setup.py
++++ b/setup.py
+@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
+ 
+ setup(
+     name='more-itertools',
+-    version='2.6.0',
++    version='3.0.0',
+     description='More routines for operating on iterables, beyond itertools',
+     long_description=open('README.rst').read() + '\n\n' +
+                      '\n'.join(open('docs/versions.rst').read()

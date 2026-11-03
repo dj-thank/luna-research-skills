@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "expected": {
+    "empty": {
+      "terminal": null,
+      "state": {
+        "outputs": [],
+        "written": "",
+        "source_seen": [],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          null
+        ]
+      }
+    },
+    "single": {
+      "terminal": null,
+      "state": {
+        "outputs": [
+          "a"
+        ],
+        "written": "a\n",
+        "source_seen": [
+          "a"
+        ],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          null
+        ]
+      }
+    },
+    "duplicates": {
+      "terminal": null,
+      "state": {
+        "outputs": [
+          "a",
+          "a",
+          "b"
+        ],
+        "written": "a\na\nb\n",
+        "source_seen": [
+          "a",
+          "a",
+          "b"
+        ],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          null
+        ]
+      }
+    },
+    "unicode": {
+      "terminal": null,
+      "state": {
+        "outputs": [
+          "桜",
+          "snow"
+        ],
+        "written": "桜\nsnow\n",
+        "source_seen": [
+          "桜",
+          "snow"
+        ],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          null
+        ]
+      }
+    },
+    "source_zero": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "source:0"
+      },
+      "state": {
+        "outputs": [],
+        "written": "",
+        "source_seen": [],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "source_one": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "source:1"
+      },
+      "state": {
+        "outputs": [
+          "a"
+        ],
+        "written": "a\n",
+        "source_seen": [
+          "a"
+        ],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "source_two": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "source:2"
+      },
+      "state": {
+        "outputs": [
+          "a",
+          "b"
+        ],
+        "written": "a\nb\n",
+        "source_seen": [
+          "a",
+          "b"
+        ],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "source_three": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "source:3"
+      },
+      "state": {
+        "outputs": [
+          "a",
+          "b",
+          "c"
+        ],
+        "written": "a\nb\nc\n",
+        "source_seen": [
+          "a",
+          "b",
+          "c"
+        ],
+        "source_finalized": true,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "consumer_zero": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "consumer:0"
+      },
+      "state": {
+        "outputs": [],
+        "written": "",
+        "source_seen": [
+          "a"
+        ],
+        "source_finalized": false,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "consumer_one": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "consumer:1"
+      },
+      "state": {
+        "outputs": [
+          "a"
+        ],
+        "written": "a\n",
+        "source_seen": [
+          "a",
+          "b"
+        ],
+        "source_finalized": false,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "consumer_two": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "consumer:2"
+      },
+      "state": {
+        "outputs": [
+          "a",
+          "b"
+        ],
+        "written": "a\nb\n",
+        "source_seen": [
+          "a",
+          "b",
+          "c"
+        ],
+        "source_finalized": false,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    },
+    "consumer_three": {
+      "terminal": {
+        "type": "InjectedError",
+        "message": "consumer:3"
+      },
+      "state": {
+        "outputs": [
+          "a",
+          "b",
+          "c"
+        ],
+        "written": "a\nb\nc\n",
+        "source_seen": [
+          "a",
+          "b",
+          "c",
+          "d"
+        ],
+        "source_finalized": false,
+        "resource_closed": true,
+        "exit_count": 1,
+        "exit_errors": [
+          "InjectedError"
+        ]
+      }
+    }
+  }
+}
