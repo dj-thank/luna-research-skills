@@ -80,6 +80,12 @@ oversized results without partial output; do not change approval states or choos
 guards from observed benchmark outcomes. Measure exposed bytes separately from
 source/request reads. Keep the copyable example executable from the plugin.
 
+The [cross-source reader](docs/cross-source-requirements.md) must require every
+explicit source binding and each requirement's per-source coverage. Preserve
+original records with their verified source ID/digest; do not count majority,
+recency or a successful record as conflict resolution. Keep aggregate read limits,
+no partial observations on gaps, and both documented plugin examples executable.
+
 Changes to `tools/install_luna_skills.py` must preserve dry-run-by-default behavior, `SKILL.md`-last publication, fail-closed path handling, no-overwrite semantics, and rollback tests for partial writes, concurrent destination creation, and user-modified content. Run its unit tests on Windows, macOS, and Linux through the existing Python matrix.
 
 Also run the bundled Skill Creator `quick_validate.py` against both Skill directories, validate the generated plugin manifest/archive, rebuild release assets twice and compare their SHA-256, and run `git diff --check`. Keep `release-check`, Python caches, runtime rollouts, discovery reports containing machine paths, and migration journals out of commits.
