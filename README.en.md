@@ -427,6 +427,8 @@ The [actual external repair example](docs/external-task-evaluation.md) executes 
 
 A [second task checks the imported code scope](docs/execution-scope-evaluation.md): changing a helper causes five failures while the primary source stays identical. Comparing the three executed package files detects a replay of an earlier passing receipt.
 
+An [input/configuration task in another repository](docs/configuration-scope-evaluation.md) executes six python-dotenv cases. Identical code behaves differently with changed input, environment values or override settings; manifest binding detects three replays of a passing receipt.
+
 For CI acceptance, [check required provider evidence](docs/ci-evidence.md) against a trusted commit and required name/app pairs. A successful watcher exit alone does not establish successful required checks.
 
 ### Actual model execution

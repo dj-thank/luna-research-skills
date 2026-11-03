@@ -11,3 +11,4 @@
 examples/value_chain_task/*.patch whitespace=-blank-at-eol
 # Preserve trailing blank context at the end of a hunk as well.
 examples/iequals_task/*.patch whitespace=-blank-at-eol,-blank-at-eof
+examples/dotenv_task/*.patch whitespace=-blank-at-eol,-blank-at-eof
